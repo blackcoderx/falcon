@@ -38,14 +38,13 @@
 - [x] Better observation truncation (first 150 + last 30 chars)
 - [x] Expand color palette with `MutedColor` and `SuccessColor`
 
-### Phase 1.7: Streaming & Multi-line Input - COMPLETE
+### Phase 1.7: Streaming Responses - COMPLETE
 - [x] Implement streaming in LLM client (`ChatStream` method in ollama.go)
 - [x] Add "streaming" event type to agent event system
 - [x] Handle streaming events in TUI (real-time text display)
-- [x] Replace `textinput` with `textarea` for multi-line input
-- [x] Update keyboard shortcuts (`ctrl+enter` to send, `alt+↑↓` for history)
 - [x] Add streaming status indicator (`⠋ streaming...`)
-- [x] Support multi-line user input display with proper indentation
+- [x] Fix viewport scrolling (only auto-scroll when at bottom)
+- [x] Add `pgup`/`pgdown`/`home`/`end` support for scrolling
 
 ---
 
@@ -98,10 +97,10 @@ zap/
 The UI is now at Claude Code level for core features:
 
 1. ~~**Streaming responses** - Show text as it arrives character by character~~ ✓ DONE
-2. ~~**Multi-line input** - Support pasting multi-line content~~ ✓ DONE
-3. ~~**Status line** - Persistent line showing current state~~ ✓ DONE
-4. ~~**Keyboard navigation** - Arrow keys to scroll history~~ ✓ DONE
-5. ~~**Better formatting** - Sophisticated word wrapping and truncation~~ ✓ DONE
+2. ~~**Status line** - Persistent line showing current state~~ ✓ DONE
+3. ~~**Keyboard navigation** - Arrow keys to scroll history~~ ✓ DONE
+4. ~~**Better formatting** - Sophisticated word wrapping and truncation~~ ✓ DONE
+5. ~~**Viewport scrolling** - Scroll up to read past messages~~ ✓ DONE
 
 **All core Claude Code UI features complete!**
 

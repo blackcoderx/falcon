@@ -48,11 +48,12 @@ type Tool interface {
 ```
 
 **TUI (pkg/tui/app.go)**: Minimal Claude Code-style interface:
-- `bubbles/viewport` - Scrollable log area
+- `bubbles/viewport` - Scrollable log area (pgup/pgdown, mouse wheel)
 - `bubbles/textinput` - Single-line input with `> ` prompt
 - `bubbles/spinner` - Loading indicator
 - `glamour` - Markdown rendering for responses
-- Status line showing current state (thinking/executing tool)
+- Streaming display (text appears as it arrives)
+- Status line showing current state (thinking/streaming/executing tool)
 - Input history navigation (↑/↓ arrows)
 
 **Styling (pkg/tui/styles.go)**: Minimal 7-color palette with log prefixes:
@@ -64,7 +65,9 @@ type Tool interface {
 - `───` conversation separator
 
 **Keyboard Shortcuts**:
+- `enter` - Send message
 - `↑` / `↓` - Navigate input history
+- `pgup` / `pgdown` - Scroll viewport
 - `ctrl+l` - Clear screen
 - `ctrl+u` - Clear input line
 - `ctrl+c` / `esc` - Quit

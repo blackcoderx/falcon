@@ -109,8 +109,9 @@ Log prefixes:
 - `───` - Conversation separator
 
 ### Keyboard Shortcuts
-- `ctrl+enter` - Send message
-- `alt+↑` / `alt+↓` - Navigate input history
+- `enter` - Send message
+- `↑` / `↓` - Navigate input history
+- `pgup` / `pgdown` - Scroll viewport
 - `ctrl+l` - Clear screen
 - `ctrl+u` - Clear input
 - `ctrl+c` / `esc` - Quit
@@ -136,14 +137,13 @@ agentDoneMsg signals completion
 
 ## What's Still Needed
 
-### For True Claude Code Style
-1. Streaming responses (show text as it arrives)
-2. Multi-line input support (textarea for pasting)
-
-### Completed in Phase 1.6
-- ~~Status line showing current state~~ ✓
-- ~~Keyboard navigation through history~~ ✓
+### Claude Code Style - COMPLETE
+All UI features implemented:
+- ~~Streaming responses~~ ✓
+- ~~Status line~~ ✓
+- ~~Keyboard navigation~~ ✓
 - ~~Better log formatting~~ ✓
+- ~~Viewport scrolling~~ ✓
 
 ### Phase 2 Goals
 1. `FileSystem` tool - Read local code

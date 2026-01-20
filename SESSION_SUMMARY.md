@@ -1,6 +1,6 @@
-# ZAP Session Summary: Streaming & Multi-line Input (Phase 1.7)
+# ZAP Session Summary: Streaming Responses (Phase 1.7)
 
-This session completed the Claude Code-style UI by adding streaming responses and multi-line input support.
+This session completed the Claude Code-style UI by adding streaming responses and fixing viewport scrolling.
 
 ## Key Accomplishments (This Session - Phase 1.7)
 
@@ -17,23 +17,16 @@ This session completed the Claude Code-style UI by adding streaming responses an
   - Updates streaming log entry in-place
   - Shows `⠋ streaming...` status
 
-### 2. Multi-line Input
-- **Replaced** `bubbles/textinput` with `bubbles/textarea`
-  - 3-line input area with 2000 char limit
-  - Supports pasting multi-line content
-  - Shows placeholder: "Ask me anything... (ctrl+enter to send)"
-- **Updated Keyboard Shortcuts**:
-  - `ctrl+enter` - Send message (was `enter`)
-  - `alt+↑` / `alt+↓` - Navigate history (was `↑` / `↓`)
-  - `enter` - Now adds newline in textarea
+### 2. Viewport Scrolling Fix
+- **Problem**: Viewport always jumped to bottom, preventing scroll-up
+- **Solution**: Only auto-scroll when user is already at bottom or agent is thinking
+- **Added**: `pgup`/`pgdown`/`home`/`end` keyboard support for scrolling
 
-### 3. Multi-line User Input Display
-- User input with multiple lines displays with proper indentation:
-  ```
-  > First line
-    Second line
-    Third line
-  ```
+### 3. Input Style (Claude Code Style)
+- Single-line `textinput` with auto-wrap (not multi-line textarea)
+- `enter` to send message
+- `↑`/`↓` for history navigation
+- Clean, minimal prompt: `> `
 
 ---
 
@@ -126,10 +119,11 @@ Final markdown-rendered response here
 
 All core features now implemented:
 - ✓ Streaming responses (real-time text display)
-- ✓ Multi-line input (textarea with ctrl+enter to send)
+- ✓ Single-line input with auto-wrap
 - ✓ Status line (thinking/streaming/executing)
-- ✓ Keyboard navigation (history with alt+arrows)
+- ✓ Keyboard navigation (↑↓ for history)
 - ✓ Visual separators between conversations
+- ✓ Viewport scrolling (pgup/pgdown, mouse wheel)
 
 ## Files Modified This Session
 
@@ -137,7 +131,7 @@ All core features now implemented:
 |------|---------|
 | `pkg/llm/ollama.go` | Added `StreamCallback`, `ChatStream()` method |
 | `pkg/core/agent.go` | Added "streaming" event, switched to `ChatStream()` |
-| `pkg/tui/app.go` | Replaced textinput with textarea, streaming handling |
+| `pkg/tui/app.go` | Streaming handling, fixed viewport scrolling |
 
 ## Next Steps for Future Agents
 
@@ -152,8 +146,9 @@ go build -o zap.exe ./cmd/zap
 ```
 
 ## Keyboard Shortcuts
-- `ctrl+enter` - Send message
-- `alt+↑` / `alt+↓` - Navigate history
+- `enter` - Send message
+- `↑` / `↓` - Navigate history
+- `pgup` / `pgdown` - Scroll viewport
 - `ctrl+l` - Clear screen
 - `esc` - Quit
 
