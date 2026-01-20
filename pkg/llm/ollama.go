@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -29,6 +30,9 @@ type ChatResponse struct {
 	Message   Message `json:"message"`
 	Done      bool    `json:"done"`
 }
+
+// StreamCallback is called for each chunk of streaming response
+type StreamCallback func(chunk string)
 
 // OllamaClient handles communication with Ollama API
 type OllamaClient struct {
@@ -91,6 +95,80 @@ func (c *OllamaClient) Chat(messages []Message) (string, error) {
 	}
 
 	return chatResp.Message.Content, nil
+}
+
+// ChatStream sends a chat request with streaming and calls callback for each chunk
+func (c *OllamaClient) ChatStream(messages []Message, callback StreamCallback) (string, error) {
+	req := ChatRequest{
+		Model:    c.Model,
+		Messages: messages,
+		Stream:   true,
+	}
+
+	jsonData, err := json.Marshal(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/api/chat", c.BaseURL)
+	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	if c.APIKey != "" {
+		httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.APIKey))
+	}
+
+	// Use a client without timeout for streaming
+	client := &http.Client{
+		Timeout: 0, // No timeout for streaming
+	}
+
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return "", fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("ollama returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Read streaming response line by line
+	var fullContent string
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" {
+			continue
+		}
+
+		var chatResp ChatResponse
+		if err := json.Unmarshal([]byte(line), &chatResp); err != nil {
+			continue // Skip malformed lines
+		}
+
+		chunk := chatResp.Message.Content
+		if chunk != "" {
+			fullContent += chunk
+			if callback != nil {
+				callback(chunk)
+			}
+		}
+
+		if chatResp.Done {
+			break
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return fullContent, fmt.Errorf("error reading stream: %w", err)
+	}
+
+	return fullContent, nil
 }
 
 // CheckConnection verifies that Ollama is running and accessible

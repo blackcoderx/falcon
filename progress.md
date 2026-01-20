@@ -1,7 +1,7 @@
 # ZAP Development Progress
 
 **Last Updated:** 2026-01-20
-**Current Phase:** Phase 1.6 - UI Refinements Complete
+**Current Phase:** Phase 1.7 - Streaming & Multi-line Input Complete
 
 ---
 
@@ -37,6 +37,15 @@
 - [x] Improve help line with styled keyboard shortcuts
 - [x] Better observation truncation (first 150 + last 30 chars)
 - [x] Expand color palette with `MutedColor` and `SuccessColor`
+
+### Phase 1.7: Streaming & Multi-line Input - COMPLETE
+- [x] Implement streaming in LLM client (`ChatStream` method in ollama.go)
+- [x] Add "streaming" event type to agent event system
+- [x] Handle streaming events in TUI (real-time text display)
+- [x] Replace `textinput` with `textarea` for multi-line input
+- [x] Update keyboard shortcuts (`ctrl+enter` to send, `alt+↑↓` for history)
+- [x] Add streaming status indicator (`⠋ streaming...`)
+- [x] Support multi-line user input display with proper indentation
 
 ---
 
@@ -86,13 +95,15 @@ zap/
 ## What's Still Needed
 
 ### For True Claude Code Style
-The current UI is getting closer to Claude Code level:
+The UI is now at Claude Code level for core features:
 
-1. **Streaming responses** - Show text as it arrives character by character
-2. **Multi-line input** - Support pasting multi-line content
+1. ~~**Streaming responses** - Show text as it arrives character by character~~ ✓ DONE
+2. ~~**Multi-line input** - Support pasting multi-line content~~ ✓ DONE
 3. ~~**Status line** - Persistent line showing current state~~ ✓ DONE
 4. ~~**Keyboard navigation** - Arrow keys to scroll history~~ ✓ DONE
 5. ~~**Better formatting** - Sophisticated word wrapping and truncation~~ ✓ DONE
+
+**All core Claude Code UI features complete!**
 
 ### Phase 2: Security & Context (NEXT)
 - [ ] `.env` loader and secret manager

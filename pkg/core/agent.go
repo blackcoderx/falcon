@@ -18,7 +18,7 @@ type Tool interface {
 
 // AgentEvent represents a state change during agent processing
 type AgentEvent struct {
-	Type    string // "thinking", "tool_call", "observation", "answer", "error"
+	Type    string // "thinking", "tool_call", "observation", "answer", "error", "streaming"
 	Content string
 }
 
@@ -138,11 +138,19 @@ func (a *Agent) ProcessMessageWithEvents(input string, callback EventCallback) (
 		messages := []llm.Message{{Role: "system", Content: systemPrompt}}
 		messages = append(messages, a.history...)
 
-		// Get LLM response
-		response, err := a.llmClient.Chat(messages)
-		if err != nil {
-			callback(AgentEvent{Type: "error", Content: err.Error()})
-			return "", fmt.Errorf("agent chat error: %w", err)
+		// Get LLM response with streaming
+		var response string
+		var streamErr error
+
+		// Stream callback emits chunks to TUI
+		streamCallback := func(chunk string) {
+			callback(AgentEvent{Type: "streaming", Content: chunk})
+		}
+
+		response, streamErr = a.llmClient.ChatStream(messages, streamCallback)
+		if streamErr != nil {
+			callback(AgentEvent{Type: "error", Content: streamErr.Error()})
+			return "", fmt.Errorf("agent chat error: %w", streamErr)
 		}
 
 		if response == "" {
@@ -153,8 +161,8 @@ func (a *Agent) ProcessMessageWithEvents(input string, callback EventCallback) (
 		// Parse response for thoughts and tool calls
 		thought, toolName, toolArgs, finalAnswer := a.parseResponse(response)
 
-		// If we got a thought, emit it
-		if thought != "" {
+		// If we got a thought (and it's different from the streamed content), emit it
+		if thought != "" && thought != response {
 			callback(AgentEvent{Type: "thinking", Content: thought})
 		}
 

@@ -1,8 +1,8 @@
 # ZAP Development Guide
 
-## Project Status: PHASE 1.6 - UI REFINEMENTS COMPLETE
+## Project Status: PHASE 1.7 - STREAMING & MULTI-LINE INPUT COMPLETE
 
-The TUI has been redesigned from a colorful chat interface to a minimal, log-centric design inspired by Claude Code. UI now includes status line, input history, and keyboard shortcuts.
+The TUI now has all Claude Code-style features: streaming responses, multi-line input, status line, and keyboard shortcuts. Ready for Phase 2 (tools).
 
 ### Current Structure
 ```
@@ -109,9 +109,10 @@ Log prefixes:
 - `───` - Conversation separator
 
 ### Keyboard Shortcuts
-- `↑` / `↓` - Navigate input history
+- `ctrl+enter` - Send message
+- `alt+↑` / `alt+↓` - Navigate input history
 - `ctrl+l` - Clear screen
-- `ctrl+u` - Clear input line
+- `ctrl+u` - Clear input
 - `ctrl+c` / `esc` - Quit
 
 ### Message Flow

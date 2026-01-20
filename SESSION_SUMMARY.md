@@ -1,8 +1,43 @@
-# ZAP Session Summary: UI Refinements (Phase 1.6)
+# ZAP Session Summary: Streaming & Multi-line Input (Phase 1.7)
 
-Previous session redesigned the TUI to minimal log-centric design. This session added polish and usability improvements to get closer to Claude Code style.
+This session completed the Claude Code-style UI by adding streaming responses and multi-line input support.
 
-## Key Accomplishments (This Session)
+## Key Accomplishments (This Session - Phase 1.7)
+
+### 1. Streaming Responses
+- **LLM Client** (`pkg/llm/ollama.go`): Added `ChatStream()` method with `StreamCallback`
+  - Reads Ollama API response line by line
+  - Emits chunks via callback as they arrive
+  - Returns full accumulated response
+- **Agent** (`pkg/core/agent.go`): Added "streaming" event type
+  - `ProcessMessageWithEvents()` now uses `ChatStream()` instead of `Chat()`
+  - Emits streaming events for each chunk
+- **TUI** (`pkg/tui/app.go`): Real-time streaming display
+  - Accumulates chunks in `streamingBuffer`
+  - Updates streaming log entry in-place
+  - Shows `⠋ streaming...` status
+
+### 2. Multi-line Input
+- **Replaced** `bubbles/textinput` with `bubbles/textarea`
+  - 3-line input area with 2000 char limit
+  - Supports pasting multi-line content
+  - Shows placeholder: "Ask me anything... (ctrl+enter to send)"
+- **Updated Keyboard Shortcuts**:
+  - `ctrl+enter` - Send message (was `enter`)
+  - `alt+↑` / `alt+↓` - Navigate history (was `↑` / `↓`)
+  - `enter` - Now adds newline in textarea
+
+### 3. Multi-line User Input Display
+- User input with multiple lines displays with proper indentation:
+  ```
+  > First line
+    Second line
+    Third line
+  ```
+
+---
+
+## Previous Session Accomplishments (Phase 1.6)
 
 ### 1. Status Line (`pkg/tui/app.go`)
 - **Dynamic Status**: Shows current agent state in real-time
@@ -87,24 +122,28 @@ Final markdown-rendered response here
 ↑↓ history  ctrl+l clear  ctrl+u clear input  esc quit
 ```
 
-## What's Still Needed for True Claude Code Style
+## Claude Code UI Features - COMPLETE
 
-1. **Streaming responses**: Show text as it arrives, not all at once
-2. **Multi-line input**: Support for pasting multi-line content
+All core features now implemented:
+- ✓ Streaming responses (real-time text display)
+- ✓ Multi-line input (textarea with ctrl+enter to send)
+- ✓ Status line (thinking/streaming/executing)
+- ✓ Keyboard navigation (history with alt+arrows)
+- ✓ Visual separators between conversations
 
 ## Files Modified This Session
 
 | File | Changes |
 |------|---------|
-| `pkg/tui/app.go` | Added status line, input history, keyboard shortcuts, separators |
-| `pkg/tui/styles.go` | Added MutedColor, SuccessColor, status/separator/shortcut styles |
+| `pkg/llm/ollama.go` | Added `StreamCallback`, `ChatStream()` method |
+| `pkg/core/agent.go` | Added "streaming" event, switched to `ChatStream()` |
+| `pkg/tui/app.go` | Replaced textinput with textarea, streaming handling |
 
 ## Next Steps for Future Agents
 
-1. **Streaming**: Implement character-by-character response streaming
-2. **Multi-line Input**: Support pasting multi-line content (textarea)
-3. **Phase 2 Tools**: Implement `FileSystem` and `CodeSearch` tools
-4. **History Persistence**: Save conversation to `.zap/history.jsonl`
+1. **Phase 2 Tools**: Implement `FileSystem` and `CodeSearch` tools
+2. **History Persistence**: Save conversation to `.zap/history.jsonl`
+3. **Variable System**: Save/reuse variables across requests
 
 ## Build & Run
 ```bash
@@ -112,4 +151,10 @@ go build -o zap.exe ./cmd/zap
 ./zap.exe
 ```
 
-**The UI is now much closer to Claude Code style. Core polish complete.**
+## Keyboard Shortcuts
+- `ctrl+enter` - Send message
+- `alt+↑` / `alt+↓` - Navigate history
+- `ctrl+l` - Clear screen
+- `esc` - Quit
+
+**The Claude Code-style UI is now complete. Ready for Phase 2!**
