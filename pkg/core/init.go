@@ -54,7 +54,7 @@ func createDefaultConfig() error {
 	config := Config{
 		OllamaURL:    "https://ollama.com",
 		OllamaAPIKey: "", // To be filled by user
-		DefaultModel: "llama3",
+		DefaultModel: "qwen3-coder:480b-cloud",
 		Theme:        "dark",
 	}
 

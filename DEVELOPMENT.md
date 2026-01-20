@@ -1,8 +1,8 @@
 # ZAP Development Guide
 
-## Project Status: PHASE 1.5 - TUI REDESIGN COMPLETE
+## Project Status: PHASE 1.6 - UI REFINEMENTS COMPLETE
 
-The TUI has been redesigned from a colorful chat interface to a minimal, log-centric design inspired by Claude Code. Core agent functionality remains solid.
+The TUI has been redesigned from a colorful chat interface to a minimal, log-centric design inspired by Claude Code. UI now includes status line, input history, and keyboard shortcuts.
 
 ### Current Structure
 ```
@@ -91,12 +91,14 @@ go build -o zap.exe ./cmd/zap
 - `lipgloss` - Minimal styling
 
 ### Styling
-Minimal 5-color palette:
+Minimal 7-color palette:
 - `#6c6c6c` - Dim (thinking, observations, help)
 - `#e0e0e0` - Text (user input, responses)
-- `#7aa2f7` - Accent (prompt, title)
+- `#7aa2f7` - Accent (prompt, title, shortcuts)
 - `#f7768e` - Error
 - `#9ece6a` - Tool calls
+- `#545454` - Muted (separators)
+- `#73daca` - Success (future use)
 
 Log prefixes:
 - `> ` - User input
@@ -104,6 +106,13 @@ Log prefixes:
 - `  tool ` - Tool being called
 - `  result ` - Tool observation
 - `  error ` - Errors
+- `───` - Conversation separator
+
+### Keyboard Shortcuts
+- `↑` / `↓` - Navigate input history
+- `ctrl+l` - Clear screen
+- `ctrl+u` - Clear input line
+- `ctrl+c` / `esc` - Quit
 
 ### Message Flow
 ```
@@ -128,10 +137,12 @@ agentDoneMsg signals completion
 
 ### For True Claude Code Style
 1. Streaming responses (show text as it arrives)
-2. Better log formatting and word wrapping
-3. Status line showing current state
-4. Keyboard navigation through history
-5. Multi-line input support
+2. Multi-line input support (textarea for pasting)
+
+### Completed in Phase 1.6
+- ~~Status line showing current state~~ ✓
+- ~~Keyboard navigation through history~~ ✓
+- ~~Better log formatting~~ ✓
 
 ### Phase 2 Goals
 1. `FileSystem` tool - Read local code

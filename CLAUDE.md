@@ -52,13 +52,22 @@ type Tool interface {
 - `bubbles/textinput` - Single-line input with `> ` prompt
 - `bubbles/spinner` - Loading indicator
 - `glamour` - Markdown rendering for responses
+- Status line showing current state (thinking/executing tool)
+- Input history navigation (↑/↓ arrows)
 
-**Styling (pkg/tui/styles.go)**: Minimal 5-color palette with log prefixes:
+**Styling (pkg/tui/styles.go)**: Minimal 7-color palette with log prefixes:
 - `> ` user input
 - `  thinking ` agent reasoning
 - `  tool ` tool calls
 - `  result ` observations
 - `  error ` errors
+- `───` conversation separator
+
+**Keyboard Shortcuts**:
+- `↑` / `↓` - Navigate input history
+- `ctrl+l` - Clear screen
+- `ctrl+u` - Clear input line
+- `ctrl+c` / `esc` - Quit
 
 ### Configuration
 
@@ -92,7 +101,7 @@ User Input → TUI captures Enter
 | File | Purpose |
 |------|---------|
 | `pkg/core/agent.go` | ReAct loop + event system |
-| `pkg/tui/app.go` | Minimal TUI with viewport, textinput, spinner |
-| `pkg/tui/styles.go` | 5-color palette, log prefixes |
+| `pkg/tui/app.go` | Minimal TUI with viewport, textinput, spinner, status line, history |
+| `pkg/tui/styles.go` | 7-color palette, log prefixes, keyboard shortcut styles |
 | `pkg/llm/ollama.go` | Ollama Cloud client with Bearer auth |
 | `pkg/core/tools/http.go` | HTTP request tool |

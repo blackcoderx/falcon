@@ -17,22 +17,27 @@ import (
 
 // logEntry represents a single log line in the UI
 type logEntry struct {
-	Type    string // "user", "thinking", "tool", "observation", "response", "error"
+	Type    string // "user", "thinking", "tool", "observation", "response", "error", "separator"
 	Content string
 }
 
 // model is the Bubble Tea model
 type model struct {
-	viewport  viewport.Model
-	textinput textinput.Model
-	spinner   spinner.Model
-	logs      []logEntry
-	thinking  bool
-	width     int
-	height    int
-	agent     *core.Agent
-	ready     bool
-	renderer  *glamour.TermRenderer
+	viewport     viewport.Model
+	textinput    textinput.Model
+	spinner      spinner.Model
+	logs         []logEntry
+	thinking     bool
+	width        int
+	height       int
+	agent        *core.Agent
+	ready        bool
+	renderer     *glamour.TermRenderer
+	inputHistory []string // history of user inputs
+	historyIdx   int      // current position in history (-1 = new input)
+	savedInput   string   // saved input when navigating history
+	status       string   // current status: "idle", "thinking", "tool:name"
+	currentTool  string   // name of tool currently being executed
 }
 
 // agentEventMsg wraps an agent event for the TUI
@@ -89,13 +94,18 @@ func initialModel() model {
 	)
 
 	return model{
-		textinput: ti,
-		spinner:   sp,
-		logs:      []logEntry{},
-		thinking:  false,
-		agent:     agent,
-		ready:     false,
-		renderer:  renderer,
+		textinput:    ti,
+		spinner:      sp,
+		logs:         []logEntry{},
+		thinking:     false,
+		agent:        agent,
+		ready:        false,
+		renderer:     renderer,
+		inputHistory: []string{},
+		historyIdx:   -1,
+		savedInput:   "",
+		status:       "idle",
+		currentTool:  "",
 	}
 }
 
@@ -137,12 +147,59 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "esc":
 			return m, tea.Quit
+		case "ctrl+l":
+			// Clear screen
+			m.logs = []logEntry{}
+			m.updateViewportContent()
+			return m, nil
+		case "ctrl+u":
+			// Clear input line
+			m.textinput.SetValue("")
+			m.historyIdx = -1
+			return m, nil
+		case "up":
+			// Navigate history backwards
+			if !m.thinking && len(m.inputHistory) > 0 {
+				if m.historyIdx == -1 {
+					// Save current input before navigating
+					m.savedInput = m.textinput.Value()
+					m.historyIdx = len(m.inputHistory) - 1
+				} else if m.historyIdx > 0 {
+					m.historyIdx--
+				}
+				m.textinput.SetValue(m.inputHistory[m.historyIdx])
+				m.textinput.CursorEnd()
+				return m, nil
+			}
+		case "down":
+			// Navigate history forwards
+			if !m.thinking && m.historyIdx != -1 {
+				if m.historyIdx < len(m.inputHistory)-1 {
+					m.historyIdx++
+					m.textinput.SetValue(m.inputHistory[m.historyIdx])
+				} else {
+					// Return to saved input
+					m.historyIdx = -1
+					m.textinput.SetValue(m.savedInput)
+				}
+				m.textinput.CursorEnd()
+				return m, nil
+			}
 		case "enter":
 			if m.textinput.Value() != "" && !m.thinking {
 				userInput := m.textinput.Value()
+				// Add separator if there are previous logs
+				if len(m.logs) > 0 {
+					m.logs = append(m.logs, logEntry{Type: "separator", Content: ""})
+				}
 				m.logs = append(m.logs, logEntry{Type: "user", Content: userInput})
+				// Add to history
+				m.inputHistory = append(m.inputHistory, userInput)
+				m.historyIdx = -1
+				m.savedInput = ""
 				m.textinput.SetValue("")
 				m.thinking = true
+				m.status = "thinking"
 				m.updateViewportContent()
 
 				return m, tea.Batch(
@@ -182,20 +239,29 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.event.Type {
 		case "thinking":
 			m.logs = append(m.logs, logEntry{Type: "thinking", Content: msg.event.Content})
+			m.status = "thinking"
 		case "tool_call":
 			m.logs = append(m.logs, logEntry{Type: "tool", Content: msg.event.Content})
+			m.status = "tool"
+			m.currentTool = msg.event.Content
 		case "observation":
 			m.logs = append(m.logs, logEntry{Type: "observation", Content: msg.event.Content})
+			m.status = "thinking"
+			m.currentTool = ""
 		case "answer":
 			m.logs = append(m.logs, logEntry{Type: "response", Content: msg.event.Content})
+			m.status = "idle"
 		case "error":
 			m.logs = append(m.logs, logEntry{Type: "error", Content: msg.event.Content})
+			m.status = "idle"
 		}
 		m.updateViewportContent()
 		cmds = append(cmds, m.spinner.Tick)
 
 	case agentDoneMsg:
 		m.thinking = false
+		m.status = "idle"
+		m.currentTool = ""
 		if msg.err != nil {
 			m.logs = append(m.logs, logEntry{Type: "error", Content: msg.err.Error()})
 		}
@@ -246,10 +312,11 @@ func (m *model) formatLogEntry(entry logEntry) string {
 	case "tool":
 		return ToolStyle.Render(ToolPrefix + entry.Content)
 	case "observation":
-		// Truncate long observations
+		// Format observation with better truncation
 		content := entry.Content
-		if len(content) > 300 {
-			content = content[:300] + "..."
+		if len(content) > 200 {
+			// Show first 150 chars and last 30 chars
+			content = content[:150] + " ... " + content[len(content)-30:]
 		}
 		return ObservationStyle.Render(ObservationPrefix + content)
 	case "response":
@@ -263,6 +330,8 @@ func (m *model) formatLogEntry(entry logEntry) string {
 		return ResponseStyle.Render(entry.Content)
 	case "error":
 		return ErrorStyle.Render(ErrorPrefix + entry.Content)
+	case "separator":
+		return SeparatorStyle.Render(Separator)
 	default:
 		return entry.Content
 	}
@@ -287,19 +356,45 @@ func (m model) View() string {
 	b.WriteString(m.viewport.View())
 	b.WriteString("\n\n")
 
-	// Input
+	// Input or status line
 	if m.thinking {
-		b.WriteString(ThinkingStyle.Render(m.spinner.View() + " processing..."))
+		statusText := m.renderStatus()
+		b.WriteString(statusText)
 	} else {
 		b.WriteString(m.textinput.View())
 	}
 	b.WriteString("\n")
 
-	// Help
-	help := HelpStyle.Render("esc to quit")
-	b.WriteString(help)
+	// Help line with shortcuts
+	b.WriteString(m.renderHelp())
 
 	return b.String()
+}
+
+// renderStatus renders the current agent status
+func (m model) renderStatus() string {
+	switch m.status {
+	case "thinking":
+		return StatusActiveStyle.Render(m.spinner.View() + " thinking...")
+	case "tool":
+		return StatusToolStyle.Render(m.spinner.View() + " executing " + m.currentTool)
+	default:
+		return StatusIdleStyle.Render("ready")
+	}
+}
+
+// renderHelp renders the help line with keyboard shortcuts
+func (m model) renderHelp() string {
+	var parts []string
+
+	if !m.thinking {
+		parts = append(parts, ShortcutKeyStyle.Render("↑↓")+ShortcutDescStyle.Render(" history"))
+	}
+	parts = append(parts, ShortcutKeyStyle.Render("ctrl+l")+ShortcutDescStyle.Render(" clear"))
+	parts = append(parts, ShortcutKeyStyle.Render("ctrl+u")+ShortcutDescStyle.Render(" clear input"))
+	parts = append(parts, ShortcutKeyStyle.Render("esc")+ShortcutDescStyle.Render(" quit"))
+
+	return strings.Join(parts, "  ")
 }
 
 // Run starts the TUI application

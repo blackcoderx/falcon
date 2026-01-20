@@ -1,7 +1,7 @@
 # ZAP Development Progress
 
 **Last Updated:** 2026-01-20
-**Current Phase:** Phase 1.5 - TUI Redesign Complete
+**Current Phase:** Phase 1.6 - UI Refinements Complete
 
 ---
 
@@ -28,6 +28,15 @@
 - [x] Add Claude Code-style log prefixes (`> `, `  thinking `, `  tool `, etc.)
 - [x] Enable async agent execution with real-time event updates
 - [x] Enable mouse support for viewport scrolling
+
+### Phase 1.6: UI Refinements - COMPLETE
+- [x] Add status line showing current state (idle/thinking/executing tool)
+- [x] Add input history navigation (↑/↓ arrow keys)
+- [x] Add keyboard shortcuts (`ctrl+l` clear, `ctrl+u` clear input)
+- [x] Add visual separators (`───`) between conversations
+- [x] Improve help line with styled keyboard shortcuts
+- [x] Better observation truncation (first 150 + last 30 chars)
+- [x] Expand color palette with `MutedColor` and `SuccessColor`
 
 ---
 
@@ -77,13 +86,13 @@ zap/
 ## What's Still Needed
 
 ### For True Claude Code Style
-The current UI is minimal but not yet at Claude Code level:
+The current UI is getting closer to Claude Code level:
 
 1. **Streaming responses** - Show text as it arrives character by character
-2. **Better formatting** - Sophisticated word wrapping and truncation
-3. **Status line** - Persistent line showing current state
-4. **Keyboard navigation** - Arrow keys to scroll history
-5. **Multi-line input** - Support pasting multi-line content
+2. **Multi-line input** - Support pasting multi-line content
+3. ~~**Status line** - Persistent line showing current state~~ ✓ DONE
+4. ~~**Keyboard navigation** - Arrow keys to scroll history~~ ✓ DONE
+5. ~~**Better formatting** - Sophisticated word wrapping and truncation~~ ✓ DONE
 
 ### Phase 2: Security & Context (NEXT)
 - [ ] `.env` loader and secret manager

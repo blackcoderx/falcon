@@ -6,11 +6,13 @@ import (
 
 // Minimal color palette
 var (
-	DimColor    = lipgloss.Color("#6c6c6c")
-	TextColor   = lipgloss.Color("#e0e0e0")
-	AccentColor = lipgloss.Color("#7aa2f7")
-	ErrorColor  = lipgloss.Color("#f7768e")
-	ToolColor   = lipgloss.Color("#9ece6a")
+	DimColor     = lipgloss.Color("#6c6c6c")
+	TextColor    = lipgloss.Color("#e0e0e0")
+	AccentColor  = lipgloss.Color("#7aa2f7")
+	ErrorColor   = lipgloss.Color("#f7768e")
+	ToolColor    = lipgloss.Color("#9ece6a")
+	MutedColor   = lipgloss.Color("#545454")
+	SuccessColor = lipgloss.Color("#73daca")
 )
 
 // Log entry styles
@@ -39,6 +41,29 @@ var (
 
 	HelpStyle = lipgloss.NewStyle().
 			Foreground(DimColor)
+
+	// Status line styles
+	StatusIdleStyle = lipgloss.NewStyle().
+			Foreground(DimColor)
+
+	StatusActiveStyle = lipgloss.NewStyle().
+				Foreground(AccentColor).
+				Bold(true)
+
+	StatusToolStyle = lipgloss.NewStyle().
+			Foreground(ToolColor).
+			Bold(true)
+
+	// Separator style
+	SeparatorStyle = lipgloss.NewStyle().
+			Foreground(MutedColor)
+
+	// Shortcut key style
+	ShortcutKeyStyle = lipgloss.NewStyle().
+				Foreground(AccentColor)
+
+	ShortcutDescStyle = lipgloss.NewStyle().
+				Foreground(DimColor)
 )
 
 // Log prefixes (Claude Code style)
@@ -48,4 +73,5 @@ const (
 	ToolPrefix        = "  tool "
 	ObservationPrefix = "  result "
 	ErrorPrefix       = "  error "
+	Separator         = "───"
 )
