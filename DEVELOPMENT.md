@@ -1,8 +1,8 @@
 # ZAP Development Guide
 
-## Project Status: PHASE 1.7 - STREAMING & MULTI-LINE INPUT COMPLETE
+## Project Status: SPRINT 1 COMPLETE - CODEBASE TOOLS
 
-The TUI now has all Claude Code-style features: streaming responses, multi-line input, status line, and keyboard shortcuts. Ready for Phase 2 (tools).
+The agent now has codebase-aware tools: `read_file`, `list_files`, and `search_code`. Ready for Sprint 2 (Error-Code Pipeline).
 
 ### Current Structure
 ```
@@ -13,12 +13,14 @@ zap/
 │   │   ├── init.go           # .zap folder initialization
 │   │   ├── agent.go          # ReAct Agent + Event System
 │   │   └── tools/
-│   │       └── http.go       # HTTP Tool (implements core.Tool)
+│   │       ├── http.go       # HTTP Tool (implements core.Tool)
+│   │       ├── file.go       # read_file, list_files tools
+│   │       └── search.go     # search_code tool (ripgrep/native)
 │   ├── llm/
 │   │   └── ollama.go         # Ollama Cloud client (Bearer auth)
 │   └── tui/
 │       ├── app.go            # Minimal TUI (viewport, textinput, spinner)
-│       └── styles.go         # Minimal styling (5 colors, log prefixes)
+│       └── styles.go         # Minimal styling (7 colors, log prefixes)
 ```
 
 ## Working with the Agent
@@ -137,19 +139,29 @@ agentDoneMsg signals completion
 
 ## What's Still Needed
 
-### Claude Code Style - COMPLETE
-All UI features implemented:
-- ~~Streaming responses~~ ✓
-- ~~Status line~~ ✓
-- ~~Keyboard navigation~~ ✓
-- ~~Better log formatting~~ ✓
-- ~~Viewport scrolling~~ ✓
+### Sprint 1 - Codebase Tools - COMPLETE
+All codebase tools implemented:
+- ✓ `read_file` - Read file contents with security bounds
+- ✓ `list_files` - List files with glob patterns (**/*.go)
+- ✓ `search_code` - Ripgrep/native search for patterns
+- ✓ Updated system prompt for codebase awareness
 
-### Phase 2 Goals
-1. `FileSystem` tool - Read local code
-2. `CodeSearch` tool - Grep-based search
-3. History persistence to `.zap/history.jsonl`
-4. Variable system for reusable values
+### Sprint 2 Goals (Error-Code Pipeline)
+1. Enhanced system prompt for error diagnosis
+2. HTTP status code interpretation helpers
+3. Stack trace parsing from responses
+4. Error context extraction
+5. Natural language → HTTP request
+
+## Running on Other Projects
+
+Run ZAP from the target project directory:
+```bash
+cd /path/to/your/project
+/c/Users/user/zap/zap.exe
+```
+
+The tools use the current working directory as the project root for security bounds.
 
 ## Debugging
 

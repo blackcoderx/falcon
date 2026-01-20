@@ -213,26 +213,45 @@ func (a *Agent) ProcessMessageWithEvents(input string, callback EventCallback) (
 
 func (a *Agent) buildSystemPrompt() string {
 	var sb strings.Builder
-	sb.WriteString("You are ZAP, an AI-powered API testing assistant. ")
-	sb.WriteString("You use tools to help users test their APIs.\n\n")
+	sb.WriteString("You are ZAP, an AI-powered API debugging assistant. ")
+	sb.WriteString("You help developers test APIs and debug errors by reading their codebase.\n\n")
 
 	sb.WriteString("AVAILABLE TOOLS:\n")
 	for _, tool := range a.tools {
 		sb.WriteString(fmt.Sprintf("- %s: %s. Parameters: %s\n", tool.Name(), tool.Description(), tool.Parameters()))
 	}
 
-	sb.WriteString("\nWhen you need to use a tool, you MUST use this format:\n")
+	sb.WriteString("\n## DEBUGGING WORKFLOW\n")
+	sb.WriteString("When a user asks about an API error or wants to understand their code:\n")
+	sb.WriteString("1. Use list_files to explore the project structure if needed\n")
+	sb.WriteString("2. Use search_code to find relevant handlers, routes, or error patterns\n")
+	sb.WriteString("3. Use read_file to examine the specific code\n")
+	sb.WriteString("4. Provide diagnosis with file:line references\n\n")
+
+	sb.WriteString("When you need to use a tool, you MUST use this format:\n")
 	sb.WriteString("Thought: <your reasoning>\n")
 	sb.WriteString("ACTION: <tool_name>(<json_arguments>)\n\n")
 
-	sb.WriteString("Example:\n")
-	sb.WriteString("Thought: I need to check the user profile.\n")
-	sb.WriteString("ACTION: http_request({\"method\": \"GET\", \"url\": \"https://api.github.com/user\"})\n\n")
+	sb.WriteString("Examples:\n")
+	sb.WriteString("Thought: I need to find where the /users endpoint is handled.\n")
+	sb.WriteString("ACTION: search_code({\"pattern\": \"/users\", \"file_pattern\": \"*.go\"})\n\n")
+
+	sb.WriteString("Thought: I need to read the handler file to understand the error.\n")
+	sb.WriteString("ACTION: read_file({\"path\": \"pkg/handlers/users.go\"})\n\n")
+
+	sb.WriteString("Thought: I need to test the API endpoint.\n")
+	sb.WriteString("ACTION: http_request({\"method\": \"GET\", \"url\": \"http://localhost:8080/users\"})\n\n")
 
 	sb.WriteString("When you have the final answer, use this format:\n")
-	sb.WriteString("Final Answer: <your response to the user>\n\n")
+	sb.WriteString("Final Answer: <your response with file:line references when relevant>\n\n")
 
-	sb.WriteString("Be concise. If a tool call fails, explain why and try to fix it.")
+	sb.WriteString("Always show:\n")
+	sb.WriteString("- The file path and line number when referencing code\n")
+	sb.WriteString("- The relevant code snippet\n")
+	sb.WriteString("- Your diagnosis or answer\n")
+	sb.WriteString("- Suggested fix if applicable\n\n")
+
+	sb.WriteString("Be concise and precise. If a tool call fails, explain why and try a different approach.")
 
 	return sb.String()
 }

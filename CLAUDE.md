@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ZAP is an AI-powered API testing assistant that runs in the terminal. It uses local LLMs (Ollama) or cloud providers to provide an autonomous agent that can make HTTP requests and interact with APIs.
+ZAP is an AI-powered API debugging assistant that runs in the terminal. It combines API testing with codebase awareness - when an API returns an error, ZAP can search your code to find the cause and suggest fixes. Uses local LLMs (Ollama) or cloud providers.
 
 ## Build & Run Commands
 
@@ -25,7 +25,7 @@ go build -o zap.exe ./cmd/zap
 
 - **cmd/zap/** - Application entry point using Cobra CLI framework
 - **pkg/core/** - Agent logic, event system, and initialization
-- **pkg/core/tools/** - Agent tools (HTTP client, etc.)
+- **pkg/core/tools/** - Agent tools (HTTP, file, search)
 - **pkg/llm/** - LLM client implementations (Ollama)
 - **pkg/tui/** - Minimal terminal UI using Bubble Tea
 
@@ -103,8 +103,19 @@ User Input → TUI captures Enter
 
 | File | Purpose |
 |------|---------|
-| `pkg/core/agent.go` | ReAct loop + event system |
+| `pkg/core/agent.go` | ReAct loop + event system + codebase-aware system prompt |
 | `pkg/tui/app.go` | Minimal TUI with viewport, textinput, spinner, status line, history |
 | `pkg/tui/styles.go` | 7-color palette, log prefixes, keyboard shortcut styles |
-| `pkg/llm/ollama.go` | Ollama Cloud client with Bearer auth |
+| `pkg/llm/ollama.go` | Ollama Cloud client with Bearer auth + streaming |
 | `pkg/core/tools/http.go` | HTTP request tool |
+| `pkg/core/tools/file.go` | `read_file` and `list_files` tools |
+| `pkg/core/tools/search.go` | `search_code` tool (ripgrep with native fallback) |
+
+## Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `http_request` | Make HTTP requests (GET/POST/PUT/DELETE) |
+| `read_file` | Read file contents (with 100KB limit) |
+| `list_files` | List files with glob patterns (`**/*.go`) |
+| `search_code` | Search for patterns in codebase (uses ripgrep if available) |

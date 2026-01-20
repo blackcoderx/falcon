@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"os"
 	"strings"
 
 	"github.com/blackcoderx/zap/pkg/core"
@@ -71,9 +72,17 @@ func initialModel() model {
 		defaultModel = "llama3"
 	}
 
+	// Get current working directory for codebase tools
+	workDir, _ := os.Getwd()
+
 	client := llm.NewOllamaClient(ollamaURL, defaultModel, ollamaAPIKey)
 	agent := core.NewAgent(client)
+
+	// Register tools
 	agent.RegisterTool(tools.NewHTTPTool())
+	agent.RegisterTool(tools.NewReadFileTool(workDir))
+	agent.RegisterTool(tools.NewListFilesTool(workDir))
+	agent.RegisterTool(tools.NewSearchCodeTool(workDir))
 
 	// Create text input (single line, auto-wraps visually)
 	ti := textinput.New()

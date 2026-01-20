@@ -1,155 +1,108 @@
-# ZAP Session Summary: Streaming Responses (Phase 1.7)
+# ZAP Session Summary: Sprint 1 - Codebase Tools
 
-This session completed the Claude Code-style UI by adding streaming responses and fixing viewport scrolling.
+This session completed Sprint 1 by implementing codebase-aware tools for the agent.
 
-## Key Accomplishments (This Session - Phase 1.7)
+## Key Accomplishments (Sprint 1)
 
-### 1. Streaming Responses
-- **LLM Client** (`pkg/llm/ollama.go`): Added `ChatStream()` method with `StreamCallback`
-  - Reads Ollama API response line by line
-  - Emits chunks via callback as they arrive
-  - Returns full accumulated response
-- **Agent** (`pkg/core/agent.go`): Added "streaming" event type
-  - `ProcessMessageWithEvents()` now uses `ChatStream()` instead of `Chat()`
-  - Emits streaming events for each chunk
-- **TUI** (`pkg/tui/app.go`): Real-time streaming display
-  - Accumulates chunks in `streamingBuffer`
-  - Updates streaming log entry in-place
-  - Shows `⠋ streaming...` status
+### 1. Read File Tool (`pkg/core/tools/file.go`)
+- `ReadFileTool` reads file contents with path parameter
+- Security: Only allows reading files within project directory
+- Size limit: 100KB max to prevent memory issues
+- Returns file contents or helpful error messages
 
-### 2. Viewport Scrolling Fix
-- **Problem**: Viewport always jumped to bottom, preventing scroll-up
-- **Solution**: Only auto-scroll when user is already at bottom or agent is thinking
-- **Added**: `pgup`/`pgdown`/`home`/`end` keyboard support for scrolling
+### 2. List Files Tool (`pkg/core/tools/file.go`)
+- `ListFilesTool` lists files with glob pattern support
+- Supports `**/*.go` recursive patterns
+- Skips hidden directories, node_modules, vendor, .git
+- Returns up to 100 files with relative paths
 
-### 3. Input Style (Claude Code Style)
-- Single-line `textinput` with auto-wrap (not multi-line textarea)
-- `enter` to send message
-- `↑`/`↓` for history navigation
-- Clean, minimal prompt: `> `
+### 3. Search Code Tool (`pkg/core/tools/search.go`)
+- `SearchCodeTool` searches for patterns in codebase
+- Uses ripgrep if available (fast), falls back to native Go search
+- Supports file pattern filters (e.g., `*.go`)
+- Returns file:line:content format
+- Limits: 50 matches, 3 per file, 200 char lines
 
----
+### 4. Tool Registration (`pkg/tui/app.go`)
+- All three new tools registered in `initialModel()`
+- Tools receive current working directory for security bounds
 
-## Previous Session Accomplishments (Phase 1.6)
-
-### 1. Status Line (`pkg/tui/app.go`)
-- **Dynamic Status**: Shows current agent state in real-time
-  - `⠋ thinking...` - When agent is reasoning
-  - `⠋ executing http_request` - When running a tool (shows tool name)
-  - Input prompt when idle
-- **New Fields**: Added `status` and `currentTool` to model struct
-
-### 2. Input History Navigation
-- **Arrow Key Support**: Navigate through previous commands
-  - `↑` - Go to previous command
-  - `↓` - Go to next command / return to current input
-- **State Preservation**: Saves current input when navigating, restores when returning
-- **New Fields**: Added `inputHistory`, `historyIdx`, `savedInput` to model
-
-### 3. Keyboard Shortcuts
-- `ctrl+l` - Clear screen (clears all logs)
-- `ctrl+u` - Clear current input line
-- `esc` - Quit application
-
-### 4. Visual Separators
-- Added `───` separator between conversations
-- New `separator` log entry type
-- Automatically added before each new user input (if logs exist)
-
-### 5. Improved Help Line
-- Shows all available shortcuts with styled keys
-- Format: `↑↓ history  ctrl+l clear  ctrl+u clear input  esc quit`
-- Keyboard shortcuts styled with accent color
-
-### 6. Better Observation Display
-- Changed truncation from simple cut to: first 150 chars + ` ... ` + last 30 chars
-- Preserves context from both start and end of long responses
-
-### 7. Expanded Color Palette (`pkg/tui/styles.go`)
-- Added `MutedColor` (#545454) - For separators
-- Added `SuccessColor` (#73daca) - For future use
-- Added new styles: `StatusIdleStyle`, `StatusActiveStyle`, `StatusToolStyle`, `SeparatorStyle`, `ShortcutKeyStyle`, `ShortcutDescStyle`
+### 5. Codebase-Aware System Prompt (`pkg/core/agent.go`)
+- Updated prompt teaches agent the debugging workflow
+- Agent knows to: list_files → search_code → read_file → diagnose
+- Includes examples for each tool
+- Emphasizes file:line references in answers
 
 ---
 
-## Previous Session Accomplishments (Phase 1.5)
+## Previous Session Accomplishments
 
-### Agent Event System (`pkg/core/agent.go`)
-- **New Types**: Added `AgentEvent` struct and `EventCallback` type
-- **Real-time Events**: Created `ProcessMessageWithEvents()` that emits events at each ReAct stage:
-  - `thinking` - When agent is reasoning
-  - `tool_call` - When a tool is about to execute
-  - `observation` - When tool returns result
-  - `answer` - Final response ready
-  - `error` - Something went wrong
-- **Backwards Compatible**: Original `ProcessMessage()` still works
+### Phase 1.7: Streaming & Multi-line Input
+- `ChatStream()` method in ollama.go for streaming responses
+- "streaming" event type in agent
+- Fixed viewport scrolling (only auto-scroll when at bottom)
+- pgup/pgdown/home/end keyboard support
 
-### Minimal TUI Redesign (`pkg/tui/app.go`)
-- **Viewport**: Replaced fixed message box with scrollable `bubbles/viewport`
-- **TextInput**: Single-line input with `> ` prompt using `bubbles/textinput`
-- **Spinner**: Loading indicator using `bubbles/spinner`
-- **Glamour**: Markdown rendering for agent responses
-- **Async Events**: Agent runs in goroutine, sends events via `program.Send()`
-- **Mouse Support**: Enabled mouse cell motion for viewport scrolling
-
-### Minimal Styling (`pkg/tui/styles.go`)
-- **Reduced Palette**: Started with 5 colors (dim, text, accent, error, tool)
-- **Removed**: All decorative borders, emoji indicators, vibrant colors
-- **Prefixes**: Claude Code-style log prefixes (`> `, `  thinking `, `  tool `, etc.)
+### Phase 1.6: UI Refinement
+- Status line (thinking/streaming/executing)
+- Input history navigation (↑/↓)
+- Keyboard shortcuts (ctrl+l, ctrl+u, esc)
+- Visual separators between conversations
+- 7-color palette
 
 ---
 
-## Current UI Layout
-```
-zap - AI-powered API testing
+## Files Created This Session
 
-> user input here
-  thinking reasoning (step 1)...
-  tool http_request
-  result {"status": 200, ...}
-Final markdown-rendered response here
-───
-> next question
-⠋ thinking...
-
-↑↓ history  ctrl+l clear  ctrl+u clear input  esc quit
-```
-
-## Claude Code UI Features - COMPLETE
-
-All core features now implemented:
-- ✓ Streaming responses (real-time text display)
-- ✓ Single-line input with auto-wrap
-- ✓ Status line (thinking/streaming/executing)
-- ✓ Keyboard navigation (↑↓ for history)
-- ✓ Visual separators between conversations
-- ✓ Viewport scrolling (pgup/pgdown, mouse wheel)
+| File | Purpose |
+|------|---------|
+| `pkg/core/tools/file.go` | `read_file` and `list_files` tools |
+| `pkg/core/tools/search.go` | `search_code` tool |
 
 ## Files Modified This Session
 
 | File | Changes |
 |------|---------|
-| `pkg/llm/ollama.go` | Added `StreamCallback`, `ChatStream()` method |
-| `pkg/core/agent.go` | Added "streaming" event, switched to `ChatStream()` |
-| `pkg/tui/app.go` | Streaming handling, fixed viewport scrolling |
+| `pkg/tui/app.go` | Register new tools, add os import |
+| `pkg/core/agent.go` | Codebase-aware system prompt |
+| `sprints.md` | Mark Sprint 1 tasks complete |
+| `DEVELOPMENT.md` | Update status and structure |
+| `CLAUDE.md` | Add tool documentation |
 
-## Next Steps for Future Agents
+---
 
-1. **Phase 2 Tools**: Implement `FileSystem` and `CodeSearch` tools
-2. **History Persistence**: Save conversation to `.zap/history.jsonl`
-3. **Variable System**: Save/reuse variables across requests
+## Current Tool Set
+
+| Tool | File | Description |
+|------|------|-------------|
+| `http_request` | `http.go` | HTTP requests (GET/POST/PUT/DELETE) |
+| `read_file` | `file.go` | Read file contents |
+| `list_files` | `file.go` | List files with glob patterns |
+| `search_code` | `search.go` | Search for patterns in code |
+
+## Next Steps (Sprint 2: Error-Code Pipeline)
+
+1. Enhanced system prompt for error diagnosis
+2. HTTP status code interpretation helpers
+3. Stack trace parsing from responses
+4. Error context extraction
+5. Natural language → HTTP request
+
+---
 
 ## Build & Run
+
 ```bash
 go build -o zap.exe ./cmd/zap
 ./zap.exe
 ```
 
-## Keyboard Shortcuts
-- `enter` - Send message
-- `↑` / `↓` - Navigate history
-- `pgup` / `pgdown` - Scroll viewport
-- `ctrl+l` - Clear screen
-- `esc` - Quit
+## Test the New Tools
 
-**The Claude Code-style UI is now complete. Ready for Phase 2!**
+Ask the agent:
+- "What files are in this project?" → Uses `list_files`
+- "What file handles HTTP requests?" → Uses `search_code`
+- "Show me the agent.go file" → Uses `read_file`
+- "What file handles the /users endpoint?" → Full workflow
+
+**Sprint 1 is complete. Ready for Sprint 2: Error-Code Pipeline!**
