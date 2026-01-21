@@ -119,14 +119,14 @@ The killer demo works: Error → Code → Insight
 
 ### Tasks
 
-| Task | File | Effort | Priority |
-|------|------|--------|----------|
-| Enhanced system prompt for error diagnosis | `pkg/core/agent.go` | 4h | P0 |
-| HTTP status code interpretation helpers | `pkg/core/tools/http.go` | 2h | P0 |
-| Stack trace parsing from responses | `pkg/core/analysis.go` | 4h | P0 |
-| Error context extraction | `pkg/core/analysis.go` | 3h | P0 |
-| "Diagnose" command/workflow | `pkg/tui/app.go` | 4h | P0 |
-| Natural language → HTTP request | `pkg/core/agent.go` | 4h | P1 |
+| Task | File | Effort | Status |
+|------|------|--------|--------|
+| Enhanced system prompt for error diagnosis | `pkg/core/agent.go` | 4h | ✅ DONE |
+| HTTP status code interpretation helpers | `pkg/core/tools/http.go` | 2h | ✅ DONE |
+| Stack trace parsing from responses | `pkg/core/analysis.go` | 4h | ✅ DONE |
+| Error context extraction | `pkg/core/analysis.go` | 3h | ✅ DONE |
+| "Diagnose" command/workflow | `pkg/tui/app.go` | 4h | In prompt |
+| Natural language → HTTP request | `pkg/core/agent.go` | 4h | ✅ DONE |
 
 ### System Prompt Enhancement
 
@@ -152,11 +152,11 @@ Always show:
 ```
 
 ### Acceptance Criteria
-- [ ] Agent interprets HTTP status codes correctly
-- [ ] Agent extracts error messages from JSON responses
-- [ ] Agent searches codebase for relevant handlers
-- [ ] Agent shows file:line references
-- [ ] Agent provides actionable diagnosis
+- [x] Agent interprets HTTP status codes correctly
+- [x] Agent extracts error messages from JSON responses
+- [x] Agent searches codebase for relevant handlers
+- [x] Agent shows file:line references
+- [x] Agent provides actionable diagnosis
 
 ### Definition of Done
 1. Make request to endpoint that returns 500
@@ -437,6 +437,6 @@ The query is missing a WHERE clause, causing a full table scan that times out.
 3. **End each sprint** with Definition of Done verification
 4. **Adjust** based on actual velocity and learnings
 
-**Current Sprint:** Sprint 1 - Codebase Tools ✅ COMPLETE
+**Current Sprint:** Sprint 2 - Error-Code Pipeline ✅ COMPLETE
 
-**Next Sprint:** Sprint 2 - Error-Code Pipeline
+**Next Sprint:** Sprint 3 - Persistence & Storage

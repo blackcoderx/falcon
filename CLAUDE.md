@@ -34,8 +34,12 @@ go build -o zap.exe ./cmd/zap
 **Agent (pkg/core/agent.go)**: Implements ReAct (Reason+Act) loop with event system:
 - `ProcessMessage(input)` - Blocking, returns final answer
 - `ProcessMessageWithEvents(input, callback)` - Emits events for real-time UI updates
-- Events: `thinking`, `tool_call`, `observation`, `answer`, `error`
+- Events: `thinking`, `tool_call`, `observation`, `answer`, `error`, `streaming`
 - Max 5 iterations to prevent infinite loops
+- Enhanced system prompt teaches:
+  - Natural language to HTTP request conversion
+  - Error diagnosis workflow (analyze → search → read → diagnose)
+  - Common error patterns and framework hints
 
 **Tool Interface**:
 ```go
@@ -103,11 +107,12 @@ User Input → TUI captures Enter
 
 | File | Purpose |
 |------|---------|
-| `pkg/core/agent.go` | ReAct loop + event system + codebase-aware system prompt |
+| `pkg/core/agent.go` | ReAct loop + event system + error diagnosis prompt |
+| `pkg/core/analysis.go` | Error context extraction, stack trace parsing |
 | `pkg/tui/app.go` | Minimal TUI with viewport, textinput, spinner, status line, history |
 | `pkg/tui/styles.go` | 7-color palette, log prefixes, keyboard shortcut styles |
 | `pkg/llm/ollama.go` | Ollama Cloud client with Bearer auth + streaming |
-| `pkg/core/tools/http.go` | HTTP request tool |
+| `pkg/core/tools/http.go` | HTTP request tool + status code meanings/hints |
 | `pkg/core/tools/file.go` | `read_file` and `list_files` tools |
 | `pkg/core/tools/search.go` | `search_code` tool (ripgrep with native fallback) |
 
@@ -115,7 +120,35 @@ User Input → TUI captures Enter
 
 | Tool | Description |
 |------|-------------|
-| `http_request` | Make HTTP requests (GET/POST/PUT/DELETE) |
-| `read_file` | Read file contents (with 100KB limit) |
-| `list_files` | List files with glob patterns (`**/*.go`) |
-| `search_code` | Search for patterns in codebase (uses ripgrep if available) |
+| `http_request` | Make HTTP requests (GET/POST/PUT/DELETE); includes status code meanings and error hints |
+| `read_file` | Read file contents (100KB limit, security bounded) |
+| `list_files` | List files with glob patterns (`**/*.go`, recursive) |
+| `search_code` | Search patterns in codebase (ripgrep with native fallback) |
+
+## Error Analysis Features
+
+**Error Context Extraction (`pkg/core/analysis.go`)**:
+- `ParseStackTrace()` - Extracts file:line from Python/Go/JS tracebacks
+- `ExtractErrorContext()` - Parses error messages from JSON responses
+- Handles FastAPI/Pydantic validation errors, common error fields
+- `FormatErrorContext()` - Human-readable error summaries
+
+**HTTP Response Enhancement (`pkg/core/tools/http.go`)**:
+- `StatusCodeMeaning()` - Human-readable status code explanations
+- `getErrorHints()` - Context-aware debugging hints (422, 500, etc.)
+- Shows validation error fields when detected
+
+## Current Capabilities
+
+**What ZAP Can Do Now**:
+1. ✓ Test APIs with natural language ("GET users from localhost:8000")
+2. ✓ Diagnose API errors (find broken code, explain cause)
+3. ✓ Search codebase for endpoints and error patterns
+4. ✓ Read source code with context
+5. ✓ Parse stack traces from error responses
+6. ✓ Suggest fixes with code examples
+
+**What's Coming Next**:
+- Sprint 3: Save/load requests to YAML files (persistence)
+- Sprint 4: Polish (JSON syntax highlighting, response diffing)
+- Sprint 5: Launch prep (Postman import, installation script)

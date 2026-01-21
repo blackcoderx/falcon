@@ -1,8 +1,8 @@
 # ZAP Development Guide
 
-## Project Status: SPRINT 1 COMPLETE - CODEBASE TOOLS
+## Project Status: SPRINT 2 COMPLETE - ERROR-CODE PIPELINE
 
-The agent now has codebase-aware tools: `read_file`, `list_files`, and `search_code`. Ready for Sprint 2 (Error-Code Pipeline).
+The killer demo is ready: API errors trigger codebase search and diagnosis with file:line references. Ready for Sprint 3 (Persistence & Storage).
 
 ### Current Structure
 ```
@@ -11,9 +11,10 @@ zap/
 ├── pkg/
 │   ├── core/
 │   │   ├── init.go           # .zap folder initialization
-│   │   ├── agent.go          # ReAct Agent + Event System
+│   │   ├── agent.go          # ReAct Agent + Event System + Error Diagnosis
+│   │   ├── analysis.go       # Stack trace parsing, error extraction
 │   │   └── tools/
-│   │       ├── http.go       # HTTP Tool (implements core.Tool)
+│   │       ├── http.go       # HTTP Tool + status code helpers
 │   │       ├── file.go       # read_file, list_files tools
 │   │       └── search.go     # search_code tool (ripgrep/native)
 │   ├── llm/
@@ -140,18 +141,21 @@ agentDoneMsg signals completion
 ## What's Still Needed
 
 ### Sprint 1 - Codebase Tools - COMPLETE
-All codebase tools implemented:
-- ✓ `read_file` - Read file contents with security bounds
-- ✓ `list_files` - List files with glob patterns (**/*.go)
-- ✓ `search_code` - Ripgrep/native search for patterns
-- ✓ Updated system prompt for codebase awareness
+- ✓ `read_file`, `list_files`, `search_code` tools
+- ✓ Codebase-aware system prompt
 
-### Sprint 2 Goals (Error-Code Pipeline)
-1. Enhanced system prompt for error diagnosis
-2. HTTP status code interpretation helpers
-3. Stack trace parsing from responses
-4. Error context extraction
-5. Natural language → HTTP request
+### Sprint 2 - Error-Code Pipeline - COMPLETE
+- ✓ Enhanced error diagnosis prompt with workflow
+- ✓ HTTP status code meanings and hints
+- ✓ Stack trace parsing (Python, Go, JS)
+- ✓ Error context extraction from JSON
+- ✓ Natural language → HTTP request conversion
+
+### Sprint 3 Goals (Persistence & Storage)
+1. YAML request schema definition
+2. Save/load requests to YAML files
+3. Request history in session
+4. Environment variable substitution
 
 ## Running on Other Projects
 

@@ -127,17 +127,72 @@ func (t *HTTPTool) Run(req HTTPRequest) (*HTTPResponse, error) {
 	}, nil
 }
 
+// StatusCodeMeaning returns a human-readable explanation of HTTP status codes
+func StatusCodeMeaning(code int) string {
+	meanings := map[int]string{
+		200: "OK - Request succeeded",
+		201: "Created - Resource created successfully",
+		204: "No Content - Request succeeded, no response body",
+		400: "Bad Request - Invalid request syntax or missing required fields",
+		401: "Unauthorized - Missing or invalid authentication token",
+		403: "Forbidden - Valid auth but insufficient permissions",
+		404: "Not Found - Endpoint or resource doesn't exist",
+		405: "Method Not Allowed - HTTP method not supported for this endpoint",
+		409: "Conflict - Resource conflict (e.g., duplicate entry)",
+		422: "Unprocessable Entity - Validation failed (check required fields)",
+		429: "Too Many Requests - Rate limit exceeded",
+		500: "Internal Server Error - Server-side exception (check logs/stack trace)",
+		502: "Bad Gateway - Upstream server error",
+		503: "Service Unavailable - Server overloaded or down",
+	}
+
+	if meaning, ok := meanings[code]; ok {
+		return meaning
+	}
+
+	// Generic meanings by range
+	switch {
+	case code >= 200 && code < 300:
+		return "Success"
+	case code >= 300 && code < 400:
+		return "Redirect"
+	case code >= 400 && code < 500:
+		return "Client Error - Check your request"
+	case code >= 500:
+		return "Server Error - Check server logs"
+	default:
+		return "Unknown status code"
+	}
+}
+
 // FormatResponse formats the HTTP response for display
 func (r *HTTPResponse) FormatResponse() string {
 	var sb strings.Builder
 
-	// Status line
-	sb.WriteString(fmt.Sprintf("Status: %s (%dms)\n\n", r.Status, r.Duration.Milliseconds()))
+	// Status line with meaning
+	sb.WriteString(fmt.Sprintf("Status: %s (%dms)\n", r.Status, r.Duration.Milliseconds()))
+	sb.WriteString(fmt.Sprintf("Meaning: %s\n\n", StatusCodeMeaning(r.StatusCode)))
 
-	// Headers
+	// Headers (condensed - only show important ones)
+	importantHeaders := []string{"Content-Type", "Authorization", "X-Request-Id", "X-Error-Code"}
 	sb.WriteString("Headers:\n")
-	for key, value := range r.Headers {
-		sb.WriteString(fmt.Sprintf("  %s: %s\n", key, value))
+	for _, key := range importantHeaders {
+		if value, ok := r.Headers[key]; ok {
+			sb.WriteString(fmt.Sprintf("  %s: %s\n", key, value))
+		}
+	}
+	// Show content-type if not in important headers
+	if ct, ok := r.Headers["Content-Type"]; ok {
+		found := false
+		for _, h := range importantHeaders {
+			if h == "Content-Type" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			sb.WriteString(fmt.Sprintf("  Content-Type: %s\n", ct))
+		}
 	}
 	sb.WriteString("\n")
 
@@ -150,5 +205,42 @@ func (r *HTTPResponse) FormatResponse() string {
 		sb.WriteString(r.Body)
 	}
 
+	// Add error hints for common status codes
+	if r.StatusCode >= 400 {
+		sb.WriteString("\n\n")
+		sb.WriteString(r.getErrorHints())
+	}
+
 	return sb.String()
+}
+
+// getErrorHints provides debugging hints based on status code and response
+func (r *HTTPResponse) getErrorHints() string {
+	var hints []string
+
+	switch r.StatusCode {
+	case 400:
+		hints = append(hints, "Hint: Check request body format and required fields")
+	case 401:
+		hints = append(hints, "Hint: Add Authorization header with valid token")
+	case 403:
+		hints = append(hints, "Hint: User authenticated but lacks permission for this action")
+	case 404:
+		hints = append(hints, "Hint: Verify the URL path and that the resource exists")
+	case 405:
+		hints = append(hints, "Hint: Check if you're using the correct HTTP method (GET/POST/PUT/DELETE)")
+	case 422:
+		hints = append(hints, "Hint: Validation error - check required fields and data types")
+		// Try to extract field errors from common formats
+		if strings.Contains(r.Body, "detail") {
+			hints = append(hints, "Hint: Look at 'detail' field for specific validation errors")
+		}
+	case 500:
+		hints = append(hints, "Hint: Server error - search codebase for the endpoint handler")
+		if strings.Contains(r.Body, "Traceback") || strings.Contains(r.Body, "stack") {
+			hints = append(hints, "Hint: Stack trace detected - look for file:line references")
+		}
+	}
+
+	return strings.Join(hints, "\n")
 }
