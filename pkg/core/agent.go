@@ -27,23 +27,39 @@ type EventCallback func(AgentEvent)
 
 // Agent represents the ZAP AI agent
 type Agent struct {
-	llmClient *llm.OllamaClient
-	tools     map[string]Tool
-	history   []llm.Message
+	llmClient    *llm.OllamaClient
+	tools        map[string]Tool
+	history      []llm.Message
+	lastResponse interface{} // Store last tool response for chaining
 }
 
 // NewAgent creates a new ZAP agent
 func NewAgent(llmClient *llm.OllamaClient) *Agent {
 	return &Agent{
-		llmClient: llmClient,
-		tools:     make(map[string]Tool),
-		history:   []llm.Message{},
+		llmClient:    llmClient,
+		tools:        make(map[string]Tool),
+		history:      []llm.Message{},
+		lastResponse: nil,
 	}
 }
 
 // RegisterTool adds a tool to the agent's arsenal
 func (a *Agent) RegisterTool(tool Tool) {
 	a.tools[tool.Name()] = tool
+}
+
+// ExecuteTool executes a tool by name (used by retry tool)
+func (a *Agent) ExecuteTool(toolName string, args string) (string, error) {
+	tool, ok := a.tools[toolName]
+	if !ok {
+		return "", fmt.Errorf("tool '%s' not found", toolName)
+	}
+	return tool.Execute(args)
+}
+
+// SetLastResponse stores the last response from a tool (for chaining)
+func (a *Agent) SetLastResponse(response interface{}) {
+	a.lastResponse = response
 }
 
 // ProcessMessage handles a user message using ReAct logic
@@ -275,6 +291,78 @@ func (a *Agent) buildSystemPrompt() string {
 	sb.WriteString("- Use list_requests to see all saved requests\n")
 	sb.WriteString("- Use set_environment to switch between dev/prod environments\n")
 	sb.WriteString("- Use list_environments to see available environments\n\n")
+
+	sb.WriteString("## TESTING & VALIDATION TOOLS\n")
+	sb.WriteString("After making HTTP requests, you can validate and extract data:\n\n")
+	sb.WriteString("1. **assert_response** - Validate responses against expected criteria:\n")
+	sb.WriteString("   - Status codes: {\"status_code\": 200, \"status_code_not\": 500}\n")
+	sb.WriteString("   - Headers: {\"headers\": {\"Content-Type\": \"application/json\"}}\n")
+	sb.WriteString("   - Body content: {\"body_contains\": [\"user_id\"], \"body_not_contains\": [\"error\"]}\n")
+	sb.WriteString("   - JSON path: {\"json_path\": {\"$.status\": \"active\", \"$.data.id\": 123}}\n")
+	sb.WriteString("   - Performance: {\"response_time_max_ms\": 500}\n\n")
+	sb.WriteString("2. **extract_value** - Extract data from responses for chaining requests:\n")
+	sb.WriteString("   - JSON path: {\"json_path\": \"$.data.user_id\", \"save_as\": \"user_id\"}\n")
+	sb.WriteString("   - Headers: {\"header\": \"X-Request-Id\", \"save_as\": \"request_id\"}\n")
+	sb.WriteString("   - Cookies: {\"cookie\": \"session_token\", \"save_as\": \"token\"}\n")
+	sb.WriteString("   - Regex: {\"regex\": \"token=([a-z0-9]+)\", \"save_as\": \"auth_token\"}\n\n")
+	sb.WriteString("3. **variable** - Manage session and global variables:\n")
+	sb.WriteString("   - Set: {\"action\": \"set\", \"name\": \"user_id\", \"value\": \"123\", \"scope\": \"session\"}\n")
+	sb.WriteString("   - Get: {\"action\": \"get\", \"name\": \"user_id\"}\n")
+	sb.WriteString("   - List all: {\"action\": \"list\"}\n")
+	sb.WriteString("   - Use {{variable_name}} in http_request URLs, headers, and body\n\n")
+	sb.WriteString("4. **wait** - Add delays for async operations:\n")
+	sb.WriteString("   - {\"duration_ms\": 1000, \"reason\": \"waiting for webhook\"}\n\n")
+	sb.WriteString("5. **retry** - Retry failed requests with backoff:\n")
+	sb.WriteString("   - {\"tool\": \"http_request\", \"args\": {...}, \"max_attempts\": 3, \"retry_delay_ms\": 500, \"backoff\": \"exponential\"}\n\n")
+
+	sb.WriteString("6. **validate_json_schema** - Validate against JSON Schema:\n")
+	sb.WriteString("   - {\"schema\": {\"type\": \"object\", \"required\": [\"id\"], \"properties\": {\"id\": {\"type\": \"integer\"}}}}\n")
+	sb.WriteString("   - Validates types, required fields, formats (email, uri), ranges, lengths\n\n")
+	sb.WriteString("7. **auth_bearer** - Create Bearer token header (JWT, API tokens):\n")
+	sb.WriteString("   - {\"token\": \"{{JWT_TOKEN}}\", \"save_as\": \"auth_header\"}\n")
+	sb.WriteString("   - Use: {\"headers\": {\"Authorization\": \"{{auth_header}}\"}}\n\n")
+	sb.WriteString("8. **auth_basic** - Create HTTP Basic auth header:\n")
+	sb.WriteString("   - {\"username\": \"admin\", \"password\": \"secret\", \"save_as\": \"auth_header\"}\n")
+	sb.WriteString("   - Use: {\"headers\": {\"Authorization\": \"{{auth_header}}\"}}\n\n")
+	sb.WriteString("9. **auth_helper** - Parse JWT tokens, decode Basic auth:\n")
+	sb.WriteString("   - {\"action\": \"parse_jwt\", \"token\": \"{{JWT_TOKEN}}\"}\n")
+	sb.WriteString("   - Shows header, payload (claims), expiration, subject\n\n")
+	sb.WriteString("10. **test_suite** - Run organized test suites:\n")
+	sb.WriteString("   - {\"name\": \"API Tests\", \"tests\": [{\"name\": \"Create user\", \"request\": {...}, \"assertions\": {...}, \"extract\": {...}}]}\n")
+	sb.WriteString("   - Runs tests sequentially, extracts values between tests, returns pass/fail summary\n\n")
+	sb.WriteString("11. **compare_responses** - Compare responses for regression testing:\n")
+	sb.WriteString("   - {\"baseline\": \"baseline_name\", \"current\": \"last_response\", \"ignore_fields\": [\"timestamp\"]}\n")
+	sb.WriteString("   - Detects added, removed, or changed fields\n")
+	sb.WriteString("   - Save baseline: {\"baseline\": \"my_baseline\", \"save_baseline\": true}\n\n")
+
+	sb.WriteString("## REQUEST CHAINING WORKFLOW\n")
+	sb.WriteString("For multi-step API flows:\n")
+	sb.WriteString("1. Make initial request with http_request\n")
+	sb.WriteString("2. Extract needed values with extract_value (saves to variables)\n")
+	sb.WriteString("3. Use {{variable}} in subsequent requests\n")
+	sb.WriteString("4. Validate each step with assert_response\n\n")
+	sb.WriteString("Example: Create user → Extract user_id → Update user\n")
+	sb.WriteString("1. POST /users → extract_value {\"json_path\": \"$.id\", \"save_as\": \"user_id\"}\n")
+	sb.WriteString("2. PUT /users/{{user_id}} with update data\n")
+	sb.WriteString("3. assert_response {\"status_code\": 200, \"body_contains\": [\"updated\"]}\n\n")
+
+	sb.WriteString("## AUTHENTICATION WORKFLOW\n")
+	sb.WriteString("Common auth patterns:\n")
+	sb.WriteString("1. **JWT/Bearer Token**:\n")
+	sb.WriteString("   - POST /auth/login → extract_value {\"json_path\": \"$.token\", \"save_as\": \"jwt\"}\n")
+	sb.WriteString("   - auth_bearer {\"token\": \"{{jwt}}\", \"save_as\": \"auth_header\"}\n")
+	sb.WriteString("   - GET /protected → Use {\"headers\": {\"Authorization\": \"{{auth_header}}\"}}\n\n")
+	sb.WriteString("2. **HTTP Basic Auth**:\n")
+	sb.WriteString("   - auth_basic {\"username\": \"user\", \"password\": \"pass\", \"save_as\": \"auth_header\"}\n")
+	sb.WriteString("   - GET /protected → Use {\"headers\": {\"Authorization\": \"{{auth_header}}\"}}\n\n")
+
+	sb.WriteString("## TEST SUITE WORKFLOW\n")
+	sb.WriteString("For running multiple related tests:\n")
+	sb.WriteString("1. Use test_suite to group tests logically\n")
+	sb.WriteString("2. Tests run sequentially and can share extracted variables\n")
+	sb.WriteString("3. Each test can have request, assertions, and extractions\n")
+	sb.WriteString("4. Suite returns summary: X/Y passed with timing\n")
+	sb.WriteString("5. Use on_failure: \"stop\" to halt on first failure or \"continue\" to run all\n\n")
 
 	sb.WriteString("When you need to use a tool, you MUST use this format:\n")
 	sb.WriteString("Thought: <your reasoning>\n")

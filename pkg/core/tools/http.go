@@ -12,15 +12,19 @@ import (
 
 // HTTPTool provides HTTP request capabilities
 type HTTPTool struct {
-	client *http.Client
+	client          *http.Client
+	responseManager *ResponseManager
+	varStore        *VariableStore
 }
 
 // NewHTTPTool creates a new HTTP tool
-func NewHTTPTool() *HTTPTool {
+func NewHTTPTool(responseManager *ResponseManager, varStore *VariableStore) *HTTPTool {
 	return &HTTPTool{
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
+		responseManager: responseManager,
+		varStore:        varStore,
 	}
 }
 
@@ -58,6 +62,11 @@ func (t *HTTPTool) Parameters() string {
 
 // Execute performs an HTTP request (implements core.Tool)
 func (t *HTTPTool) Execute(args string) (string, error) {
+	// Substitute variables in args if varStore is available
+	if t.varStore != nil {
+		args = t.varStore.Substitute(args)
+	}
+
 	var req HTTPRequest
 	if err := json.Unmarshal([]byte(args), &req); err != nil {
 		return "", fmt.Errorf("failed to parse arguments: %w", err)
@@ -66,6 +75,11 @@ func (t *HTTPTool) Execute(args string) (string, error) {
 	resp, err := t.Run(req)
 	if err != nil {
 		return "", err
+	}
+
+	// Store response for assert/extract tools
+	if t.responseManager != nil {
+		t.responseManager.SetHTTPResponse(resp)
 	}
 
 	return resp.FormatResponse(), nil

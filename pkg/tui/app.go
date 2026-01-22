@@ -82,8 +82,13 @@ func initialModel() model {
 	client := llm.NewOllamaClient(ollamaURL, defaultModel, ollamaAPIKey)
 	agent := core.NewAgent(client)
 
+	// Initialize shared components
+	responseManager := tools.NewResponseManager()
+	varStore := tools.NewVariableStore(zapDir)
+
 	// Register codebase tools
-	agent.RegisterTool(tools.NewHTTPTool())
+	httpTool := tools.NewHTTPTool(responseManager, varStore)
+	agent.RegisterTool(httpTool)
 	agent.RegisterTool(tools.NewReadFileTool(workDir))
 	agent.RegisterTool(tools.NewListFilesTool(workDir))
 	agent.RegisterTool(tools.NewSearchCodeTool(workDir))
@@ -95,6 +100,23 @@ func initialModel() model {
 	agent.RegisterTool(tools.NewListRequestsTool(persistence))
 	agent.RegisterTool(tools.NewListEnvironmentsTool(persistence))
 	agent.RegisterTool(tools.NewSetEnvironmentTool(persistence))
+
+	// Register Sprint 1 testing tools
+	assertTool := tools.NewAssertTool(responseManager)
+	extractTool := tools.NewExtractTool(responseManager, varStore)
+	agent.RegisterTool(assertTool)
+	agent.RegisterTool(extractTool)
+	agent.RegisterTool(tools.NewVariableTool(varStore))
+	agent.RegisterTool(tools.NewWaitTool())
+	agent.RegisterTool(tools.NewRetryTool(agent))
+
+	// Register Sprint 2 tools
+	agent.RegisterTool(tools.NewSchemaValidationTool(responseManager))
+	agent.RegisterTool(tools.NewAuthBearerTool(varStore))
+	agent.RegisterTool(tools.NewAuthBasicTool(varStore))
+	agent.RegisterTool(tools.NewAuthHelperTool(responseManager, varStore))
+	agent.RegisterTool(tools.NewTestSuiteTool(httpTool, assertTool, extractTool, responseManager, varStore, zapDir))
+	agent.RegisterTool(tools.NewCompareResponsesTool(responseManager, zapDir))
 
 	// Create text input (single line, auto-wraps visually)
 	ti := textinput.New()

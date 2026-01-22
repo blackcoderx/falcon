@@ -135,27 +135,56 @@ User Input → TUI captures Enter
 | `pkg/tui/app.go` | Minimal TUI with viewport, textinput, spinner, status line, history |
 | `pkg/tui/styles.go` | 7-color palette, log prefixes, keyboard shortcut styles |
 | `pkg/llm/ollama.go` | Ollama Cloud client with Bearer auth + streaming |
-| `pkg/core/tools/http.go` | HTTP request tool + status code meanings/hints |
+| `pkg/core/tools/http.go` | HTTP request tool + status code meanings/hints + variable substitution |
 | `pkg/core/tools/file.go` | `read_file` and `list_files` tools |
 | `pkg/core/tools/search.go` | `search_code` tool (ripgrep with native fallback) |
 | `pkg/core/tools/persistence.go` | Save/load requests, environment management |
+| `pkg/core/tools/assert.go` | Response validation tool (status, headers, body, timing) |
+| `pkg/core/tools/extract.go` | Value extraction tool (JSON path, headers, cookies, regex) |
+| `pkg/core/tools/variables.go` | Variable management (session/global with persistence) |
+| `pkg/core/tools/timing.go` | Wait and retry tools (delays, backoff strategies) |
+| `pkg/core/tools/manager.go` | Response manager for sharing HTTP responses between tools |
 | `pkg/storage/schema.go` | YAML request/environment schema definitions |
 | `pkg/storage/yaml.go` | YAML file read/write operations |
 | `pkg/storage/env.go` | Environment variable substitution |
 
 ## Available Tools
 
+### Core API Tools
 | Tool | Description |
 |------|-------------|
-| `http_request` | Make HTTP requests (GET/POST/PUT/DELETE); includes status code meanings and error hints |
-| `read_file` | Read file contents (100KB limit, security bounded) |
-| `list_files` | List files with glob patterns (`**/*.go`, recursive) |
-| `search_code` | Search patterns in codebase (ripgrep with native fallback) |
+| `http_request` | Make HTTP requests (GET/POST/PUT/DELETE); includes status code meanings, error hints, and variable substitution |
 | `save_request` | Save API request to YAML file with {{VAR}} placeholders |
 | `load_request` | Load saved request from YAML (substitutes environment variables) |
 | `list_requests` | List all saved requests in `.zap/requests/` |
 | `set_environment` | Set active environment (dev, prod, etc.) |
 | `list_environments` | List available environments in `.zap/environments/` |
+
+### Testing & Validation Tools (Sprint 1)
+| Tool | Description |
+|------|-------------|
+| `assert_response` | Validate API responses (status codes, headers, body content, JSON path, performance) |
+| `extract_value` | Extract values from responses (JSON path, headers, cookies, regex) for request chaining |
+| `variable` | Manage session/global variables (set, get, delete, list) with disk persistence |
+| `wait` | Add delays for async operations (webhooks, polling, rate limiting) |
+| `retry` | Retry tool execution with configurable attempts, delay, and exponential backoff |
+
+### Advanced Testing Tools (Sprint 2)
+| Tool | Description |
+|------|-------------|
+| `validate_json_schema` | Validate response bodies against JSON Schema specs (draft-07, draft-2020-12) |
+| `auth_bearer` | Create Bearer token authorization headers (JWT, API tokens) |
+| `auth_basic` | Create HTTP Basic authentication headers (base64 encoded) |
+| `auth_helper` | Parse JWT tokens, decode Basic auth, show claims and metadata |
+| `test_suite` | Run organized test suites with multiple tests, assertions, and value extraction |
+| `compare_responses` | Compare API responses for regression testing with baseline management |
+
+### Codebase Analysis Tools
+| Tool | Description |
+|------|-------------|
+| `read_file` | Read file contents (100KB limit, security bounded) |
+| `list_files` | List files with glob patterns (`**/*.go`, recursive) |
+| `search_code` | Search patterns in codebase (ripgrep with native fallback) |
 
 ## Error Analysis Features
 
@@ -186,12 +215,32 @@ User Input → TUI captures Enter
 11. ✓ Display request timing (ms) and response size (KB)
 12. ✓ CLI mode for scripting (`--request`, `--env` flags)
 13. ✓ Copy responses to clipboard (`ctrl+y`)
+14. ✓ **Validate responses** (status, headers, body, JSON path, performance)
+15. ✓ **Chain requests** (extract values → use in next request)
+16. ✓ **Manage variables** (session/global with persistence)
+17. ✓ **Retry failed requests** (exponential backoff, conditional retry)
+18. ✓ **Wait for async operations** (webhooks, polling)
+19. ✓ **JSON Schema validation** (contract testing, type validation)
+20. ✓ **JWT/Bearer token auth** (automatic header creation)
+21. ✓ **HTTP Basic auth** (base64 encoding)
+22. ✓ **JWT token parsing** (decode claims, expiration, subject)
+23. ✓ **Test suites** (organized multi-test execution)
+24. ✓ **Regression testing** (baseline comparison, diff detection)
 
-**What's Coming Next (Sprint 5 - Launch Prep)**:
-- Installation script (`curl | sh`)
-- README with demo GIF
-- Postman collection import
-- GitHub releases with binaries
+**Sprint 2 Completed Features**:
+- ✓ JSON Schema validation (contract testing)
+- ✓ Bearer token auth (JWT, API tokens)
+- ✓ HTTP Basic authentication
+- ✓ JWT token parsing
+- ✓ Test suite organization
+- ✓ Regression testing with baseline comparison
+
+**Future Enhancements (Sprint 3+)**:
+- OAuth2 authentication flows
+- Performance/load testing
+- Mock response generation
+- Webhook listeners
+- Complex workflows with conditionals
 
 ## CLI Usage
 
