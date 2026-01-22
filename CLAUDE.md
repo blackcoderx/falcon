@@ -75,6 +75,7 @@ type Tool interface {
 - `pgup` / `pgdown` - Scroll viewport
 - `ctrl+l` - Clear screen
 - `ctrl+u` - Clear input line
+- `ctrl+y` - Copy last response to clipboard
 - `ctrl+c` / `esc` - Quit
 
 ### Configuration
@@ -181,7 +182,29 @@ User Input → TUI captures Enter
 7. ✓ Save/load requests to YAML files
 8. ✓ Environment variable substitution ({{VAR}})
 9. ✓ Switch between dev/prod environments
+10. ✓ JSON syntax highlighting in responses
+11. ✓ Display request timing (ms) and response size (KB)
+12. ✓ CLI mode for scripting (`--request`, `--env` flags)
+13. ✓ Copy responses to clipboard (`ctrl+y`)
 
-**What's Coming Next**:
-- Sprint 4: Polish (JSON syntax highlighting, response diffing)
-- Sprint 5: Launch prep (Postman import, installation script)
+**What's Coming Next (Sprint 5 - Launch Prep)**:
+- Installation script (`curl | sh`)
+- README with demo GIF
+- Postman collection import
+- GitHub releases with binaries
+
+## CLI Usage
+
+ZAP supports both interactive and non-interactive modes:
+
+```bash
+# Interactive mode (default)
+./zap.exe
+
+# Execute a saved request with environment
+./zap.exe --request get-users --env prod
+./zap.exe -r get-users -e dev
+
+# Show help
+./zap.exe --help
+```

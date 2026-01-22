@@ -130,14 +130,12 @@ zap/
 - ✓ **Sprint 4**: Developer Experience (JSON highlight, CLI flags, Clipboard)
 
 ### Sprint 5: Launch Prep (NEXT)
-- [ ] JSON syntax highlighting in responses
-- [ ] Better error messages
-- [ ] `--help` and usage documentation
-- [ ] `--request` CLI flag for scripting
-- [ ] Request timing display
-- [ ] Response size display
-- [ ] Copy response to clipboard
-
+- [ ] Installation script (`curl | sh`)
+- [ ] README with demo GIF
+- [ ] Postman collection import
+- [ ] GitHub releases with binaries
+- [ ] Landing page
+- [ ] Demo video (30 seconds)
 
 ### Future
 - [ ] `FileEdit` tool with human approval

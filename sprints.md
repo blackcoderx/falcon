@@ -251,15 +251,16 @@ Feels polished, ready for public use.
 
 ### Tasks
 
-| Task | File | Effort | Priority |
-|------|------|--------|----------|
-| JSON syntax highlighting in responses | `pkg/tui/highlight.go` | 4h | P0 |
-| Better error messages | `pkg/core/*.go` | 3h | P0 |
-| `--help` and usage documentation | `cmd/zap/main.go` | 3h | P0 |
-| `--request` CLI flag for scripting | `cmd/zap/main.go` | 4h | P1 |
-| Request timing display | `pkg/tui/app.go` | 2h | P1 |
-| Response size display | `pkg/tui/app.go` | 1h | P1 |
-| Copy response to clipboard | `pkg/tui/app.go` | 2h | P2 |
+| Task | File | Effort | Priority | Status |
+|------|------|--------|----------|--------|
+| JSON syntax highlighting in responses | `pkg/tui/highlight.go` | 4h | P0 | ✅ DONE |
+| Better error messages | `pkg/core/*.go` | 3h | P0 | ✅ DONE |
+| `--help` and usage documentation | `cmd/zap/main.go` | 3h | P0 | ✅ DONE |
+| `--request` CLI flag for scripting | `cmd/zap/main.go` | 4h | P1 | ✅ DONE |
+| `--env` CLI flag for environment | `cmd/zap/main.go` | 1h | P1 | ✅ DONE |
+| Request timing display | `pkg/core/tools/http.go` | 2h | P1 | ✅ DONE |
+| Response size display | `pkg/core/tools/http.go` | 1h | P1 | ✅ DONE |
+| Copy response to clipboard | `pkg/tui/app.go` | 2h | P2 | ✅ DONE |
 
 ### CLI Interface
 

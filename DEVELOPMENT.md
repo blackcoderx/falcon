@@ -135,6 +135,7 @@ Log prefixes:
 - `pgup` / `pgdown` - Scroll viewport
 - `ctrl+l` - Clear screen
 - `ctrl+u` - Clear input
+- `ctrl+y` - Copy last response to clipboard
 - `ctrl+c` / `esc` - Quit
 
 ### Message Flow
