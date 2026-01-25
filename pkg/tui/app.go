@@ -42,6 +42,7 @@ type model struct {
 	status          string   // current status: "idle", "thinking", "tool:name", "streaming"
 	currentTool     string   // name of tool currently being executed
 	streamingBuffer string   // buffer for accumulating streaming content
+	modelName       string   // current LLM model name for badge display
 }
 
 // agentEventMsg wraps an agent event for the TUI
@@ -151,6 +152,12 @@ func initialModel() model {
 	// Get .zap directory path
 	zapDir := core.ZapFolderName
 
+	// Get model name for display
+	modelName := viper.GetString("default_model")
+	if modelName == "" {
+		modelName = "llama3"
+	}
+
 	client := newLLMClient()
 	agent := core.NewAgent(client)
 
@@ -189,6 +196,7 @@ func initialModel() model {
 		status:          "idle",
 		currentTool:     "",
 		streamingBuffer: "",
+		modelName:       modelName,
 	}
 }
 
@@ -321,12 +329,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 
-		// Initialize or resize viewport
-		headerHeight := 2
-		inputHeight := 2
-		helpHeight := 1
-		viewportHeight := m.height - headerHeight - inputHeight - helpHeight - 2
+		// No header - maximize viewport space
+		inputHeight := 1
+		footerHeight := 1
+		margins := 3
 
+		viewportHeight := m.height - inputHeight - footerHeight - margins
 		if viewportHeight < 5 {
 			viewportHeight = 5
 		}
@@ -340,7 +348,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewport.Height = viewportHeight
 		}
 
-		m.textinput.Width = m.width - 6
+		// Account for model badge width in input
+		badgeWidth := lipgloss.Width(ModelBadgeStyle.Render(m.modelName))
+		m.textinput.Width = m.width - badgeWidth - 10
 
 	case agentEventMsg:
 		// Handle agent events
@@ -443,57 +453,57 @@ func (m *model) updateViewportContent() {
 }
 
 func (m *model) formatLogEntry(entry logEntry) string {
+	contentWidth := m.width - 6
+	if contentWidth < 40 {
+		contentWidth = 40
+	}
+
 	switch entry.Type {
 	case "user":
-		// Handle multi-line user input
-		lines := strings.Split(entry.Content, "\n")
-		if len(lines) == 1 {
-			return UserStyle.Render(UserPrefix + entry.Content)
-		}
-		// Multi-line: prefix first line, indent rest
-		var result strings.Builder
-		result.WriteString(UserStyle.Render(UserPrefix + lines[0]))
-		for _, line := range lines[1:] {
-			result.WriteString("\n")
-			result.WriteString(UserStyle.Render("  " + line))
-		}
-		return result.String()
+		// Blue left border + gray background (OpenCode style)
+		return UserMessageStyle.Width(contentWidth).Render(entry.Content)
+
 	case "thinking":
-		return ThinkingStyle.Render(ThinkingPrefix + entry.Content)
+		// Hide thinking entries for cleaner display
+		return ""
+
 	case "tool":
-		return ToolStyle.Render(ToolPrefix + entry.Content)
+		// Circle prefix + tool name: args (dimmed)
+		return ToolCallStyle.Render(ToolCallPrefix + entry.Content)
+
 	case "observation":
-		// If the observation contains markdown code blocks, render with Glamour
+		// Tool results - show in dimmed text, truncated
+		content := entry.Content
+		if len(content) > 500 {
+			content = content[:400] + "\n... (truncated)"
+		}
+		// If contains markdown code blocks, render with glamour
 		if strings.Contains(entry.Content, "```") && m.renderer != nil {
 			rendered, err := m.renderer.Render(entry.Content)
 			if err == nil {
 				return strings.TrimSpace(rendered)
 			}
 		}
+		return ToolCallStyle.Render("  " + content) // Indent results, no circle
 
-		// Format observation with better truncation
-		content := entry.Content
-		if len(content) > 1000 {
-			// Show first 800 chars and last 100 chars
-			content = content[:800] + " ... " + content[len(content)-100:]
-		}
-		return ObservationStyle.Render(ObservationPrefix + content)
 	case "streaming":
-		// Show streaming content as-is (raw LLM output)
-		return ThinkingStyle.Render("  " + entry.Content)
+		return AgentMessageStyle.Render(entry.Content)
+
 	case "response":
-		// Render markdown for responses
 		if m.renderer != nil {
 			rendered, err := m.renderer.Render(entry.Content)
 			if err == nil {
 				return strings.TrimSpace(rendered)
 			}
 		}
-		return ResponseStyle.Render(entry.Content)
+		return AgentMessageStyle.Render(entry.Content)
+
 	case "error":
-		return ErrorStyle.Render(ErrorPrefix + entry.Content)
+		return ErrorStyle.Render("  Error: " + entry.Content)
+
 	case "separator":
-		return SeparatorStyle.Render(Separator)
+		return "" // No visible separators in OpenCode style
+
 	default:
 		return entry.Content
 	}
@@ -506,29 +516,16 @@ func (m model) View() string {
 
 	var b strings.Builder
 
-	// Header
-	title := lipgloss.NewStyle().
-		Foreground(AccentColor).
-		Bold(true).
-		Render("zap")
-	subtitle := HelpStyle.Render(" - AI-powered API testing")
-	b.WriteString(title + subtitle + "\n\n")
-
-	// Viewport (logs)
+	// Viewport (messages) - no header, maximize space
 	b.WriteString(m.viewport.View())
-	b.WriteString("\n\n")
-
-	// Input or status line
-	if m.thinking {
-		statusText := m.renderStatus()
-		b.WriteString(statusText)
-	} else {
-		b.WriteString(m.textinput.View())
-	}
 	b.WriteString("\n")
 
-	// Help line with shortcuts
-	b.WriteString(m.renderHelp())
+	// Input area
+	b.WriteString(m.renderInputArea())
+	b.WriteString("\n")
+
+	// Footer
+	b.WriteString(m.renderFooter())
 
 	return b.String()
 }
@@ -547,18 +544,40 @@ func (m model) renderStatus() string {
 	}
 }
 
-// renderHelp renders the help line with keyboard shortcuts
-func (m model) renderHelp() string {
+// renderInputArea renders the OpenCode-style input area with model badge
+func (m model) renderInputArea() string {
+	if m.thinking {
+		statusText := m.renderStatus()
+		return InputAreaStyle.Width(m.width - 2).Render(statusText)
+	}
+
+	inputView := m.textinput.View()
+	badge := ModelBadgeStyle.Render(m.modelName)
+
+	// Calculate spacing to push badge to right
+	spacing := m.width - lipgloss.Width(inputView) - lipgloss.Width(badge) - 6
+	if spacing < 1 {
+		spacing = 1
+	}
+
+	inputLine := inputView + strings.Repeat(" ", spacing) + badge
+	return InputAreaStyle.Width(m.width - 2).Render(inputLine)
+}
+
+// renderFooter renders the footer with keyboard shortcuts (OpenCode style)
+func (m model) renderFooter() string {
 	var parts []string
 
-	if !m.thinking {
+	if m.thinking {
+		parts = append(parts, ShortcutKeyStyle.Render("esc")+ShortcutDescStyle.Render(" interrupt"))
+	} else {
+		parts = append(parts, ShortcutKeyStyle.Render("esc")+ShortcutDescStyle.Render(" quit"))
 		parts = append(parts, ShortcutKeyStyle.Render("↑↓")+ShortcutDescStyle.Render(" history"))
 	}
 	parts = append(parts, ShortcutKeyStyle.Render("ctrl+l")+ShortcutDescStyle.Render(" clear"))
 	parts = append(parts, ShortcutKeyStyle.Render("ctrl+y")+ShortcutDescStyle.Render(" copy"))
-	parts = append(parts, ShortcutKeyStyle.Render("esc")+ShortcutDescStyle.Render(" quit"))
 
-	return strings.Join(parts, "  ")
+	return FooterStyle.Width(m.width).Render(strings.Join(parts, " | "))
 }
 
 // Run starts the TUI application.

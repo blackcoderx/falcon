@@ -13,6 +13,12 @@ var (
 	ToolColor    = lipgloss.Color("#9ece6a")
 	MutedColor   = lipgloss.Color("#545454")
 	SuccessColor = lipgloss.Color("#73daca")
+
+	// OpenCode-style colors
+	UserMessageBg = lipgloss.Color("#2a2a2a") // Gray background for user messages
+	InputAreaBg   = lipgloss.Color("#2a2a2a") // Matches user messages
+	FooterBg      = lipgloss.Color("#1a1a1a") // Darker footer
+	ModelBadgeBg  = lipgloss.Color("#565f89") // Model name badge
 )
 
 // Log entry styles
@@ -66,7 +72,55 @@ var (
 				Foreground(DimColor)
 )
 
-// Log prefixes (Claude Code style)
+// OpenCode-style message block styles
+var (
+	// User message: blue left border + gray background
+	UserMessageStyle = lipgloss.NewStyle().
+				Background(UserMessageBg).
+				BorderStyle(lipgloss.ThickBorder()).
+				BorderForeground(AccentColor).
+				BorderLeft(true).
+				BorderTop(false).
+				BorderRight(false).
+				BorderBottom(false).
+				PaddingLeft(1).
+				PaddingRight(1).
+				MarginTop(1).
+				MarginBottom(1)
+
+	// Tool calls: dimmed with circle prefix
+	ToolCallStyle = lipgloss.NewStyle().
+			Foreground(DimColor)
+
+	// Agent messages: plain text
+	AgentMessageStyle = lipgloss.NewStyle().
+				Foreground(TextColor)
+
+	// Input area: matches user message style
+	InputAreaStyle = lipgloss.NewStyle().
+			Background(InputAreaBg).
+			BorderStyle(lipgloss.ThickBorder()).
+			BorderForeground(AccentColor).
+			BorderLeft(true).
+			BorderTop(false).
+			BorderRight(false).
+			BorderBottom(false).
+			PaddingLeft(1)
+
+	// Footer bar
+	FooterStyle = lipgloss.NewStyle().
+			Background(FooterBg).
+			Foreground(DimColor).
+			Padding(0, 1)
+
+	// Model badge
+	ModelBadgeStyle = lipgloss.NewStyle().
+			Background(ModelBadgeBg).
+			Foreground(TextColor).
+			Padding(0, 1)
+)
+
+// Log prefixes (Claude Code style - kept for compatibility)
 const (
 	UserPrefix        = "> "
 	ThinkingPrefix    = "  thinking "
@@ -74,4 +128,7 @@ const (
 	ObservationPrefix = "  result "
 	ErrorPrefix       = "  error "
 	Separator         = "───"
+
+	// OpenCode-style prefix
+	ToolCallPrefix = "○ " // Circle prefix for tool calls
 )
