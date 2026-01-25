@@ -103,13 +103,39 @@ func newSpinner() spinner.Model {
 
 // newTextInput creates a text input with the ZAP style.
 // No prompt prefix - clean input area.
+// init.go
+
+// newTextInput creates a text input with the ZAP style.
 func newTextInput() textinput.Model {
 	ti := textinput.New()
 	ti.Placeholder = "Ask me anything..."
 	ti.Focus()
 	ti.CharLimit = 2000
-	ti.Width = 80 // Initial width, will be updated on resize
+	ti.Width = 80
 	ti.Prompt = "" // No prompt prefix
+
+	// --- FIX STARTS HERE ---
+
+	// We need to match the textinput background to the container background
+	// defined in your tui.go (InputAreaBg)
+
+	// 1. The text you type
+	ti.TextStyle = lipgloss.NewStyle().
+		Foreground(TextColor).
+		Background(InputAreaBg)
+
+	// 2. The placeholder text ("Ask me anything...")
+	ti.PlaceholderStyle = lipgloss.NewStyle().
+		Foreground(DimColor).
+		Background(InputAreaBg)
+
+	// 3. The blinking cursor
+	ti.Cursor.Style = lipgloss.NewStyle().
+		Foreground(AccentColor).
+		Background(InputAreaBg)
+
+	// --- FIX ENDS HERE ---
+
 	return ti
 }
 

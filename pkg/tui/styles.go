@@ -97,9 +97,8 @@ var (
 				BorderTop(false).
 				BorderRight(true).
 				BorderBottom(false).
-				Padding(1, 1, 1, 1).
-				Margin(1, 1, 1, 1).
-				Width(80)
+				Padding(1, 2).
+				Margin(1, 0)
 
 	// Tool calls: dimmed with circle prefix
 	ToolCallStyle = lipgloss.NewStyle().
