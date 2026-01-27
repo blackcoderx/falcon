@@ -1,12 +1,21 @@
 package tui
 
 import (
+	"time"
+
 	"github.com/blackcoderx/zap/pkg/core"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
+
+// animTick returns a command that sends animation tick messages at ~30fps.
+func animTick() tea.Cmd {
+	return tea.Tick(time.Second/30, func(t time.Time) tea.Msg {
+		return animTickMsg(t)
+	})
+}
 
 // runAgentAsync starts the agent in a goroutine and sends events via the program.
 // This allows the TUI to remain responsive while the agent processes the request.
@@ -59,6 +68,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.spinner, cmd = m.spinner.Update(msg)
 			cmds = append(cmds, cmd)
 		}
+
+	case animTickMsg:
+		m = m.handleAnimTick()
+		cmds = append(cmds, animTick())
 	}
 
 	// Update textinput (for regular character input)
@@ -76,12 +89,31 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+// handleAnimTick updates the harmonica spring animation state.
+func (m Model) handleAnimTick() Model {
+	if !m.thinking {
+		return m
+	}
+
+	// Update spring physics
+	m.animPos, m.animVel = m.animSpring.Update(m.animPos, m.animVel, m.animTarget)
+
+	// Oscillate: flip target when position gets close
+	if m.animTarget > 0.5 && m.animPos > 0.85 {
+		m.animTarget = 0.0
+	} else if m.animTarget < 0.5 && m.animPos < 0.15 {
+		m.animTarget = 1.0
+	}
+
+	return m
+}
+
 // handleWindowResize adjusts the layout when the terminal is resized.
 func (m Model) handleWindowResize(msg tea.WindowSizeMsg) Model {
 	m.width = msg.Width
 	m.height = msg.Height
 
-	// Calculate viewport dimensions
+	// Calculate viewport dimensions accounting for padding
 	inputHeight := 1
 	footerHeight := 1
 	margins := 3
@@ -91,18 +123,26 @@ func (m Model) handleWindowResize(msg tea.WindowSizeMsg) Model {
 		viewportHeight = 5
 	}
 
+	viewportWidth := m.width - 2
+	if viewportWidth < 40 {
+		viewportWidth = 40
+	}
+
 	if !m.ready {
-		m.viewport = viewport.New(m.width-2, viewportHeight)
+		m.viewport = viewport.New(viewportWidth, viewportHeight)
 		m.viewport.SetContent("")
 		m.ready = true
 	} else {
-		m.viewport.Width = m.width - 2
+		m.viewport.Width = viewportWidth
 		m.viewport.Height = viewportHeight
 	}
 
-	// Account for model badge width in input
+	// Update text input width
 	badgeWidth := lipgloss.Width(ModelBadgeStyle.Render(m.modelName))
 	m.textinput.Width = m.width - badgeWidth - 10
+
+	// Update glamour renderer for new width
+	m.updateGlamourWidth(m.width - ContentPadLeft - ContentPadRight - 10)
 
 	return m
 }
@@ -132,7 +172,11 @@ func (m Model) handleAgentEvent(msg agentEventMsg) Model {
 	case "tool_call":
 		// Clear streaming when tool is called
 		m.streamingBuffer = ""
-		m.logs = append(m.logs, logEntry{Type: "tool", Content: msg.event.Content})
+		m.logs = append(m.logs, logEntry{
+			Type:     "tool",
+			Content:  msg.event.Content,
+			ToolArgs: msg.event.ToolArgs,
+		})
 		m.status = "tool"
 		m.currentTool = msg.event.Content
 
@@ -159,6 +203,17 @@ func (m Model) handleAgentEvent(msg agentEventMsg) Model {
 	case "tool_usage":
 		if msg.event.ToolUsage != nil {
 			usage := msg.event.ToolUsage
+
+			// Update the most recent tool entry with usage data
+			for i := len(m.logs) - 1; i >= 0; i-- {
+				if m.logs[i].Type == "tool" {
+					m.logs[i].ToolUsed = usage.ToolCurrent
+					m.logs[i].ToolLimit = usage.ToolLimit
+					break
+				}
+			}
+
+			// Update model-level tracking
 			m.totalCalls = usage.TotalCalls
 			m.totalLimit = usage.TotalLimit
 			m.lastToolName = usage.ToolName
@@ -201,6 +256,11 @@ func (m Model) handleAgentDone(msg agentDoneMsg) Model {
 	m.lastToolName = ""
 	m.lastToolCount = 0
 	m.lastToolLimit = 0
+
+	// Reset animation
+	m.animPos = 0.0
+	m.animVel = 0.0
+	m.animTarget = 1.0
 
 	if msg.err != nil {
 		m.logs = append(m.logs, logEntry{Type: "error", Content: msg.err.Error()})

@@ -23,7 +23,8 @@ type Tool interface {
 type AgentEvent struct {
 	Type             string // "thinking", "tool_call", "observation", "answer", "error", "streaming", "tool_usage", "confirmation_required"
 	Content          string
-	ToolUsage        *ToolUsageEvent  // Present only for "tool_usage" events
+	ToolArgs         string            // Tool arguments (present only for "tool_call" events)
+	ToolUsage        *ToolUsageEvent   // Present only for "tool_usage" events
 	FileConfirmation *FileConfirmation // Present only for "confirmation_required" events
 }
 
@@ -377,8 +378,8 @@ func (a *Agent) ProcessMessageWithEvents(input string, callback EventCallback) (
 				continue
 			}
 
-			// Emit tool call event
-			callback(AgentEvent{Type: "tool_call", Content: toolName})
+			// Emit tool call event with arguments
+			callback(AgentEvent{Type: "tool_call", Content: toolName, ToolArgs: toolArgs})
 
 			// Increment counters before execution
 			a.toolCounts[toolName]++

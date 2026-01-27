@@ -20,7 +20,7 @@ func (m Model) View() string {
 	b.WriteString(m.viewport.View())
 	b.WriteString("\n")
 
-	// Input area
+	// Input area with horizontal margin
 	b.WriteString(m.renderInputArea())
 	b.WriteString("\n")
 
@@ -35,12 +35,18 @@ func (m Model) View() string {
 func (m *Model) updateViewportContent() {
 	var content strings.Builder
 
+	// Top padding - space between terminal window and first message
+	content.WriteString("\n")
+
 	// In confirmation mode, show the diff view
 	if m.confirmationMode && m.pendingConfirmation != nil {
 		content.WriteString(m.renderConfirmationView())
 	} else {
 		for _, entry := range m.logs {
 			line := m.formatLogEntry(entry)
+			if line == "" {
+				continue
+			}
 			content.WriteString(line)
 			content.WriteString("\n")
 		}
@@ -58,123 +64,181 @@ func (m *Model) updateViewportContent() {
 	}
 }
 
+// boxWidth returns the shared content width for user message and input boxes.
+// Both use the same value so their edges align perfectly.
+func (m *Model) boxWidth() int {
+	// Account for MarginLeft + border + padding on each side
+	w := m.width - ContentPadLeft - ContentPadRight - 6
+	if w < 40 {
+		w = 40
+	}
+	return w
+}
+
 // formatLogEntry formats a single log entry for display.
 func (m *Model) formatLogEntry(entry logEntry) string {
-	contentWidth := m.width - 6
-	if contentWidth < 40 {
-		contentWidth = 40
-	}
+	pad := strings.Repeat(" ", ContentPadLeft)
 
 	switch entry.Type {
 	case "user":
-		// Blue left border + gray background (OpenCode style)
-		return UserMessageStyle.Width(contentWidth).Render(entry.Content)
+		// MarginLeft/Top/Bottom are on the style — no manual pad or \n needed
+		return UserMessageStyle.Width(m.boxWidth()).Render(entry.Content)
 
 	case "thinking":
-		// Hide thinking entries for cleaner display
 		return ""
 
 	case "tool":
-		// Circle prefix + tool name: args (dimmed)
-		return ToolCallStyle.Render(ToolCallPrefix + entry.Content)
+		return pad + m.formatCompactToolCall(entry)
 
 	case "observation":
-		// Tool results - show in dimmed text, truncated
-		content := entry.Content
-		if len(content) > 500 {
-			content = content[:400] + "\n... (truncated)"
-		}
-		// If contains markdown code blocks, render with glamour
-		if strings.Contains(entry.Content, "```") && m.renderer != nil {
-			rendered, err := m.renderer.Render(entry.Content)
-			if err == nil {
-				return strings.TrimSpace(rendered)
-			}
-		}
-		return ToolCallStyle.Render("  " + content) // Indent results, no circle
+		return ""
 
 	case "streaming":
+		// MarginLeft/Top are on AgentMessageStyle
 		return AgentMessageStyle.Render(entry.Content)
 
 	case "response":
 		if m.renderer != nil {
 			rendered, err := m.renderer.Render(entry.Content)
 			if err == nil {
-				return strings.TrimSpace(rendered)
+				// Add left padding to each line of rendered markdown
+				lines := strings.Split(strings.TrimSpace(rendered), "\n")
+				for i, line := range lines {
+					lines[i] = pad + line
+				}
+				return "\n" + strings.Join(lines, "\n")
 			}
 		}
 		return AgentMessageStyle.Render(entry.Content)
 
 	case "error":
-		return ErrorStyle.Render("  Error: " + entry.Content)
+		return pad + ErrorStyle.Render("  Error: "+entry.Content)
 
 	case "separator":
-		return "" // No visible separators in OpenCode style
+		return ""
 
 	default:
-		return entry.Content
+		return pad + entry.Content
 	}
 }
 
-// renderStatus renders the current agent status.
-func (m Model) renderStatus() string {
+// formatCompactToolCall formats a tool call as a single compact line.
+// Format: tool_name (args_summary) used/limit
+func (m *Model) formatCompactToolCall(entry logEntry) string {
+	// Tool name in warm orange
+	name := ToolNameCompactStyle.Render(entry.Content)
+
+	// Truncate args for compact display
+	args := entry.ToolArgs
+	if len(args) > 60 {
+		args = args[:57] + "..."
+	}
+	argsDisplay := ToolArgsCompactStyle.Render("(" + args + ")")
+
+	// Usage fraction
+	var usageDisplay string
+	if entry.ToolLimit > 0 {
+		usageDisplay = ToolUsageCompactStyle.Render(
+			fmt.Sprintf(" %d/%d", entry.ToolUsed, entry.ToolLimit),
+		)
+	}
+
+	return name + " " + argsDisplay + usageDisplay
+}
+
+// formatObservationCard formats a tool observation/result in a card style.
+func (m *Model) formatObservationCard(entry logEntry, contentWidth int) string {
+	content := entry.Content
+
+	// Truncate very long observations
+	if len(content) > 500 {
+		content = content[:400] + "\n... (truncated)"
+	}
+
+	// If contains markdown code blocks, render with glamour
+	if strings.Contains(content, "```") && m.renderer != nil {
+		rendered, err := m.renderer.Render(content)
+		if err == nil {
+			content = strings.TrimSpace(rendered)
+		}
+	}
+
+	// Render in response card
+	cardWidth := contentWidth - 4 // Account for card border/padding
+	if cardWidth < 30 {
+		cardWidth = 30
+	}
+
+	return ResponseCardStyle.Width(cardWidth).Render(content)
+}
+
+// renderStatus renders the current agent status text (without circle).
+func (m Model) renderStatusText() string {
 	switch m.status {
 	case "thinking":
-		return StatusActiveStyle.Render(m.spinner.View() + " thinking...")
+		return StatusLabelStyle.Render("thinking")
 	case "streaming":
-		return StatusActiveStyle.Render(m.spinner.View() + " streaming...")
+		return StatusLabelStyle.Render("streaming")
 	case "tool":
-		return StatusToolStyle.Render(m.spinner.View() + " executing " + m.currentTool)
+		return StatusLabelStyle.Render("tool calling")
 	default:
 		return StatusIdleStyle.Render("ready")
 	}
 }
 
-// renderInputArea renders the OpenCode-style input area.
-func (m Model) renderInputArea() string {
-	return InputAreaStyle.Width(m.width - 3).Render(m.textinput.View())
+// renderAnimatedCircle renders the pulsing status circle using harmonica spring values.
+func (m Model) renderAnimatedCircle() string {
+	if !m.thinking {
+		// Static dim circle when idle
+		return lipgloss.NewStyle().Foreground(MutedColor).Render("●")
+	}
+
+	// Map spring position (0.0-1.0) to color index
+	idx := int(m.animPos * float64(len(PulseColors)-1))
+	if idx < 0 {
+		idx = 0
+	}
+	if idx >= len(PulseColors) {
+		idx = len(PulseColors) - 1
+	}
+
+	return lipgloss.NewStyle().Foreground(PulseColors[idx]).Render("●")
 }
 
-// renderFooter renders the footer with model info/status on left and shortcuts on right.
+// renderInputArea renders the input area — same width as user message box.
+func (m Model) renderInputArea() string {
+	// MarginLeft is on InputAreaStyle — no manual pad needed
+	return InputAreaStyle.Width(m.boxWidth()).Render(m.textinput.View())
+}
+
+// renderFooter renders the footer with animated circle, status, model info, and shortcuts.
 func (m Model) renderFooter() string {
 	// Special footer for confirmation mode
 	if m.confirmationMode {
 		return m.renderConfirmationFooter()
 	}
 
-	var left string
-	var right string
+	// Left side: animated circle + status + model name
+	circle := m.renderAnimatedCircle()
+	status := m.renderStatusText()
+	modelInfo := FooterModelStyle.Render(m.modelName)
 
-	// Left Side: Status or Model Info
-	if m.thinking {
-		// Active state: show tool usage if available
-		if m.totalCalls > 0 {
-			left = m.spinner.View() + " " + m.renderToolUsage()
-		} else {
-			left = m.spinner.View() + " " + ShortcutKeyStyle.Render("esc") + ShortcutDescStyle.Render(" interrupt")
-		}
-	} else {
-		// Idle state: Zap [Model] Console
-		left = FooterAppNameStyle.Render("Zap") + FooterModelStyle.Render(m.modelName) + FooterInfoStyle.Render("Console")
-	}
+	left := circle + " " + status + "  " + modelInfo
 
-	// Right Side: Hints
+	// Right side: keyboard shortcuts
 	var parts []string
 	if m.thinking {
-		// Show total usage and interrupt hint when thinking
 		parts = append(parts, ShortcutKeyStyle.Render("esc")+ShortcutDescStyle.Render(" interrupt"))
 	} else {
 		parts = append(parts, ShortcutKeyStyle.Render("↑↓")+ShortcutDescStyle.Render(" history"))
 	}
 	parts = append(parts, ShortcutKeyStyle.Render("ctrl+l")+ShortcutDescStyle.Render(" clear"))
 	parts = append(parts, ShortcutKeyStyle.Render("ctrl+y")+ShortcutDescStyle.Render(" copy"))
+	right := strings.Join(parts, "    ")
 
-	// Join with more spacing
-	right = strings.Join(parts, "    ")
-
-	// Calculate spacing
+	// Calculate spacing between left and right
 	w := m.width
-	gap := w - lipglossWidth(left) - lipglossWidth(right)
+	gap := w - lipglossWidth(left) - lipglossWidth(right) - 4 // Account for footer padding
 	if gap < 2 {
 		gap = 2
 	}
@@ -182,7 +246,7 @@ func (m Model) renderFooter() string {
 	return FooterStyle.Width(m.width).Render(left + strings.Repeat(" ", gap) + right)
 }
 
-// renderToolUsage renders the current tool usage statistics
+// renderToolUsage renders the current tool usage statistics (used in footer during thinking)
 func (m Model) renderToolUsage() string {
 	var parts []string
 
@@ -237,18 +301,19 @@ func (m Model) renderConfirmationView() string {
 		return ""
 	}
 
+	pad := strings.Repeat(" ", ContentPadLeft)
 	var sb strings.Builder
 
 	// Header
 	sb.WriteString("\n")
-	sb.WriteString(ConfirmHeaderStyle.Render("  File Write Confirmation"))
+	sb.WriteString(pad + ConfirmHeaderStyle.Render("  File Write Confirmation"))
 	sb.WriteString("\n\n")
 
 	// File path
 	if c.IsNewFile {
-		sb.WriteString(ConfirmPathStyle.Render(fmt.Sprintf("  Creating: %s", c.FilePath)))
+		sb.WriteString(pad + ConfirmPathStyle.Render(fmt.Sprintf("  Creating: %s", c.FilePath)))
 	} else {
-		sb.WriteString(ConfirmPathStyle.Render(fmt.Sprintf("  Modifying: %s", c.FilePath)))
+		sb.WriteString(pad + ConfirmPathStyle.Render(fmt.Sprintf("  Modifying: %s", c.FilePath)))
 	}
 	sb.WriteString("\n\n")
 
@@ -265,6 +330,7 @@ func (m Model) renderColoredDiff(diff string) string {
 		return DiffContextStyle.Render("  (no changes)")
 	}
 
+	pad := strings.Repeat(" ", ContentPadLeft)
 	var sb strings.Builder
 	lines := strings.Split(diff, "\n")
 
@@ -273,23 +339,18 @@ func (m Model) renderColoredDiff(diff string) string {
 
 		switch {
 		case strings.HasPrefix(line, "+++") || strings.HasPrefix(line, "---"):
-			// File headers (yellow/bold)
 			styledLine = DiffHeaderStyle.Render("  " + line)
 		case strings.HasPrefix(line, "@@"):
-			// Hunk headers (blue)
 			styledLine = DiffHunkStyle.Render("  " + line)
 		case strings.HasPrefix(line, "+"):
-			// Added lines (green)
 			styledLine = DiffAddStyle.Render("  " + line)
 		case strings.HasPrefix(line, "-"):
-			// Removed lines (red)
 			styledLine = DiffRemoveStyle.Render("  " + line)
 		default:
-			// Context lines (dimmed)
 			styledLine = DiffContextStyle.Render("  " + line)
 		}
 
-		sb.WriteString(styledLine)
+		sb.WriteString(pad + styledLine)
 		sb.WriteString("\n")
 	}
 
@@ -306,9 +367,8 @@ func (m Model) renderConfirmationFooter() string {
 		"    " +
 		ShortcutKeyStyle.Render("pgup/pgdown") + ShortcutDescStyle.Render(" scroll")
 
-	// Calculate spacing
 	w := m.width
-	gap := w - lipglossWidth(left) - lipglossWidth(right)
+	gap := w - lipglossWidth(left) - lipglossWidth(right) - 4
 	if gap < 2 {
 		gap = 2
 	}

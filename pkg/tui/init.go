@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/harmonica"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/viper"
 )
@@ -288,6 +289,13 @@ func InitialModel() Model {
 		modelName:        modelName,
 		confirmManager:   confirmManager,
 		confirmationMode: false,
+
+		// Initialize harmonica spring for pulsing animation
+		// frequency=5.0 (moderate oscillation speed), damping=0.3 (keeps bouncing)
+		animSpring: harmonica.NewSpring(harmonica.FPS(30), 5.0, 0.3),
+		animPos:    0.0,
+		animVel:    0.0,
+		animTarget: 1.0,
 	}
 }
 
@@ -298,5 +306,6 @@ func (m Model) Init() tea.Cmd {
 		tea.EnterAltScreen,
 		textinput.Blink,
 		m.spinner.Tick,
+		animTick(), // Start harmonica spring animation loop
 	)
 }

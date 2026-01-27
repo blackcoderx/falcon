@@ -21,6 +21,15 @@ var (
 	InputAreaBg   = lipgloss.Color("#2a2a2a") // Matches user messages
 	FooterBg      = lipgloss.Color("#1a1a1a") // Darker footer
 	ModelBadgeBg  = lipgloss.Color("#565f89") // Model name badge
+
+	// Compact tool call colors
+	ToolNameColor = lipgloss.Color("#cf8a6b") // Warm orange for tool names
+	ToolArgsColor = lipgloss.Color("#6c6c6c") // Dim for arguments
+	ToolUseColor  = lipgloss.Color("#545454") // Very muted for usage fraction
+
+	// Response card
+	ResponseCardBg    = lipgloss.Color("#1e1e2e") // Slightly elevated background
+	ResponseCardBorder = lipgloss.Color("#3b3b5c") // Subtle border
 )
 
 // Log entry styles
@@ -55,12 +64,14 @@ var (
 			Foreground(DimColor)
 
 	StatusActiveStyle = lipgloss.NewStyle().
-				Foreground(AccentColor).
-				Bold(true)
+				Foreground(AccentColor)
 
 	StatusToolStyle = lipgloss.NewStyle().
-			Foreground(ToolColor).
-			Bold(true)
+			Foreground(ToolColor)
+
+	// Status label style (for "thinking", "streaming", "tool calling")
+	StatusLabelStyle = lipgloss.NewStyle().
+				Foreground(DimColor)
 
 	// Separator style
 	SeparatorStyle = lipgloss.NewStyle().
@@ -80,7 +91,7 @@ var (
 				PaddingRight(1)
 
 	FooterModelStyle = lipgloss.NewStyle().
-				Foreground(TextColor).
+				Foreground(DimColor).
 				PaddingRight(1)
 
 	FooterInfoStyle = lipgloss.NewStyle().
@@ -89,7 +100,7 @@ var (
 
 // OpenCode-style message block styles
 var (
-	// User message: blue left border + gray background
+	// User message: blue left border + gray background + vertical spacing
 	UserMessageStyle = lipgloss.NewStyle().
 				Background(UserMessageBg).
 				BorderStyle(lipgloss.ThickBorder()).
@@ -99,35 +110,55 @@ var (
 				BorderRight(true).
 				BorderBottom(false).
 				Padding(1, 2).
-				Margin(1, 0)
+				MarginLeft(ContentPadLeft).
+				MarginTop(1).
+				MarginBottom(1)
 
-	// Tool calls: dimmed with circle prefix
+	// Compact tool call styles
+	ToolNameCompactStyle = lipgloss.NewStyle().
+				Foreground(ToolNameColor)
+
+	ToolArgsCompactStyle = lipgloss.NewStyle().
+				Foreground(ToolArgsColor)
+
+	ToolUsageCompactStyle = lipgloss.NewStyle().
+				Foreground(ToolUseColor)
+
+	// Tool calls: dimmed with circle prefix (legacy, kept for compatibility)
 	ToolCallStyle = lipgloss.NewStyle().
 			Foreground(DimColor)
 
-	// Agent messages: plain text
+	// Agent messages: plain text with left margin + top spacing
 	AgentMessageStyle = lipgloss.NewStyle().
-				Foreground(TextColor)
+				Foreground(TextColor).
+				MarginLeft(ContentPadLeft).
+				MarginTop(1)
 
-	// Input area: matches user message style
-	// USER: This controls the input box style (where you type)
-	// Input area: matches user message style
+	// Response card: subtle box for tool output/responses
+	ResponseCardStyle = lipgloss.NewStyle().
+				Background(ResponseCardBg).
+				BorderStyle(lipgloss.RoundedBorder()).
+				BorderForeground(ResponseCardBorder).
+				Padding(1, 2).
+				MarginLeft(2)
+
+	// Input area: matches user message style exactly (same borders, padding, margin)
 	InputAreaStyle = lipgloss.NewStyle().
 			Background(InputAreaBg).
 			BorderStyle(lipgloss.ThickBorder()).
 			BorderForeground(AccentColor).
-			BorderLeft(true). // The blue vertical bar on the left
+			BorderLeft(true).
 			BorderTop(false).
 			BorderRight(true).
 			BorderBottom(false).
 			Padding(1, 2).
-			Margin(1, 1, 1, 1) // USER: Set to 0 to remove spacing around the input box
+			MarginLeft(ContentPadLeft)
 
-	// USER: This controls the footer bar style (bottom row)
+	// Footer bar style
 	FooterStyle = lipgloss.NewStyle().
 			Background(FooterBg).
 			Foreground(DimColor).
-			Padding(0, 0) // USER: Padding inside the footer bar
+			PaddingLeft(2)
 
 	// Model badge
 	ModelBadgeStyle = lipgloss.NewStyle().
@@ -136,18 +167,35 @@ var (
 			Padding(0, 1)
 )
 
-// Log prefixes (Claude Code style - kept for compatibility)
+// Content layout constants
 const (
-	// UserPrefix        = "> "
+	ContentPadLeft  = 2 // Left padding for viewport content
+	ContentPadRight = 2 // Right padding for viewport content
+)
+
+// Log prefixes
+const (
 	ThinkingPrefix    = "  thinking "
 	ToolPrefix        = "  tool "
 	ObservationPrefix = "  result "
 	ErrorPrefix       = "  error "
 	Separator         = "───"
-
-	// OpenCode-style prefix
-	ToolCallPrefix = "○ " // Circle prefix for tool calls
+	ToolCallPrefix    = "○ " // Circle prefix for tool calls (legacy)
 )
+
+// Pulse animation colors for status circle (dim blue → bright blue → dim blue)
+var PulseColors = []lipgloss.Color{
+	"#2a2f4e",
+	"#3b4570",
+	"#4c5a92",
+	"#5d70b4",
+	"#6e86d6",
+	"#7aa2f7", // peak brightness (accent color)
+	"#6e86d6",
+	"#5d70b4",
+	"#4c5a92",
+	"#3b4570",
+}
 
 // Tool usage display styles
 var (

@@ -2,6 +2,7 @@ package tui
 
 import (
 	"sync"
+	"time"
 
 	"github.com/blackcoderx/zap/pkg/core"
 	"github.com/blackcoderx/zap/pkg/core/tools"
@@ -10,12 +11,16 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/harmonica"
 )
 
 // logEntry represents a single log line in the UI
 type logEntry struct {
-	Type    string // "user", "thinking", "tool", "observation", "response", "error", "separator", "streaming"
-	Content string
+	Type      string // "user", "thinking", "tool", "observation", "response", "error", "separator", "streaming"
+	Content   string
+	ToolArgs  string // Tool arguments (for "tool" entries)
+	ToolUsed  int    // Current usage count (for "tool" entries)
+	ToolLimit int    // Usage limit (for "tool" entries)
 }
 
 // ToolUsageDisplay represents tool usage for TUI display
@@ -63,6 +68,12 @@ type Model struct {
 	confirmationMode    bool                      // True when awaiting user confirmation
 	pendingConfirmation *core.FileConfirmation    // Details of the pending file change
 	confirmManager      *tools.ConfirmationManager // Shared confirmation manager
+
+	// Animation state (harmonica spring for pulsing status circle)
+	animSpring harmonica.Spring
+	animPos    float64 // Current spring position (0.0 - 1.0)
+	animVel    float64 // Current spring velocity
+	animTarget float64 // Target position (oscillates between 0 and 1)
 }
 
 // agentEventMsg wraps an agent event for the TUI
@@ -74,6 +85,9 @@ type agentEventMsg struct {
 type agentDoneMsg struct {
 	err error
 }
+
+// animTickMsg drives the harmonica spring animation
+type animTickMsg time.Time
 
 // programRef holds the program reference for sending messages from goroutines.
 // Using a struct with mutex for thread-safe access instead of a bare global variable.
