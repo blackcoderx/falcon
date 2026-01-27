@@ -17,6 +17,10 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (Model, tea.Cmd) {
 
 	switch msg.String() {
 	case "ctrl+c", "esc":
+		// Save session summary before quitting
+		if m.memoryStore != nil {
+			m.memoryStore.SaveSessionSummary(m.agent.GetHistory())
+		}
 		// Cancel any pending confirmation when quitting
 		if m.confirmManager != nil {
 			m.confirmManager.Cancel()
@@ -192,6 +196,10 @@ func (m Model) handleConfirmationKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.confirmationMode = false
 		m.pendingConfirmation = nil
 		if msg.String() == "ctrl+c" {
+			// Save session summary before quitting
+			if m.memoryStore != nil {
+				m.memoryStore.SaveSessionSummary(m.agent.GetHistory())
+			}
 			return m, tea.Quit
 		}
 		m.logs = append(m.logs, logEntry{Type: "error", Content: "Rejected file change"})

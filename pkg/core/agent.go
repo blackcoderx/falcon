@@ -72,6 +72,9 @@ type Agent struct {
 
 	// User's API framework (gin, fastapi, express, etc.)
 	framework string
+
+	// Persistent memory across sessions
+	memoryStore *MemoryStore
 }
 
 // NewAgent creates a new ZAP agent
@@ -137,6 +140,16 @@ func (a *Agent) SetFramework(framework string) {
 // GetFramework returns the configured API framework
 func (a *Agent) GetFramework() string {
 	return a.framework
+}
+
+// SetMemoryStore sets the persistent memory store for the agent.
+func (a *Agent) SetMemoryStore(store *MemoryStore) {
+	a.memoryStore = store
+}
+
+// GetHistory returns the agent's conversation history.
+func (a *Agent) GetHistory() []llm.Message {
+	return a.history
 }
 
 // ResetToolCounts resets all tool call counters (called at start of each message)
@@ -296,6 +309,11 @@ func (a *Agent) ProcessMessageWithEvents(input string, callback EventCallback) (
 	// Add user message to history
 	a.history = append(a.history, llm.Message{Role: "user", Content: input})
 
+	// Track turn in memory
+	if a.memoryStore != nil {
+		a.memoryStore.TrackTurn()
+	}
+
 	// Reset tool call counters for this session
 	a.ResetToolCounts()
 
@@ -385,6 +403,11 @@ func (a *Agent) ProcessMessageWithEvents(input string, callback EventCallback) (
 			a.toolCounts[toolName]++
 			a.totalCalls++
 
+			// Track tool usage in memory
+			if a.memoryStore != nil {
+				a.memoryStore.TrackTool(toolName)
+			}
+
 			// If tool implements ConfirmableTool, set the callback so it can emit events
 			if confirmable, ok := tool.(ConfirmableTool); ok {
 				confirmable.SetEventCallback(callback)
@@ -432,6 +455,7 @@ func (a *Agent) buildSystemPrompt() string {
 	sb.WriteString("You are ZAP, an AI-powered API debugging assistant. ")
 	sb.WriteString("You help developers test APIs and debug errors by reading their codebase.\n\n")
 
+	sb.WriteString(a.buildMemorySection())
 	sb.WriteString(a.buildToolsSection())
 	sb.WriteString(a.buildNaturalLanguageSection())
 	sb.WriteString(a.buildErrorDiagnosisSection())
@@ -445,6 +469,13 @@ func (a *Agent) buildSystemPrompt() string {
 	sb.WriteString(a.buildOutputFormatSection())
 
 	return sb.String()
+}
+
+func (a *Agent) buildMemorySection() string {
+	if a.memoryStore == nil {
+		return ""
+	}
+	return a.memoryStore.GetCompactSummary()
 }
 
 func (a *Agent) buildToolsSection() string {

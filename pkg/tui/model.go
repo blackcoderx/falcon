@@ -69,6 +69,9 @@ type Model struct {
 	pendingConfirmation *core.FileConfirmation    // Details of the pending file change
 	confirmManager      *tools.ConfirmationManager // Shared confirmation manager
 
+	// Persistent memory store
+	memoryStore *core.MemoryStore
+
 	// Animation state (harmonica spring for pulsing status circle)
 	animSpring harmonica.Spring
 	animPos    float64 // Current spring position (0.0 - 1.0)

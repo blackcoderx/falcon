@@ -247,6 +247,8 @@ func createDefaultConfig(framework string) error {
 				"retry":      15,
 				"wait":       20,
 				"test_suite": 10,
+				// Memory tool
+				"memory": 50,
 			},
 		},
 	}
@@ -264,9 +266,12 @@ func createDefaultConfig(framework string) error {
 	return nil
 }
 
-// createMemoryFile creates an empty memory.json file
+// createMemoryFile creates a memory.json file with versioned format
 func createMemoryFile() error {
-	memory := make(map[string]interface{})
+	memory := map[string]interface{}{
+		"version": 1,
+		"entries": []interface{}{},
+	}
 	data, err := json.MarshalIndent(memory, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal memory: %w", err)

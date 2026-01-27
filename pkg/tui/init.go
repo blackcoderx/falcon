@@ -48,6 +48,8 @@ func configureToolLimits(agent *core.Agent) {
 		"retry":      15,
 		"wait":       20,
 		"test_suite": 10,
+		// Memory tool
+		"memory": 50,
 	}
 
 	// Set global limits from config (with defaults)
@@ -91,7 +93,7 @@ func configureToolLimits(agent *core.Agent) {
 
 // registerTools adds all tools to the agent.
 // This includes codebase tools, persistence tools, and testing tools from all sprints.
-func registerTools(agent *core.Agent, zapDir, workDir string, confirmManager *tools.ConfirmationManager) {
+func registerTools(agent *core.Agent, zapDir, workDir string, confirmManager *tools.ConfirmationManager, memStore *core.MemoryStore) {
 	// Initialize shared components
 	responseManager := tools.NewResponseManager()
 	varStore := tools.NewVariableStore(zapDir)
@@ -133,6 +135,9 @@ func registerTools(agent *core.Agent, zapDir, workDir string, confirmManager *to
 	agent.RegisterTool(tools.NewPerformanceTool(httpTool, varStore))
 	agent.RegisterTool(tools.NewWebhookListenerTool(varStore))
 	agent.RegisterTool(tools.NewAuthOAuth2Tool(varStore))
+
+	// Register memory tool
+	agent.RegisterTool(tools.NewMemoryTool(memStore))
 }
 
 // newLLMClient creates and configures the LLM client from Viper config.
@@ -270,7 +275,11 @@ func InitialModel() Model {
 	// Create confirmation manager for file write approvals (shared between tool and TUI)
 	confirmManager := tools.NewConfirmationManager()
 
-	registerTools(agent, zapDir, workDir, confirmManager)
+	// Create memory store for persistent agent memory
+	memStore := core.NewMemoryStore(zapDir)
+	agent.SetMemoryStore(memStore)
+
+	registerTools(agent, zapDir, workDir, confirmManager, memStore)
 
 	return Model{
 		textinput:        newTextInput(),
@@ -289,6 +298,7 @@ func InitialModel() Model {
 		modelName:        modelName,
 		confirmManager:   confirmManager,
 		confirmationMode: false,
+		memoryStore:      memStore,
 
 		// Initialize harmonica spring for pulsing animation
 		// frequency=5.0 (moderate oscillation speed), damping=0.3 (keeps bouncing)
