@@ -124,6 +124,9 @@ var (
 	ToolUsageCompactStyle = lipgloss.NewStyle().
 				Foreground(ToolUseColor)
 
+	ToolDurationStyle = lipgloss.NewStyle().
+				Foreground(MutedColor)
+
 	// Tool calls: dimmed with circle prefix (legacy, kept for compatibility)
 	ToolCallStyle = lipgloss.NewStyle().
 			Foreground(DimColor)

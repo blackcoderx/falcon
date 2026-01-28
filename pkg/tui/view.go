@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -123,7 +124,7 @@ func (m *Model) formatLogEntry(entry logEntry) string {
 }
 
 // formatCompactToolCall formats a tool call as a single compact line.
-// Format: tool_name (args_summary) used/limit
+// Format: tool_name (args_summary) used/limit duration
 func (m *Model) formatCompactToolCall(entry logEntry) string {
 	// Tool name in warm orange
 	name := ToolNameCompactStyle.Render(entry.Content)
@@ -143,7 +144,22 @@ func (m *Model) formatCompactToolCall(entry logEntry) string {
 		)
 	}
 
-	return name + " " + argsDisplay + usageDisplay
+	// Duration (only shown after tool completes)
+	var durationDisplay string
+	if entry.Duration > 0 {
+		durationDisplay = ToolDurationStyle.Render(fmt.Sprintf(" %s", formatDuration(entry.Duration)))
+	}
+
+	return name + " " + argsDisplay + usageDisplay + durationDisplay
+}
+
+// formatDuration formats a duration in a human-readable way.
+// Shows milliseconds for short durations, seconds for longer ones.
+func formatDuration(d time.Duration) string {
+	if d < time.Second {
+		return fmt.Sprintf("%dms", d.Milliseconds())
+	}
+	return fmt.Sprintf("%.1fs", d.Seconds())
 }
 
 // formatObservationCard formats a tool observation/result in a card style.

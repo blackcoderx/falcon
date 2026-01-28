@@ -16,11 +16,12 @@ import (
 
 // logEntry represents a single log line in the UI
 type logEntry struct {
-	Type      string // "user", "thinking", "tool", "observation", "response", "error", "separator", "streaming"
+	Type      string        // "user", "thinking", "tool", "observation", "response", "error", "separator", "streaming"
 	Content   string
-	ToolArgs  string // Tool arguments (for "tool" entries)
-	ToolUsed  int    // Current usage count (for "tool" entries)
-	ToolLimit int    // Usage limit (for "tool" entries)
+	ToolArgs  string        // Tool arguments (for "tool" entries)
+	ToolUsed  int           // Current usage count (for "tool" entries)
+	ToolLimit int           // Usage limit (for "tool" entries)
+	Duration  time.Duration // Execution time (for "tool" entries, set when observation arrives)
 }
 
 // ToolUsageDisplay represents tool usage for TUI display
@@ -63,6 +64,7 @@ type Model struct {
 	lastToolName   string             // Last tool that was called
 	lastToolCount  int                // Last tool's current count
 	lastToolLimit  int                // Last tool's limit
+	toolStartTime  time.Time          // When the current tool call started
 
 	// Confirmation state for file write approval
 	confirmationMode    bool                      // True when awaiting user confirmation

@@ -176,6 +176,8 @@ func (m Model) handleAgentEvent(msg agentEventMsg) Model {
 		if len(m.logs) > 0 && m.logs[len(m.logs)-1].Type == "streaming" {
 			m.logs = m.logs[:len(m.logs)-1]
 		}
+		// Record start time for timing the tool execution
+		m.toolStartTime = time.Now()
 		m.logs = append(m.logs, logEntry{
 			Type:     "tool",
 			Content:  msg.event.Content,
@@ -185,7 +187,14 @@ func (m Model) handleAgentEvent(msg agentEventMsg) Model {
 		m.currentTool = msg.event.Content
 
 	case "observation":
-		m.logs = append(m.logs, logEntry{Type: "observation", Content: msg.event.Content})
+		// Calculate elapsed time and update the most recent tool entry
+		elapsed := time.Since(m.toolStartTime)
+		for i := len(m.logs) - 1; i >= 0; i-- {
+			if m.logs[i].Type == "tool" {
+				m.logs[i].Duration = elapsed
+				break
+			}
+		}
 		m.status = "thinking"
 		m.currentTool = ""
 
