@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -107,7 +108,8 @@ func (a *Agent) ProcessMessage(input string) (string, error) {
 // ProcessMessageWithEvents handles a user message and emits events for each stage.
 // This enables real-time UI updates as the agent thinks, uses tools, and responds.
 // Events emitted: thinking, tool_call, observation, answer, error, streaming, tool_usage, confirmation_required
-func (a *Agent) ProcessMessageWithEvents(input string, callback EventCallback) (string, error) {
+// The context can be used to cancel the agent mid-processing.
+func (a *Agent) ProcessMessageWithEvents(ctx context.Context, input string, callback EventCallback) (string, error) {
 	// Add user message to history
 	a.history = append(a.history, llm.Message{Role: "user", Content: input})
 
@@ -120,6 +122,14 @@ func (a *Agent) ProcessMessageWithEvents(input string, callback EventCallback) (
 	a.ResetToolCounts()
 
 	for {
+		// Check for cancellation
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		default:
+			// Continue processing
+		}
+
 		// Check total limit safety cap
 		if a.isTotalLimitReached() {
 			msg := fmt.Sprintf("I reached the maximum total tool calls (%d). Stopping to prevent runaway execution.", a.totalLimit)

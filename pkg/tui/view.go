@@ -115,6 +115,9 @@ func (m *Model) formatLogEntry(entry logEntry) string {
 	case "error":
 		return pad + ErrorStyle.Render("  Error: "+entry.Content)
 
+	case "interrupted":
+		return pad + InterruptedStyle.Render("  interrupted")
+
 	case "separator":
 		return ""
 

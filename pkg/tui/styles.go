@@ -53,6 +53,11 @@ var (
 	ErrorStyle = lipgloss.NewStyle().
 			Foreground(ErrorColor)
 
+	// Interrupted style - faded/muted for agent interruption
+	InterruptedStyle = lipgloss.NewStyle().
+				Foreground(MutedColor).
+				Italic(true)
+
 	PromptStyle = lipgloss.NewStyle().
 			Foreground(AccentColor)
 

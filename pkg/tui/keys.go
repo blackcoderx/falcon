@@ -16,12 +16,37 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (Model, tea.Cmd) {
 	}
 
 	switch msg.String() {
-	case "ctrl+c", "esc":
+	case "ctrl+c":
 		// Save session summary before quitting
 		if m.memoryStore != nil {
 			m.memoryStore.SaveSessionSummary(m.agent.GetHistory())
 		}
 		// Cancel any pending confirmation when quitting
+		if m.confirmManager != nil {
+			m.confirmManager.Cancel()
+		}
+		return m, tea.Quit
+
+	case "esc":
+		// If agent is running, cancel it instead of quitting
+		if m.thinking && m.cancelAgent != nil {
+			m.cancelAgent()
+			m.thinking = false
+			m.status = "idle"
+			m.streamingBuffer = ""
+			m.cancelAgent = nil
+			// Remove any trailing streaming entry
+			if len(m.logs) > 0 && m.logs[len(m.logs)-1].Type == "streaming" {
+				m.logs = m.logs[:len(m.logs)-1]
+			}
+			m.logs = append(m.logs, logEntry{Type: "interrupted", Content: ""})
+			m.updateViewportContent()
+			return m, nil
+		}
+		// If not thinking, quit the application
+		if m.memoryStore != nil {
+			m.memoryStore.SaveSessionSummary(m.agent.GetHistory())
+		}
 		if m.confirmManager != nil {
 			m.confirmManager.Cancel()
 		}

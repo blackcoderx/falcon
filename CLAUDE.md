@@ -76,7 +76,8 @@ type Tool interface {
 - `ctrl+l` - Clear screen
 - `ctrl+u` - Clear input line
 - `ctrl+y` - Copy last response to clipboard
-- `ctrl+c` / `esc` - Quit
+- `esc` - Stop agent (when running) / Quit (when idle)
+- `ctrl+c` - Quit
 
 **File Write Confirmation Mode** (shown when agent wants to modify files):
 - `y` / `Y` - Approve file change

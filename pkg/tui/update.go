@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"time"
 
 	"github.com/blackcoderx/zap/pkg/core"
@@ -21,13 +22,19 @@ func animTick() tea.Cmd {
 // This allows the TUI to remain responsive while the agent processes the request.
 func runAgentAsync(agent *core.Agent, input string) tea.Cmd {
 	return func() tea.Msg {
+		// Create a cancellable context
+		ctx, cancel := context.WithCancel(context.Background())
+
+		// Send the cancel function to the model
+		globalProgram.Send(agentCancelMsg{cancel: cancel})
+
 		// Run agent in goroutine so we can send intermediate events
 		go func() {
 			callback := func(event core.AgentEvent) {
 				globalProgram.Send(agentEventMsg{event: event})
 			}
 
-			_, err := agent.ProcessMessageWithEvents(input, callback)
+			_, err := agent.ProcessMessageWithEvents(ctx, input, callback)
 			globalProgram.Send(agentDoneMsg{err: err})
 		}()
 
@@ -58,6 +65,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case agentEventMsg:
 		m = m.handleAgentEvent(msg)
 		cmds = append(cmds, m.spinner.Tick)
+
+	case agentCancelMsg:
+		m.cancelAgent = msg.cancel
 
 	case agentDoneMsg:
 		m = m.handleAgentDone(msg)
@@ -149,6 +159,11 @@ func (m Model) handleWindowResize(msg tea.WindowSizeMsg) Model {
 
 // handleAgentEvent processes events from the agent during processing.
 func (m Model) handleAgentEvent(msg agentEventMsg) Model {
+	// Ignore events if agent was cancelled
+	if !m.thinking {
+		return m
+	}
+
 	switch msg.event.Type {
 	case "thinking":
 		// Clear streaming buffer when starting new thinking
@@ -258,9 +273,13 @@ func (m Model) handleAgentEvent(msg agentEventMsg) Model {
 
 // handleAgentDone processes the completion of agent processing.
 func (m Model) handleAgentDone(msg agentDoneMsg) Model {
+	// If already not thinking (was cancelled), just clean up
+	wasCancelled := !m.thinking
+
 	m.thinking = false
 	m.status = "idle"
 	m.currentTool = ""
+	m.cancelAgent = nil // Clear the cancel function
 
 	// Reset tool usage display
 	m.toolUsage = nil
@@ -275,7 +294,8 @@ func (m Model) handleAgentDone(msg agentDoneMsg) Model {
 	m.animVel = 0.0
 	m.animTarget = 1.0
 
-	if msg.err != nil {
+	// Only show error if not cancelled and there's an actual error
+	if !wasCancelled && msg.err != nil && msg.err != context.Canceled {
 		m.logs = append(m.logs, logEntry{Type: "error", Content: msg.err.Error()})
 	}
 	m.updateViewportContent()

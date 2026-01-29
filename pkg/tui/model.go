@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -74,6 +75,9 @@ type Model struct {
 	// Persistent memory store
 	memoryStore *core.MemoryStore
 
+	// Agent cancellation
+	cancelAgent context.CancelFunc
+
 	// Animation state (harmonica spring for pulsing status circle)
 	animSpring harmonica.Spring
 	animPos    float64 // Current spring position (0.0 - 1.0)
@@ -93,6 +97,11 @@ type agentDoneMsg struct {
 
 // animTickMsg drives the harmonica spring animation
 type animTickMsg time.Time
+
+// agentCancelMsg carries the cancel function when agent starts
+type agentCancelMsg struct {
+	cancel context.CancelFunc
+}
 
 // programRef holds the program reference for sending messages from goroutines.
 // Using a struct with mutex for thread-safe access instead of a bare global variable.
