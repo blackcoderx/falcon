@@ -99,7 +99,9 @@ func (c *OllamaClient) Chat(messages []Message) (string, error) {
 	return chatResp.Message.Content, nil
 }
 
-// ChatStream sends a chat request with streaming and calls callback for each chunk
+// ChatStream sends a chat request with streaming and calls callback for each chunk.
+// If streaming fails with 503 (common with Ollama Cloud), it automatically falls back
+// to non-streaming mode and delivers the response as a single chunk.
 func (c *OllamaClient) ChatStream(messages []Message, callback StreamCallback) (string, error) {
 	req := ChatRequest{
 		Model:    c.Model,
@@ -133,6 +135,12 @@ func (c *OllamaClient) ChatStream(messages []Message, callback StreamCallback) (
 		return "", fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
+
+	// If streaming returns 503 (common with Ollama Cloud), fall back to non-streaming
+	if resp.StatusCode == http.StatusServiceUnavailable {
+		resp.Body.Close() // Close the failed streaming response
+		return c.chatWithFallback(messages, callback)
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -171,6 +179,22 @@ func (c *OllamaClient) ChatStream(messages []Message, callback StreamCallback) (
 	}
 
 	return fullContent, nil
+}
+
+// chatWithFallback uses non-streaming mode and delivers the response via callback.
+// This is used as a fallback when streaming is unavailable (e.g., Ollama Cloud 503).
+func (c *OllamaClient) chatWithFallback(messages []Message, callback StreamCallback) (string, error) {
+	content, err := c.Chat(messages)
+	if err != nil {
+		return "", err
+	}
+
+	// Deliver the full response as a single "chunk" via the callback
+	if callback != nil && content != "" {
+		callback(content)
+	}
+
+	return content, nil
 }
 
 // CheckConnection verifies that Ollama is running and accessible

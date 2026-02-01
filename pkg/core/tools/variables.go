@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/blackcoderx/zap/pkg/core"
 )
 
 // VariableStore manages session and global variables
@@ -36,11 +38,18 @@ func (vs *VariableStore) Set(name, value string) {
 }
 
 // SetGlobal stores a global variable (persisted to disk)
-func (vs *VariableStore) SetGlobal(name, value string) error {
+// Warns if the value appears to be a secret (should use session scope instead)
+func (vs *VariableStore) SetGlobal(name, value string) (warning string, err error) {
 	vs.mu.Lock()
 	defer vs.mu.Unlock()
+
+	// Warn on potential secrets
+	if core.IsSecret(name, value) {
+		warning = fmt.Sprintf("WARNING: '%s' appears to be a secret. Consider using session scope instead (secrets are cleared on exit for security).", name)
+	}
+
 	vs.global[name] = value
-	return vs.saveGlobalVariables()
+	return warning, vs.saveGlobalVariables()
 }
 
 // Get retrieves a variable (checks session first, then global)
@@ -128,7 +137,13 @@ func (vs *VariableStore) saveGlobalVariables() error {
 		return err
 	}
 
-	return os.WriteFile(varFile, data, 0644)
+	if err := os.WriteFile(varFile, data, 0644); err != nil {
+		return err
+	}
+
+	// Update manifest counts
+	core.UpdateManifestCounts(vs.zapDir)
+	return nil
 }
 
 // VariableTool provides variable get/set/list operations
@@ -186,14 +201,19 @@ func (t *VariableTool) Execute(args string) (string, error) {
 		}
 
 		if params.Scope == "global" {
-			if err := t.store.SetGlobal(params.Name, params.Value); err != nil {
+			warning, err := t.store.SetGlobal(params.Name, params.Value)
+			if err != nil {
 				return "", fmt.Errorf("failed to set global variable: %w", err)
 			}
-			return fmt.Sprintf("Set global variable: {{%s}} = '%s'\n(Persisted to disk)", params.Name, params.Value), nil
+			result := fmt.Sprintf("Set global variable: {{%s}} = '%s'\n(Persisted to disk)", params.Name, core.MaskSecret(params.Value))
+			if warning != "" {
+				result = warning + "\n\n" + result
+			}
+			return result, nil
 		}
 
 		t.store.Set(params.Name, params.Value)
-		return fmt.Sprintf("Set session variable: {{%s}} = '%s'\n(Available until ZAP exits)", params.Name, params.Value), nil
+		return fmt.Sprintf("Set session variable: {{%s}} = '%s'\n(Available until ZAP exits)", params.Name, core.MaskSecret(params.Value)), nil
 
 	case "get":
 		if params.Name == "" {

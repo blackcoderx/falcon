@@ -252,6 +252,11 @@ func InitializeZapFolder(framework string) error {
 			return err
 		}
 
+		// Create manifest.json
+		if err := CreateManifest(ZapFolderName); err != nil {
+			return err
+		}
+
 		fmt.Printf("\nInitialized .zap folder with framework: %s\n", setup.Framework)
 	} else if framework != "" {
 		// Update framework in existing config if provided via flag
@@ -264,6 +269,12 @@ func InitializeZapFolder(framework string) error {
 	// Ensure subdirectories exist (for upgrades from older versions)
 	ensureDir(filepath.Join(ZapFolderName, "requests"))
 	ensureDir(filepath.Join(ZapFolderName, "environments"))
+	ensureDir(filepath.Join(ZapFolderName, "baselines"))
+
+	// Ensure manifest exists (for upgrades)
+	if _, err := os.Stat(filepath.Join(ZapFolderName, ManifestFilename)); os.IsNotExist(err) {
+		CreateManifest(ZapFolderName)
+	}
 
 	return nil
 }

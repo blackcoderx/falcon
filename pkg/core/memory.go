@@ -65,7 +65,13 @@ func NewMemoryStore(zapDir string) *MemoryStore {
 }
 
 // Save upserts a memory entry (updates if key exists, inserts otherwise) and persists to disk.
+// Returns an error if attempting to save secrets to memory.
 func (ms *MemoryStore) Save(key, value, category string) error {
+	// Check for secrets - prevent saving sensitive data to memory
+	if IsSecret(key, value) {
+		return fmt.Errorf("cannot save secrets to memory. Use the 'variable' tool with session scope instead for sensitive values like tokens and passwords")
+	}
+
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 

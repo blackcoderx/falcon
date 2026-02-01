@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/blackcoderx/zap/pkg/core"
 	"github.com/blackcoderx/zap/pkg/storage"
 )
 
@@ -90,6 +91,11 @@ func (t *SaveRequestTool) Execute(args string) (string, error) {
 		return "", fmt.Errorf("url is required")
 	}
 
+	// Validate for plaintext secrets
+	if secretErr := core.ValidateRequestForSecrets(params.URL, params.Headers, params.Body); secretErr != "" {
+		return "", fmt.Errorf("cannot save request: %s", secretErr)
+	}
+
 	req := storage.Request{
 		Name:    params.Name,
 		Method:  strings.ToUpper(params.Method),
@@ -105,6 +111,9 @@ func (t *SaveRequestTool) Execute(args string) (string, error) {
 	if err := storage.SaveRequest(req, filePath); err != nil {
 		return "", err
 	}
+
+	// Update manifest counts
+	core.UpdateManifestCounts(t.persistence.baseDir)
 
 	return fmt.Sprintf("Request saved to %s", filePath), nil
 }
