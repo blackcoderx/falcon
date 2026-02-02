@@ -1,15 +1,26 @@
-# ⚡ ZAP
+# ZAP
 
 > AI-powered API testing that understands your codebase
 
-**ZAP** is the terminal-based AI assistant that doesn't just test your APIs—it debugs them. When an endpoint returns an error, ZAP searches your actual code to find the cause and suggests fixes. Uses local LLMs (Ollama) or cloud providers (OpenAI/Anthropic).
+**ZAP** is a terminal-based AI assistant that doesn't just test your APIs—it debugs them. When an endpoint returns an error, ZAP searches your actual code to find the cause and suggests fixes. Works with local LLMs (Ollama) or cloud providers (Gemini).
 
-## 🚀 Quick Start
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Available Tools](#available-tools)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Quick Start
 
 ### Prerequisites
 
 - Go 1.25.3 or higher
-- [Ollama](https://ollama.ai/) (optional, for local AI)
+- [Ollama](https://ollama.ai/) for local AI (or Gemini API key for cloud)
 
 ### Build and Run
 
@@ -20,111 +31,167 @@ go build -o zap.exe ./cmd/zap
 ./zap
 ```
 
-**First run:**
-1. Creates `.zap` folder with config, history, and memory
-2. Prompts you to select your API framework (gin, fastapi, express, etc.)
-3. Launches interactive TUI
+### First Run
 
-**Try it:**
+1. ZAP creates a `.zap/` folder with config, history, and memory
+2. Select your LLM provider (Ollama local, Ollama cloud, or Gemini)
+3. Choose your API framework (gin, fastapi, express, etc.)
+4. The interactive TUI launches
+
+### Try It
+
 ```bash
-# In the TUI, type:
+# In the TUI, type natural language commands:
 > GET http://localhost:8000/api/users
 
-# ZAP will make the request, show the response, and if there's an error,
-# it can search your code to find the cause
+# ZAP makes the request, shows the response, and if there's an error,
+# searches your code to find and explain the cause
 ```
 
-## ✨ Features
+## Features
 
-### 🧠 **Codebase-Aware Debugging**
-- Analyzes error responses and searches your code for causes
-- Parses stack traces (Python/Go/JavaScript)
-- Framework-specific hints for common errors
-- Suggests fixes with code examples
+### Codebase-Aware Debugging
 
-### 🛠️ **28+ Tools Across API Testing**
+ZAP doesn't just show you errors—it explains them:
 
-**Core API Tools:**
-- HTTP requests with status explanations and error hints
-- Save/load requests as YAML with `{{VAR}}` substitution
-- Environment switching (dev/prod/staging)
+- **Stack trace parsing** - Extracts file:line from Python, Go, and JavaScript tracebacks
+- **Code search** - Uses ripgrep to find relevant code (with native Go fallback)
+- **Framework hints** - Provides framework-specific debugging tips (15+ frameworks supported)
+- **Fix suggestions** - Suggests code changes with examples
 
-**Testing & Validation:**
-- Response assertions (status, headers, body, JSON path, timing)
-- JSON Schema validation (draft-07, draft-2020-12)
-- Test suite execution with pass/fail reporting
-- Regression testing with baseline comparison
+### 28+ Tools for API Testing
 
-**Request Chaining:**
-- Extract values from responses (JSON path, headers, cookies, regex)
-- Variable management (session/global with persistence)
-- Retry with exponential backoff
+| Category | Tools |
+|----------|-------|
+| **HTTP** | `http_request` - Full HTTP client with variable substitution |
+| **Persistence** | `save_request`, `load_request`, `list_requests`, `set_environment`, `list_environments` |
+| **Validation** | `assert_response`, `validate_json_schema` |
+| **Extraction** | `extract_value` (JSON path, headers, cookies, regex) |
+| **Variables** | `variable` (session/global with disk persistence) |
+| **Timing** | `wait`, `retry` (exponential backoff) |
+| **Auth** | `auth_bearer`, `auth_basic`, `auth_oauth2`, `auth_helper` |
+| **Testing** | `test_suite`, `compare_responses` (regression testing) |
+| **Performance** | `performance_test` (load testing with p50/p95/p99 metrics) |
+| **Webhooks** | `webhook_listener` (temporary HTTP server) |
+| **Codebase** | `read_file`, `write_file`, `list_files`, `search_code` |
 
-**Authentication:**
-- OAuth2 (client_credentials, password flows)
-- JWT/Bearer tokens with automatic header creation
-- HTTP Basic auth
-- JWT token parsing (decode claims, expiration)
+### Beautiful Terminal Interface
 
-**Performance:**
-- Load testing with concurrent users
-- Latency metrics (p50/p95/p99)
-- Webhook listener (temporary HTTP server for callbacks)
-- Wait/delay tools for async operations
+Built with the [Charm](https://charm.sh/) ecosystem:
 
-**Codebase Analysis:**
-- Read files (with 100KB security limit)
-- Write/modify files with human-in-the-loop confirmation
-- Search code patterns (ripgrep with fallback)
-- List files with glob patterns
+- **Streaming responses** - Text appears as the LLM generates it
+- **Markdown rendering** - Responses are beautifully formatted with syntax highlighting
+- **Input history** - Navigate with Shift+Up/Down
+- **Clipboard support** - Copy responses with Ctrl+Y
+- **Status line** - See what ZAP is doing (thinking, executing tool, streaming)
 
-### 💅 **Beautiful Terminal Interface**
-- Minimal Claude Code-style UI with Charm stack
-- Streaming responses (text appears as it arrives)
-- Markdown rendering with syntax highlighting
-- Input history navigation (Shift+↑/↓)
-- Copy responses to clipboard (Ctrl+Y)
+### Human-in-the-Loop Safety
 
-### 🔒 **Secure & Local-First**
-- API keys stored in `.env`, never in plain text
-- Persistent conversation history and agent memory
-- Everything works offline except LLM calls
-- Human-in-the-loop approval for file modifications
+When ZAP wants to modify a file:
 
-## ⚙️ Configuration
+1. Shows a colored diff of the proposed changes
+2. Waits for your approval (Y/N)
+3. Only writes the file if you confirm
 
-### Framework Setup
+No surprises, no unauthorized changes.
 
-**First-time setup** (interactive wizard):
+## Architecture
+
+```
+zap/
+├── cmd/zap/              # Application entry point (Cobra CLI)
+├── pkg/
+│   ├── core/             # Agent logic, ReAct loop, tool interface
+│   │   └── tools/        # 28+ tool implementations
+│   │       └── auth/     # Authentication tools (Bearer, Basic, OAuth2)
+│   ├── llm/              # LLM client implementations (Ollama, Gemini)
+│   ├── storage/          # Request persistence (YAML, environments)
+│   └── tui/              # Terminal UI (Bubble Tea)
+│       └── setup/        # Setup wizard components
+├── .zap/                 # Runtime configuration (created on first run)
+│   ├── config.json       # Main settings
+│   ├── history.jsonl     # Conversation log
+│   ├── memory.json       # Agent memory
+│   ├── requests/         # Saved API requests (YAML)
+│   └── environments/     # Environment configs
+├── go.mod                # Go module dependencies
+└── CLAUDE.md             # Development guidelines
+```
+
+### Core Components
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| **Agent** | `pkg/core/agent.go` | Tool registration, call counting, limit enforcement |
+| **ReAct Loop** | `pkg/core/react.go` | Reason-Act-Observe loop for tool execution |
+| **System Prompt** | `pkg/core/prompt.go` | 20-section LLM instructions |
+| **Tools** | `pkg/core/tools/` | 28+ tool implementations |
+| **LLM Clients** | `pkg/llm/` | Ollama and Gemini implementations |
+| **TUI** | `pkg/tui/` | Bubble Tea-based terminal interface |
+| **Storage** | `pkg/storage/` | YAML I/O, variable substitution |
+
+### Message Flow
+
+```
+User Input → TUI (keys.go)
+           → runAgentAsync() goroutine
+           → Agent.ProcessMessageWithEvents()
+           → LLM generates response
+           → Parse for tool calls
+           → Execute tool → Observe result → Loop or Final Answer
+           → Events emitted to TUI
+           → View rendered
+```
+
+See [pkg/core/README.md](pkg/core/README.md) for detailed architecture documentation.
+
+## Configuration
+
+### Setup Wizard
+
+On first run, ZAP walks you through configuration:
+
 ```bash
 ./zap
-# Select your API framework:
-# 1. gin    2. echo    3. chi    4. fiber
-# 5. fastapi    6. flask    7. django
-# 8. express    9. nestjs    10. hono
-# ...
+
+# Step 1: Select LLM provider
+# 1. Ollama (local)
+# 2. Ollama (cloud)
+# 3. Gemini
+
+# Step 2: Select your API framework
+# gin, echo, chi, fiber, fastapi, flask, django, express, nestjs, hono, spring, laravel, rails, actix, axum, other
 ```
 
-**With CLI flag** (skip wizard):
+### CLI Flags
+
 ```bash
+# Skip wizard with flags
 ./zap --framework gin
-./zap -f fastapi
-```
 
-**Update existing config:**
-```bash
-./zap --framework express
-# Updated framework to: express
+# Execute saved request
+./zap --request get-users --env prod
+./zap -r get-users -e dev
+
+# Show help
+./zap --help
 ```
 
 ### Configuration Files
 
-ZAP creates a `.zap` folder containing:
+**`.zap/config.json`** - Main settings:
 
-**`config.json`** - Main settings:
 ```json
 {
-  "ollama_url": "http://localhost:11434",
+  "provider": "ollama",
+  "ollama": {
+    "mode": "local",
+    "url": "http://localhost:11434",
+    "api_key": ""
+  },
+  "gemini": {
+    "api_key": ""
+  },
   "default_model": "llama3",
   "framework": "gin",
   "tool_limits": {
@@ -139,18 +206,15 @@ ZAP creates a `.zap` folder containing:
 }
 ```
 
-**Tool Limits** prevent runaway execution:
-- `default_limit` - Fallback for tools without specific limits (50)
-- `total_limit` - Safety cap on total calls per session (200)
-- `per_tool` - Per-tool overrides by name
+**`.env`** - API keys (optional, at project root):
 
-**`.env`** - API keys (optional):
 ```env
-OPENAI_API_KEY=your_key_here
-ANTHROPIC_API_KEY=your_key_here
+OLLAMA_API_KEY=your_key_here
+GEMINI_API_KEY=your_key_here
 ```
 
-**`requests/`** - Saved API requests:
+**`.zap/requests/`** - Saved requests with variable substitution:
+
 ```yaml
 # .zap/requests/get-users.yaml
 name: Get Users
@@ -160,72 +224,198 @@ headers:
   Authorization: "Bearer {{API_TOKEN}}"
 ```
 
-**`environments/`** - Environment variables:
+**`.zap/environments/`** - Environment variables:
+
 ```yaml
 # .zap/environments/dev.yaml
 BASE_URL: http://localhost:3000
 API_TOKEN: dev-token-123
 ```
 
-## 📖 Usage
+### Tool Limits
 
-### Interactive Mode (Default)
+Prevent runaway execution with per-tool and global limits:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `default_limit` | 50 | Fallback for tools without specific limits |
+| `total_limit` | 200 | Safety cap on total calls per session |
+| `per_tool` | varies | Per-tool overrides by name |
+
+## Usage
+
+### Interactive Mode
 
 ```bash
 ./zap
 ```
 
-Launch the TUI and interact with natural language:
-- `> GET http://localhost:8000/api/users` - Make requests
-- `> save this request as get-users` - Save for reuse
-- `> switch to prod environment` - Change environments
-- `> search for the /users endpoint` - Find code
+#### Natural Language Commands
 
-**Keyboard Shortcuts:**
-- `Enter` - Send message
-- `Shift+↑/↓` - Navigate input history
-- `PgUp/PgDown` - Scroll output
-- `Ctrl+L` - Clear screen
-- `Ctrl+Y` - Copy last response
-- `Ctrl+C` or `Esc` - Quit
+```bash
+# Make HTTP requests
+> GET http://localhost:8000/api/users
+> POST /api/users with {"name": "John"}
+
+# Save and load requests
+> save this request as get-users
+> load the get-users request
+> list my saved requests
+
+# Environment management
+> switch to prod environment
+> show available environments
+
+# Code analysis
+> search for the /users endpoint
+> read the file api/handlers.go
+> find where UserService is defined
+
+# Testing
+> validate the response matches this schema: {...}
+> run a load test with 10 concurrent users
+> compare this response to the baseline
+```
+
+#### Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `Enter` | Send message |
+| `Shift+↑/↓` | Navigate input history |
+| `PgUp/PgDown` | Scroll output |
+| `Ctrl+L` | Clear screen |
+| `Ctrl+U` | Clear input line |
+| `Ctrl+Y` | Copy last response |
+| `Esc` | Stop agent (running) / Quit (idle) |
+| `Ctrl+C` | Quit |
+
+#### File Write Confirmation
+
+When ZAP wants to modify a file:
+
+| Key | Action |
+|-----|--------|
+| `Y` | Approve change |
+| `N` | Reject change |
+| `PgUp/PgDown` | Scroll diff |
+| `Esc` | Reject and continue |
 
 ### CLI Mode (Automation)
+
+Perfect for CI/CD pipelines:
 
 ```bash
 # Execute saved request with environment
 ./zap --request get-users --env prod
-./zap -r get-users -e dev
 
 # Combine with framework setup
 ./zap --framework gin --request health-check
 ```
 
-Perfect for CI/CD pipelines and automation scripts.
+## Available Tools
 
-## 🎨 Design Philosophy
+### Core API Tools
 
-1. **Context is King** - The agent sees your actual code, not guesses
-2. **Human in the Loop** - File modifications require approval (shows diff)
-3. **Fail Loudly** - Errors are visible and helpful with debugging hints
-4. **Beautiful UX** - Production-quality interface, not a prototype
+| Tool | Description |
+|------|-------------|
+| `http_request` | Make HTTP requests with status code meanings and error hints |
+| `save_request` | Save API request to YAML with `{{VAR}}` placeholders |
+| `load_request` | Load saved request with environment variable substitution |
+| `list_requests` | List all saved requests in `.zap/requests/` |
+| `set_environment` | Set active environment (dev, prod, staging) |
+| `list_environments` | List available environments |
 
-## 🛠️ Tech Stack
+### Testing & Validation
 
-- **Language:** Go 1.25.3
-- **CLI Framework:** Cobra + Viper
-- **TUI Stack:** Bubble Tea, Lip Gloss, Huh, Bubbles, Glamour
-- **LLM Interface:** Raw HTTP Client (no LangChain)
-- **Local LLM:** Ollama (with cloud provider fallback)
-- **Search:** ripgrep (automatic fallback to native Go implementation)
+| Tool | Description |
+|------|-------------|
+| `assert_response` | Validate status codes, headers, body, JSON path, timing |
+| `extract_value` | Extract values using JSON path, headers, cookies, regex |
+| `validate_json_schema` | Validate against JSON Schema (draft-07, draft-2020-12) |
+| `test_suite` | Run organized test suites with assertions |
+| `compare_responses` | Regression testing with baseline comparison |
 
-## 📝 License
+### Variables & Timing
+
+| Tool | Description |
+|------|-------------|
+| `variable` | Manage session/global variables with disk persistence |
+| `wait` | Add delays for async operations |
+| `retry` | Retry with configurable attempts and exponential backoff |
+
+### Authentication
+
+| Tool | Description |
+|------|-------------|
+| `auth_bearer` | Create Bearer token headers (JWT, API tokens) |
+| `auth_basic` | Create HTTP Basic authentication headers |
+| `auth_oauth2` | OAuth2 flows (client_credentials, password) |
+| `auth_helper` | Parse JWT tokens, decode Basic auth |
+
+### Performance & Webhooks
+
+| Tool | Description |
+|------|-------------|
+| `performance_test` | Load test with concurrent users, p50/p95/p99 latency |
+| `webhook_listener` | Temporary HTTP server to capture callbacks |
+
+### Codebase Analysis
+
+| Tool | Description |
+|------|-------------|
+| `read_file` | Read file contents (100KB security limit) |
+| `write_file` | Write files with human-in-the-loop confirmation |
+| `list_files` | List files with glob patterns (`**/*.go`) |
+| `search_code` | Search patterns with ripgrep (native fallback) |
+
+## Contributing
+
+Contributions are welcome! See the package-level documentation for understanding the codebase:
+
+- [pkg/core/README.md](pkg/core/README.md) - Agent and ReAct loop
+- [pkg/core/tools/README.md](pkg/core/tools/README.md) - Tool implementation guide
+- [pkg/llm/README.md](pkg/llm/README.md) - Adding new LLM providers
+- [pkg/storage/README.md](pkg/storage/README.md) - Persistence layer
+- [pkg/tui/README.md](pkg/tui/README.md) - Terminal UI
+
+### Adding a New Tool
+
+1. Create a new file in `pkg/core/tools/`
+2. Implement the `core.Tool` interface:
+
+```go
+type Tool interface {
+    Name() string
+    Description() string
+    Parameters() string  // JSON Schema
+    Execute(args string) (string, error)
+}
+```
+
+3. Register in `pkg/tui/init.go` via `agent.RegisterTool()`
+
+### Development Guidelines
+
+See [CLAUDE.md](CLAUDE.md) for detailed development guidelines.
+
+## Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Language | Go 1.25.3 |
+| CLI Framework | Cobra + Viper |
+| TUI | Bubble Tea, Lip Gloss, Bubbles, Glamour, Huh |
+| LLM Providers | Ollama, Google Gemini |
+| Search | ripgrep (with native Go fallback) |
+| Data | YAML for requests/environments |
+| Validation | gojsonschema |
+| Auth | golang.org/x/oauth2 |
+
+## License
 
 MIT
 
-## 🤝 Contributing
-
-Contributions welcome! This is an actively developed project.
-
-## 🙏 Acknowledgments
+## Acknowledgments
 
 Built with the amazing [Charm](https://charm.sh/) ecosystem.
