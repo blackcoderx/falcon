@@ -410,7 +410,6 @@ See [CLAUDE.md](CLAUDE.md) for detailed development guidelines.
 | Search | ripgrep (with native Go fallback) |
 | Data | YAML for requests/environments |
 | Validation | gojsonschema |
-| Auth | golang.org/x/oauth2 |
 
 ## License
 
