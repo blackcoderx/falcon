@@ -18,14 +18,31 @@ type ToolLimitsConfig struct {
 	PerTool      map[string]int `json:"per_tool"`      // Per-tool limits (tool_name -> max_calls)
 }
 
+// OllamaConfig holds Ollama-specific configuration
+type OllamaConfig struct {
+	Mode   string `json:"mode"`    // "local" or "cloud"
+	URL    string `json:"url"`     // API URL
+	APIKey string `json:"api_key"` // API key (for cloud mode)
+}
+
+// GeminiConfig holds Gemini-specific configuration
+type GeminiConfig struct {
+	APIKey string `json:"api_key"` // Gemini API key
+}
+
 // Config represents the user's ZAP configuration
 type Config struct {
-	OllamaURL    string           `json:"ollama_url"`
-	OllamaAPIKey string           `json:"ollama_api_key"`
+	Provider     string           `json:"provider"` // "ollama" or "gemini"
+	OllamaConfig OllamaConfig     `json:"ollama,omitempty"`
+	GeminiConfig GeminiConfig     `json:"gemini,omitempty"`
 	DefaultModel string           `json:"default_model"`
 	Theme        string           `json:"theme"`
 	Framework    string           `json:"framework"` // API framework (e.g., gin, fastapi, express)
 	ToolLimits   ToolLimitsConfig `json:"tool_limits"`
+
+	// Legacy fields for backward compatibility (deprecated)
+	OllamaURL    string `json:"ollama_url,omitempty"`
+	OllamaAPIKey string `json:"ollama_api_key,omitempty"`
 }
 
 // SupportedFrameworks lists frameworks that ZAP recognizes
@@ -50,10 +67,13 @@ var SupportedFrameworks = []string{
 
 // SetupResult holds the collected values from the first-run setup wizard.
 type SetupResult struct {
-	Framework string
-	OllamaURL string
-	Model     string
-	APIKey    string
+	Framework   string
+	Provider    string // "ollama" or "gemini"
+	OllamaMode  string // "local" or "cloud" (for Ollama only)
+	OllamaURL   string // Ollama API URL
+	GeminiKey   string // Gemini API key
+	OllamaKey   string // Ollama API key (for cloud mode)
+	Model       string
 }
 
 // frameworkGroup organizes frameworks by language for the setup wizard.
@@ -90,6 +110,22 @@ func buildFrameworkOptions() []huh.Option[string] {
 	return options
 }
 
+// providerOptions returns the available LLM provider options for the setup wizard.
+func providerOptions() []huh.Option[string] {
+	return []huh.Option[string]{
+		huh.NewOption("Ollama (local or cloud)", "ollama"),
+		huh.NewOption("Gemini (Google AI)", "gemini"),
+	}
+}
+
+// ollamaModeOptions returns the Ollama mode options (local vs cloud).
+func ollamaModeOptions() []huh.Option[string] {
+	return []huh.Option[string]{
+		huh.NewOption("Local (run on your machine)", "local"),
+		huh.NewOption("Cloud (Ollama Cloud)", "cloud"),
+	}
+}
+
 // runSetupWizard displays an interactive setup wizard on first run using the huh library.
 // If frameworkFlag is non-empty, the framework selection step is skipped.
 func runSetupWizard(frameworkFlag string) (*SetupResult, error) {
@@ -97,9 +133,12 @@ func runSetupWizard(frameworkFlag string) (*SetupResult, error) {
 	// any pre-initialized value interference with input fields
 	var (
 		selectedFramework = frameworkFlag
+		selectedProvider  string
+		ollamaMode        string
 		ollamaURL         string
+		ollamaKey         string
+		geminiKey         string
 		modelName         string
-		apiKey            string
 	)
 
 	fmt.Println()
@@ -107,10 +146,8 @@ func runSetupWizard(frameworkFlag string) (*SetupResult, error) {
 	fmt.Println("  Let's configure your setup.")
 	fmt.Println()
 
-	// Phase 1: Collect settings
+	// Phase 1: Framework selection (skip if --framework flag was provided)
 	var configGroups []*huh.Group
-
-	// Framework selection (skip if --framework flag was provided)
 	if frameworkFlag == "" {
 		configGroups = append(configGroups,
 			huh.NewGroup(
@@ -124,60 +161,183 @@ func runSetupWizard(frameworkFlag string) (*SetupResult, error) {
 		)
 	}
 
-	// Model configuration
+	// Phase 2: Provider selection
 	configGroups = append(configGroups,
 		huh.NewGroup(
-			huh.NewInput().
-				Title("Ollama API URL").
-				Description("The URL of your Ollama-compatible API endpoint.").
-				Placeholder("https://ollama.com").
-				Value(&ollamaURL),
-			huh.NewInput().
-				Title("Model name").
-				Description("The model to use for AI assistance.").
-				Placeholder("qwen3-coder:480b-cloud").
-				Value(&modelName),
-			huh.NewInput().
-				Title("API Key").
-				Description("Your API key for authentication.").
-				Placeholder("Enter your API key...").
-				EchoMode(huh.EchoModePassword).
-				Value(&apiKey),
+			huh.NewSelect[string]().
+				Title("Select your LLM provider").
+				Description("Choose which AI service to use for assistance.").
+				Options(providerOptions()...).
+				Value(&selectedProvider),
 		),
 	)
 
-	configForm := huh.NewForm(configGroups...).WithTheme(huh.ThemeDracula())
-	if err := configForm.Run(); err != nil {
+	providerForm := huh.NewForm(configGroups...).WithTheme(huh.ThemeDracula())
+	if err := providerForm.Run(); err != nil {
 		return nil, fmt.Errorf("setup cancelled: %w", err)
 	}
 
-	// Build result with defaults for empty fields
+	// Phase 3: Provider-specific configuration
 	result := &SetupResult{
 		Framework: selectedFramework,
-		OllamaURL: ollamaURL,
-		Model:     modelName,
-		APIKey:    apiKey,
-	}
-	if result.OllamaURL == "" {
-		result.OllamaURL = "https://ollama.com"
-	}
-	if result.Model == "" {
-		result.Model = "qwen3-coder:480b-cloud"
+		Provider:  selectedProvider,
 	}
 
-	// Phase 2: Confirmation with actual entered values
+	if selectedProvider == "ollama" {
+		// Ollama mode selection
+		modeForm := huh.NewForm(
+			huh.NewGroup(
+				huh.NewSelect[string]().
+					Title("Select Ollama mode").
+					Description("Local runs on your machine, Cloud uses Ollama's hosted service.").
+					Options(ollamaModeOptions()...).
+					Value(&ollamaMode),
+			),
+		).WithTheme(huh.ThemeDracula())
+
+		if err := modeForm.Run(); err != nil {
+			return nil, fmt.Errorf("setup cancelled: %w", err)
+		}
+
+		result.OllamaMode = ollamaMode
+
+		if ollamaMode == "local" {
+			// Local Ollama configuration
+			localForm := huh.NewForm(
+				huh.NewGroup(
+					huh.NewInput().
+						Title("Ollama URL").
+						Description("Local Ollama server URL (default: http://localhost:11434).").
+						Placeholder("http://localhost:11434").
+						Value(&ollamaURL),
+					huh.NewInput().
+						Title("Model name").
+						Description("The model to use (must be installed locally).").
+						Placeholder("llama3").
+						Value(&modelName),
+				),
+			).WithTheme(huh.ThemeDracula())
+
+			if err := localForm.Run(); err != nil {
+				return nil, fmt.Errorf("setup cancelled: %w", err)
+			}
+
+			// Set defaults for local mode
+			if ollamaURL == "" {
+				ollamaURL = "http://localhost:11434"
+			}
+			if modelName == "" {
+				modelName = "llama3"
+			}
+
+			result.OllamaURL = ollamaURL
+			result.Model = modelName
+
+		} else {
+			// Cloud Ollama configuration
+			cloudForm := huh.NewForm(
+				huh.NewGroup(
+					huh.NewInput().
+						Title("Ollama Cloud URL").
+						Description("Ollama Cloud API endpoint (default: https://ollama.com).").
+						Placeholder("https://ollama.com").
+						Value(&ollamaURL),
+					huh.NewInput().
+						Title("Model name").
+						Description("The cloud model to use.").
+						Placeholder("qwen3-coder:480b-cloud").
+						Value(&modelName),
+					huh.NewInput().
+						Title("API Key").
+						Description("Your Ollama Cloud API key.").
+						Placeholder("Enter your API key...").
+						EchoMode(huh.EchoModePassword).
+						Value(&ollamaKey),
+				),
+			).WithTheme(huh.ThemeDracula())
+
+			if err := cloudForm.Run(); err != nil {
+				return nil, fmt.Errorf("setup cancelled: %w", err)
+			}
+
+			// Set defaults for cloud mode
+			if ollamaURL == "" {
+				ollamaURL = "https://ollama.com"
+			}
+			if modelName == "" {
+				modelName = "qwen3-coder:480b-cloud"
+			}
+
+			result.OllamaURL = ollamaURL
+			result.OllamaKey = ollamaKey
+			result.Model = modelName
+		}
+
+	} else {
+		// Gemini configuration
+		geminiForm := huh.NewForm(
+			huh.NewGroup(
+				huh.NewInput().
+					Title("Gemini API Key").
+					Description("Get your API key from aistudio.google.com.").
+					Placeholder("Enter your Gemini API key...").
+					EchoMode(huh.EchoModePassword).
+					Value(&geminiKey),
+				huh.NewInput().
+					Title("Model name").
+					Description("The Gemini model to use (default: gemini-2.5-flash-lite).").
+					Placeholder("gemini-2.5-flash-lite").
+					Value(&modelName),
+			),
+		).WithTheme(huh.ThemeDracula())
+
+		if err := geminiForm.Run(); err != nil {
+			return nil, fmt.Errorf("setup cancelled: %w", err)
+		}
+
+		// Set defaults for Gemini
+		if modelName == "" {
+			modelName = "gemini-2.5-flash-lite"
+		}
+
+		result.GeminiKey = geminiKey
+		result.Model = modelName
+	}
+
+	// Phase 4: Confirmation with actual entered values
+	var confirmDescription string
+	if result.Provider == "ollama" {
+		if result.OllamaMode == "local" {
+			confirmDescription = fmt.Sprintf(
+				"Provider:  Ollama (local)\nFramework: %s\nURL:       %s\nModel:     %s",
+				result.Framework,
+				result.OllamaURL,
+				result.Model,
+			)
+		} else {
+			confirmDescription = fmt.Sprintf(
+				"Provider:  Ollama (cloud)\nFramework: %s\nURL:       %s\nModel:     %s\nAPI Key:   %s",
+				result.Framework,
+				result.OllamaURL,
+				result.Model,
+				maskAPIKey(result.OllamaKey),
+			)
+		}
+	} else {
+		confirmDescription = fmt.Sprintf(
+			"Provider:  Gemini\nFramework: %s\nModel:     %s\nAPI Key:   %s",
+			result.Framework,
+			result.Model,
+			maskAPIKey(result.GeminiKey),
+		)
+	}
+
 	var confirmed bool
 	confirmForm := huh.NewForm(
 		huh.NewGroup(
 			huh.NewConfirm().
 				Title("Create configuration with these settings?").
-				Description(fmt.Sprintf(
-					"Framework: %s\nAPI URL:   %s\nModel:     %s\nAPI Key:   %s",
-					result.Framework,
-					result.OllamaURL,
-					result.Model,
-					maskAPIKey(result.APIKey),
-				)).
+				Description(confirmDescription).
 				Affirmative("Yes, create config").
 				Negative("No, cancel").
 				Value(&confirmed),
@@ -348,8 +508,7 @@ func createDefaultEnvironment() error {
 // createDefaultConfig creates a default configuration file with the setup wizard results.
 func createDefaultConfig(setup *SetupResult) error {
 	config := Config{
-		OllamaURL:    setup.OllamaURL,
-		OllamaAPIKey: setup.APIKey,
+		Provider:     setup.Provider,
 		DefaultModel: setup.Model,
 		Theme:        "dark",
 		Framework:    setup.Framework,
@@ -385,6 +544,19 @@ func createDefaultConfig(setup *SetupResult) error {
 				"memory": 50,
 			},
 		},
+	}
+
+	// Set provider-specific config
+	if setup.Provider == "ollama" {
+		config.OllamaConfig = OllamaConfig{
+			Mode:   setup.OllamaMode,
+			URL:    setup.OllamaURL,
+			APIKey: setup.OllamaKey,
+		}
+	} else {
+		config.GeminiConfig = GeminiConfig{
+			APIKey: setup.GeminiKey,
+		}
 	}
 
 	data, err := json.MarshalIndent(config, "", "  ")

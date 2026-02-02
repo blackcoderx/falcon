@@ -12,7 +12,7 @@ import (
 // Agent represents the ZAP AI agent that processes user messages,
 // executes tools, and provides API debugging assistance.
 type Agent struct {
-	llmClient    *llm.OllamaClient
+	llmClient    llm.LLMClient
 	tools        map[string]Tool
 	toolsMu      sync.RWMutex // Protects access to tools map
 	history      []llm.Message
@@ -49,7 +49,7 @@ const (
 //   - Default per-tool limit: 50 calls
 //   - Total limit: 200 calls per session
 //   - Max history: 100 messages
-func NewAgent(llmClient *llm.OllamaClient) *Agent {
+func NewAgent(llmClient llm.LLMClient) *Agent {
 	return &Agent{
 		llmClient:    llmClient,
 		tools:        make(map[string]Tool),

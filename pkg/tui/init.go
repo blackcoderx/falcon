@@ -142,8 +142,68 @@ func registerTools(agent *core.Agent, zapDir, workDir string, confirmManager *to
 }
 
 // newLLMClient creates and configures the LLM client from Viper config.
-func newLLMClient() *llm.OllamaClient {
-	// Get config from viper
+// Supports multiple providers: ollama (local/cloud) and gemini.
+// Falls back to legacy config format for backward compatibility.
+func newLLMClient() llm.LLMClient {
+	provider := viper.GetString("provider")
+
+	// Default model from config
+	defaultModel := viper.GetString("default_model")
+
+	switch provider {
+	case "gemini":
+		// Gemini configuration
+		apiKey := viper.GetString("gemini.api_key")
+		if apiKey == "" {
+			apiKey = os.Getenv("GEMINI_API_KEY")
+		}
+
+		if defaultModel == "" {
+			defaultModel = "gemini-2.5-flash-lite"
+		}
+
+		client, err := llm.NewGeminiClient(apiKey, defaultModel)
+		if err != nil {
+			// Fall back to Ollama if Gemini client creation fails
+			return newOllamaClientFallback(defaultModel)
+		}
+		return client
+
+	case "ollama":
+		// New Ollama config format
+		ollamaURL := viper.GetString("ollama.url")
+		ollamaAPIKey := viper.GetString("ollama.api_key")
+
+		if ollamaURL == "" {
+			// Check mode for defaults
+			mode := viper.GetString("ollama.mode")
+			if mode == "local" {
+				ollamaURL = "http://localhost:11434"
+			} else {
+				ollamaURL = "https://ollama.com"
+			}
+		}
+
+		if defaultModel == "" {
+			mode := viper.GetString("ollama.mode")
+			if mode == "local" {
+				defaultModel = "llama3"
+			} else {
+				defaultModel = "qwen3-coder:480b-cloud"
+			}
+		}
+
+		return llm.NewOllamaClient(ollamaURL, defaultModel, ollamaAPIKey)
+
+	default:
+		// Legacy config format (backward compatibility)
+		return newOllamaClientFallback(defaultModel)
+	}
+}
+
+// newOllamaClientFallback creates an Ollama client using legacy config fields.
+// Used for backward compatibility with existing config files.
+func newOllamaClientFallback(defaultModel string) *llm.OllamaClient {
 	ollamaURL := viper.GetString("ollama_url")
 	if ollamaURL == "" {
 		ollamaURL = "https://ollama.com"
@@ -151,10 +211,9 @@ func newLLMClient() *llm.OllamaClient {
 
 	ollamaAPIKey := viper.GetString("ollama_api_key")
 	if ollamaAPIKey == "" {
-		ollamaAPIKey = viper.GetString("OLLAMA_API_KEY")
+		ollamaAPIKey = os.Getenv("OLLAMA_API_KEY")
 	}
 
-	defaultModel := viper.GetString("default_model")
 	if defaultModel == "" {
 		defaultModel = "llama3"
 	}

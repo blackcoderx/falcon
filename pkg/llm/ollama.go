@@ -223,3 +223,8 @@ func (c *OllamaClient) CheckConnection() error {
 
 	return nil
 }
+
+// GetModel returns the name of the model being used.
+func (c *OllamaClient) GetModel() string {
+	return c.Model
+}
