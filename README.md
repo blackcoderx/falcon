@@ -4,8 +4,35 @@
 
 **ZAP** is a terminal-based AI assistant that doesn't just test your APIs—it debugs them. When an endpoint returns an error, ZAP searches your actual code to find the cause and suggests fixes. Works with local LLMs (Ollama) or cloud providers (Gemini).
 
+## Installation
+
+### Homebrew (macOS/Linux)
+
+```bash
+brew tap blackcoderx/zap
+brew install zap
+```
+
+### Scoop (Windows)
+
+```bash
+scoop bucket add blackcoderx https://github.com/blackcoderx/scoop-bucket
+scoop install zap
+```
+
+### From Source
+
+```bash
+go install github.com/blackcoderx/zap/cmd/zap@latest
+```
+
+### Download Binary
+
+Download pre-built binaries from [Releases](https://github.com/blackcoderx/zap/releases).
+
 ## Table of Contents
 
+- [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Features](#features)
 - [Architecture](#architecture)
