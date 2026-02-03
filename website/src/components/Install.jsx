@@ -51,6 +51,49 @@ function Install() {
           </a>
         </div>
 
+        {/* Setup instructions */}
+        <div className="border-4 border-mustard p-6 mb-12">
+          <h3 className="font-bold mb-4 text-lg">After Download</h3>
+
+          <div className="space-y-6">
+            <div>
+              <h4 className="text-mustard font-bold mb-2">Windows</h4>
+              <ol className="space-y-2 text-silver text-sm">
+                <li className="flex gap-3">
+                  <span className="text-bone font-bold">1.</span>
+                  <span>Extract the <code className="text-mustard">.zip</code> file to a folder (e.g., <code className="text-bone">C:\zap</code>)</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-bone font-bold">2.</span>
+                  <span>Add to PATH: Search "Environment Variables" → Edit PATH → Add <code className="text-bone">C:\zap</code></span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-bone font-bold">3.</span>
+                  <span>Open a new terminal and run <code className="text-mustard">zap</code></span>
+                </li>
+              </ol>
+            </div>
+
+            <div>
+              <h4 className="text-mustard font-bold mb-2">macOS / Linux</h4>
+              <ol className="space-y-2 text-silver text-sm">
+                <li className="flex gap-3">
+                  <span className="text-bone font-bold">1.</span>
+                  <span>Extract: <code className="text-mustard">tar -xzf zap_*.tar.gz</code></span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-bone font-bold">2.</span>
+                  <span>Move to PATH: <code className="text-mustard">sudo mv zap /usr/local/bin/</code></span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-bone font-bold">3.</span>
+                  <span>Run <code className="text-mustard">zap</code> from any directory</span>
+                </li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
         <h3 className="text-xl font-bold mb-6 text-center">
           <span className="text-silver">&gt;</span> Or build from source
         </h3>
