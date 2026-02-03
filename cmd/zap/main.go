@@ -14,6 +14,11 @@ import (
 )
 
 var (
+	// Version info (injected by GoReleaser)
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+
 	cfgFile     string
 	requestFile string
 	envName     string
@@ -66,6 +71,17 @@ func init() {
 	rootCmd.Flags().StringVarP(&requestFile, "request", "r", "", "Execute a saved request file (YAML)")
 	rootCmd.Flags().StringVarP(&envName, "env", "e", "dev", "Environment to use for variable substitution")
 	rootCmd.Flags().StringVarP(&framework, "framework", "f", "", "API framework (gin, fastapi, express, etc.)")
+
+	// Version command
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "version",
+		Short: "Print version information",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("ZAP %s\n", version)
+			fmt.Printf("  commit: %s\n", commit)
+			fmt.Printf("  built:  %s\n", date)
+		},
+	})
 }
 
 func initConfig() {

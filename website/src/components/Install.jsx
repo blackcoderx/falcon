@@ -1,5 +1,15 @@
 import { useState } from 'react'
 
+const downloads = [
+  { os: 'Windows', arch: 'x64', file: 'zap_1.0.0_windows_amd64.zip', icon: '[]' },
+  { os: 'macOS', arch: 'Apple Silicon', file: 'zap_1.0.0_darwin_arm64.tar.gz', icon: '()' },
+  { os: 'macOS', arch: 'Intel', file: 'zap_1.0.0_darwin_amd64.tar.gz', icon: '()' },
+  { os: 'Linux', arch: 'x64', file: 'zap_1.0.0_linux_amd64.tar.gz', icon: '><' },
+  { os: 'Linux', arch: 'ARM64', file: 'zap_1.0.0_linux_arm64.tar.gz', icon: '><' },
+]
+
+const baseUrl = 'https://github.com/blackcoderx/zap/releases/download/v1.0.0'
+
 function Install() {
   const [copied, setCopied] = useState(false)
   const installCmd = 'git clone https://github.com/blackcoderx/zap.git && cd zap && go build -o zap ./cmd/zap'
@@ -14,8 +24,36 @@ function Install() {
     <section id="install" className="bg-smoke py-16 border-b-4 border-ash">
       <div className="max-w-4xl mx-auto px-6">
         <h2 className="text-2xl font-bold mb-8 text-center">
-          <span className="text-mustard">&gt;</span> Install
+          <span className="text-mustard">&gt;</span> Download
         </h2>
+
+        {/* Download buttons */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-12">
+          {downloads.map((d) => (
+            <a
+              key={d.file}
+              href={`${baseUrl}/${d.file}`}
+              className="border-4 border-ash hover:border-mustard p-4 text-center transition-colors group"
+            >
+              <div className="text-2xl font-bold text-mustard mb-1 font-mono">{d.icon}</div>
+              <div className="font-bold text-sm">{d.os}</div>
+              <div className="text-silver text-xs">{d.arch}</div>
+            </a>
+          ))}
+        </div>
+
+        <div className="text-center mb-12">
+          <a
+            href="https://github.com/blackcoderx/zap/releases/latest"
+            className="text-mustard hover:underline text-sm"
+          >
+            View all releases &rarr;
+          </a>
+        </div>
+
+        <h3 className="text-xl font-bold mb-6 text-center">
+          <span className="text-silver">&gt;</span> Or build from source
+        </h3>
 
         <div className="space-y-8">
           <div>

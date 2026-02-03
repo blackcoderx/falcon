@@ -33,11 +33,11 @@ function Hero() {
           <span className="text-xl font-bold tracking-wider">ZAP</span>
         </div>
         <div className="flex gap-6 text-sm">
+          <a href="#install" className="text-silver hover:text-mustard transition-colors">
+            Download
+          </a>
           <a href="https://github.com/blackcoderx/zap" className="text-silver hover:text-mustard transition-colors">
             GitHub
-          </a>
-          <a href="#install" className="text-silver hover:text-mustard transition-colors">
-            Install
           </a>
         </div>
       </nav>
@@ -58,10 +58,10 @@ function Hero() {
 
         <div className="flex gap-4 fade-in-up" style={{ animationDelay: '0.5s', opacity: 0 }}>
           <a
-            href="#install"
+            href="https://github.com/blackcoderx/zap/releases/latest"
             className="bg-mustard text-charcoal px-6 py-3 font-bold border-4 border-black hover:bg-mustard-dark transition-colors pulse-glow"
           >
-            GET STARTED
+            DOWNLOAD v1.0
           </a>
           <a
             href="https://github.com/blackcoderx/zap"
