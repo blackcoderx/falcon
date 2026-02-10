@@ -16,6 +16,9 @@ func (a *Agent) buildSystemPrompt() string {
 	sb.WriteString(a.buildGuardrailsSection())
 	sb.WriteString(a.buildBehavioralRulesSection())
 	sb.WriteString(a.buildAutonomousWorkflow())
+	sb.WriteString(a.buildAIAnalysisSection())
+	sb.WriteString(a.buildCodeFixingSection())
+	sb.WriteString(a.buildReportingSection())
 	sb.WriteString(a.buildZapFolderSync())
 	sb.WriteString(a.buildSecretsHandling())
 	sb.WriteString(a.buildToolUsageRules())
@@ -253,11 +256,16 @@ func (a *Agent) buildToolUsageRules() string {
 | memory recall | Check for saved project info |
 | load_request | Reuse saved request |
 | auth_* | Set up authentication headers |
+| analyze_endpoint | Analyze endpoint structure and security |
+| generate_tests | Create comprehensive test scenarios |
 
 ### Making API Calls:
 | Tool | When to Use |
 |------|-------------|
 | http_request | Execute the request |
+| auto_test | Run full autonomous test cycle |
+| run_tests | Run multiple scenarios in parallel |
+| run_single_test | Re-run a specific test |
 | assert_response | Validate response matches expectations |
 | extract_value | Pull values for request chaining |
 | variable | Store extracted values |
@@ -267,6 +275,12 @@ func (a *Agent) buildToolUsageRules() string {
 |------|-------------|
 | search_code | Find endpoint handlers by path/error |
 | read_file | Examine specific code files |
+| find_handler | Locate endpoint handlers in code |
+| analyze_failure | Intelligent assessment of failed tests |
+| propose_fix | Generate secure code changes (diff) |
+| create_test_file | Create regression tests for fixes |
+| security_report | Generate comprehensive analysis |
+| export_results | Export data to JSON/Markdown |
 | memory save | Save diagnosis for future reference |
 
 ### Persistence:
@@ -492,6 +506,84 @@ func (a *Agent) buildFrameworkHintsSection() string {
 
 `)
 	return sb.String()
+}
+
+// buildAIAnalysisSection returns instructions for AI analysis and test generation tools.
+func (a *Agent) buildAIAnalysisSection() string {
+	return `## AI ANALYSIS & TEST GENERATION
+You have access to powerful AI-driven tools for API security and testing:
+
+1. **analyze_endpoint** - Perform deep analysis of an endpoint:
+   - Identifies parameters, auth types, and structured response definitions
+   - Discovers hidden security risks (SQLi, IDOR, etc.)
+   - Use this before generating tests to get high-quality scenarios
+
+2. **generate_tests** - Create diverse, high-coverage test cases:
+   - Categories: security, validation, happy_path, edge_case, performance
+   - Generates payloads, OWASP references, and specific assertions
+   - Use count parameter to control volume (default: 20)
+
+3. **run_tests** - High-concurrency test execution:
+   - Runs multiple scenarios in parallel (defaults to 5 concurrent)
+   - Filters by category
+   - Provides status summary and failure details
+
+4. **analyze_failure** - Expert assessment of test failures:
+   - Explains WHY a test failed beyond just status codes
+   - Assigns severity and OWASP/CWE categories
+   - Provides step-by-step remediation with code examples
+
+5. **auto_test** - The "Magic" button for full automation:
+   - One-click workflow: analyze -> generate -> execute -> assess
+   - Returns a comprehensive markdown report
+   - Use this when the user says "test this endpoint" or "check /api/users for bugs"
+
+`
+}
+
+// buildCodeFixingSection returns instructions for codebase intelligence and code fixing tools.
+func (a *Agent) buildCodeFixingSection() string {
+	return `## CODEBASE INTELLIGENCE & CODE FIXING
+You can autonomously find and fix vulnerabilities in the application code:
+
+1. **find_handler** - Locate the code responsible for an endpoint:
+   - Uses framework-aware patterns (Gin, FastAPI, Express, etc.)
+   - Helps you find exactly WHERE to look for a bug
+   - Use this when a test fails and you need to see the source code
+
+2. **propose_fix** - Generate a high-quality security fix:
+   - Provides a unified diff format
+   - Explains the fix and required imports
+   - Assesses the risk of applying the change
+
+3. **create_test_file** - Ensure the fix lasts:
+   - Generates framework-specific unit/integration tests
+   - Specifically targets the vulnerability you just fixed
+   - Helps prevent future regressions
+
+**WORKFLOW**:
+Failure detected -> find_handler -> read_file -> analyze_failure -> propose_fix -> (user confirms) -> create_test_file -> run_single_test (verify)
+`
+}
+
+// buildReportingSection returns instructions for reporting and security scoring tools.
+func (a *Agent) buildReportingSection() string {
+	return `## REPORTING & SECURITY SCORING
+You can generate professional reports of your testing activities:
+
+1. **security_report** - Create a detailed security assessment:
+   - Summarizes pass/fail rates and severity breakdown
+   - Maps failures to OWASP/CWE
+   - Provides an actionable remediation roadmap
+
+2. **export_results** - Save your findings for external use:
+   - Supports JSON (for automation) and Markdown (for humans)
+   - Automatically saves to .zap/reports/
+   - Essential for CI/CD integration and team handoffs
+
+**WORKFLOW**:
+Testing complete -> security_report -> export_results (json/markdown) -> Provide final summary to user
+`
 }
 
 // buildPersistenceSection returns instructions for request persistence features.

@@ -16,8 +16,8 @@ type Agent struct {
 	tools        map[string]Tool
 	toolsMu      sync.RWMutex // Protects access to tools map
 	history      []llm.Message
-	historyMu    sync.RWMutex  // Protects access to history slice
-	lastResponse interface{}   // Store last tool response for chaining
+	historyMu    sync.RWMutex // Protects access to history slice
+	lastResponse interface{}  // Store last tool response for chaining
 
 	// Per-tool call limiting
 	toolLimits   map[string]int // max calls per tool per session
@@ -92,6 +92,11 @@ func (a *Agent) SetLastResponse(response interface{}) {
 // SetToolLimit sets the maximum number of calls allowed for a specific tool per session.
 func (a *Agent) SetToolLimit(toolName string, limit int) {
 	a.toolLimits[toolName] = limit
+}
+
+// LLMClient returns the agent's LLM client.
+func (a *Agent) LLMClient() llm.LLMClient {
+	return a.llmClient
 }
 
 // SetDefaultLimit sets the fallback limit for tools without a specific limit.

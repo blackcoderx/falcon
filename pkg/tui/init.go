@@ -49,6 +49,20 @@ func configureToolLimits(agent *core.Agent) {
 		"retry":      15,
 		"wait":       20,
 		"test_suite": 10,
+		// AI Analysis & Orchestration
+		"analyze_endpoint": 15,
+		"analyze_failure":  15,
+		"generate_tests":   10,
+		"run_tests":        10,
+		"run_single_test":  20,
+		"auto_test":        5,
+		// Sprint 3: Codebase Intelligence & Fixing
+		"find_handler":     20,
+		"propose_fix":      10,
+		"create_test_file": 10,
+		// Sprint 4: Reporting
+		"security_report": 20,
+		"export_results":  20,
 		// Memory tool
 		"memory": 50,
 	}
@@ -136,6 +150,28 @@ func registerTools(agent *core.Agent, zapDir, workDir string, confirmManager *to
 	agent.RegisterTool(tools.NewPerformanceTool(httpTool, varStore))
 	agent.RegisterTool(tools.NewWebhookListenerTool(varStore))
 	agent.RegisterTool(auth.NewOAuth2Tool(varStore))
+
+	// AI Analysis & Orchestration (Sprint 1 & 2 additions)
+	analyzeEndpoint := tools.NewAnalyzeEndpointTool(agent.LLMClient())
+	analyzeFailure := tools.NewAnalyzeFailureTool(agent.LLMClient())
+	generateTests := tools.NewGenerateTestsTool(agent.LLMClient())
+	runTests := tools.NewRunTestsTool(httpTool, assertTool, varStore)
+
+	agent.RegisterTool(analyzeEndpoint)
+	agent.RegisterTool(analyzeFailure)
+	agent.RegisterTool(generateTests)
+	agent.RegisterTool(runTests)
+	agent.RegisterTool(tools.NewRunSingleTestTool(httpTool, assertTool, varStore))
+	agent.RegisterTool(tools.NewAutoTestTool(analyzeEndpoint, generateTests, runTests, analyzeFailure))
+
+	// Register Sprint 3 tools
+	agent.RegisterTool(tools.NewFindHandlerTool(workDir))
+	agent.RegisterTool(tools.NewProposeFixTool(agent.LLMClient()))
+	agent.RegisterTool(tools.NewCreateTestFileTool(agent.LLMClient()))
+
+	// Register Sprint 4 tools
+	agent.RegisterTool(tools.NewSecurityReportTool(zapDir))
+	agent.RegisterTool(tools.NewExportResultsTool(zapDir))
 
 	// Register memory tool
 	agent.RegisterTool(tools.NewMemoryTool(memStore))

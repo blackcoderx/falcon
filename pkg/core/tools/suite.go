@@ -47,8 +47,8 @@ type TestSuiteParams struct {
 	SaveResults bool             `json:"save_results,omitempty"` // Save to .zap/test-results/
 }
 
-// TestResult represents the result of a single test
-type TestResult struct {
+// SuiteTestResult represents the result of a single test in a manual suite
+type SuiteTestResult struct {
 	Name       string        `json:"name"`
 	Passed     bool          `json:"passed"`
 	Duration   time.Duration `json:"duration"`
@@ -58,14 +58,14 @@ type TestResult struct {
 
 // SuiteResult represents the result of an entire suite
 type SuiteResult struct {
-	Name       string        `json:"name"`
-	StartTime  time.Time     `json:"start_time"`
-	EndTime    time.Time     `json:"end_time"`
-	Duration   time.Duration `json:"duration"`
-	TotalTests int           `json:"total_tests"`
-	Passed     int           `json:"passed"`
-	Failed     int           `json:"failed"`
-	Tests      []TestResult  `json:"tests"`
+	Name       string            `json:"name"`
+	StartTime  time.Time         `json:"start_time"`
+	EndTime    time.Time         `json:"end_time"`
+	Duration   time.Duration     `json:"duration"`
+	TotalTests int               `json:"total_tests"`
+	Passed     int               `json:"passed"`
+	Failed     int               `json:"failed"`
+	Tests      []SuiteTestResult `json:"tests"`
 }
 
 // Name returns the tool name
@@ -139,7 +139,7 @@ func (t *TestSuiteTool) runSuite(params TestSuiteParams) SuiteResult {
 		Name:       params.Name,
 		StartTime:  time.Now(),
 		TotalTests: len(params.Tests),
-		Tests:      make([]TestResult, 0, len(params.Tests)),
+		Tests:      make([]SuiteTestResult, 0, len(params.Tests)),
 	}
 
 	for i, test := range params.Tests {
@@ -163,9 +163,9 @@ func (t *TestSuiteTool) runSuite(params TestSuiteParams) SuiteResult {
 }
 
 // runTest executes a single test
-func (t *TestSuiteTool) runTest(test TestDefinition, testNum, totalTests int) TestResult {
+func (t *TestSuiteTool) runTest(test TestDefinition, testNum, totalTests int) SuiteTestResult {
 	startTime := time.Now()
-	result := TestResult{
+	result := SuiteTestResult{
 		Name:   test.Name,
 		Passed: true,
 	}
