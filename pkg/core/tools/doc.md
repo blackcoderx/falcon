@@ -11,18 +11,53 @@ Each tool implements the `core.Tool` interface and handles a specific type of op
 
 ## Tools by Category
 
-### HTTP
+### AI Analysis
 | Tool | File | Description |
 |------|------|-------------|
-| `http_request` | `http.go` | Make HTTP requests |
+| `analyze_endpoint` | `analyze.go` | Deep analysis of endpoint structure and risks |
+| `analyze_failure` | `analyze.go` | Expert assessment of test failures |
 
-### Codebase
+### Test Generation
+| Tool | File | Description |
+|------|------|-------------|
+| `generate_tests` | `generate.go` | Create diverse, high-coverage scenarios |
+
+### Orchestration
+| Tool | File | Description |
+|------|------|-------------|
+| `run_tests` | `orchestrate.go` | Run multiple tests in parallel |
+| `run_single_test` | `orchestrate.go` | Re-run a specific test scenario |
+| `auto_test` | `orchestrate.go` | Full autonomous test-and-fix workflow |
+
+### Codebase Intelligence
 | Tool | File | Description |
 |------|------|-------------|
 | `read_file` | `file.go` | Read file contents |
 | `write_file` | `write.go` | Write/update files |
 | `list_files` | `file.go` | List directory contents |
 | `search_code` | `search.go` | Search for patterns in code |
+| `find_handler` | `handler.go` | Locate endpoint handlers in code |
+| `propose_fix` | `fix.go` | Generate secure code changes (diff) |
+| `create_test_file` | `test_gen.go` | Create regression tests for fixes |
+
+### Reporting
+| Tool | File | Description |
+|------|------|-------------|
+| `security_report` | `report.go` | Generate comprehensive analysis |
+| `export_results` | `report.go` | Export findings to JSON/Markdown |
+
+### Authentication
+| Tool | File | Description |
+|------|------|-------------|
+| `auth_bearer` | `auth/bearer.go` | Bearer token creation |
+| `auth_basic` | `auth/basic.go` | Basic auth creation |
+| `auth_oauth2` | `auth/oauth2.go` | OAuth2 authentication flows |
+| `auth_helper` | `auth/helper.go` | Token parsing and decoding |
+
+### HTTP
+| Tool | File | Description |
+|------|------|-------------|
+| `http_request` | `http.go` | Make HTTP requests |
 
 ### Testing & Validation
 | Tool | File | Description |
@@ -33,7 +68,7 @@ Each tool implements the `core.Tool` interface and handles a specific type of op
 | `compare_responses` | `diff.go` | Compare response differences |
 | `test_suite` | `suite.go` | Run test suites |
 
-### Performance
+### Performance & Timing
 | Tool | File | Description |
 |------|------|-------------|
 | `performance_test` | `perf.go` | Load testing |

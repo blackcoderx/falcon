@@ -14,58 +14,24 @@ This package implements the AI agent that powers ZAP. It uses a ReAct (Reason+Ac
 
 ## Key Components
 
-### Agent (`agent.go`)
-The main AI agent struct that orchestrates the ReAct loop.
+### Autonomous Testing Workflow (`react.go`, `prompt.go`)
+ZAP uses a specialized ReAct loop combined with AI-driven testing tools:
+1. **Analyze**: Understand endpoint requirements via `analyze_endpoint`.
+2. **Generate**: Create thousands of tests covering security, validation, and edge cases.
+3. **Execute**: Run parallelized tests with `run_tests`.
+4. **Fix**: Locate handlers with `find_handler` and propose secure code changes with `propose_fix`.
+5. **Report**: Aggregate findings into professional security reports.
 
-```go
-agent := core.NewAgent(llmClient)
-agent.RegisterTool(httpTool)
-agent.SetFramework("gin")
-answer, err := agent.ProcessMessageWithEvents(input, callback)
-```
-
-### Tool Interface (`types.go`)
-All agent capabilities implement the `Tool` interface:
-
-```go
-type Tool interface {
-    Name() string
-    Description() string
-    Parameters() string
-    Execute(args string) (string, error)
-}
-```
-
-### ReAct Loop (`react.go`)
-The core reasoning loop that processes messages:
-
-- `ProcessMessage(input)` - Blocking, returns final answer
-- `ProcessMessageWithEvents(input, callback)` - Emits events for real-time UI updates
+### Tool Interface (`types.go`, `test_types.go`)
+Standard tool interface coupled with core testing data structures:
+- `TestScenario`: Defines a single test case (HTTP details + expectations).
+- `TestResult`: Captures execution details, duration, and failure analysis.
 
 ### System Prompts (`prompt.go`)
-Constructs the LLM system prompt with:
-- Available tools and their descriptions
-- Framework-specific guidance (Gin, FastAPI, Express, etc.)
-- Error diagnosis workflows
-- Request chaining patterns
-
-### Memory Store (`memory.go`, `session.go`)
-Persistent memory across sessions:
-- Key-value facts storage
-- Session tracking and history
-- Conversation summaries
-
-### Configuration (`init.go`)
-Initialization and configuration loading:
-- `.zap` folder creation
-- Framework selection
-- Tool limits configuration
-
-### Error Analysis (`analysis.go`)
-Error context extraction and stack trace parsing:
-- Multi-language stack trace parsing (Python, Go, JavaScript)
-- JSON error response parsing
-- Human-readable error formatting
+Constructs dynamic instructions with:
+- **Auto-Test Workflows**: Step-by-step guidance for autonomous testing.
+- **Code Fixing Workflows**: Guided remediation patterns.
+- **Reporting Workflows**: Professional assessment generation.
 
 ## Event System
 
@@ -74,37 +40,30 @@ The agent emits events during processing for real-time UI updates:
 | Event Type | Description |
 |------------|-------------|
 | `thinking` | Agent is reasoning |
-| `tool_call` | Executing a tool |
+| `tool_call` | Executing a tool (e.g., `auto_test`) |
 | `observation` | Tool returned a result |
 | `answer` | Final answer ready |
-| `error` | An error occurred |
 | `streaming` | LLM response chunk |
-| `tool_usage` | Tool usage statistics |
-| `confirmation_required` | File write needs approval |
-
-## Tool Limits
-
-The agent enforces per-tool call limits to prevent runaway execution:
-
-```go
-agent.SetToolLimit("http_request", 25)  // Max 25 HTTP requests
-agent.SetDefaultLimit(50)               // Default for other tools
-agent.SetTotalLimit(200)                // Safety cap total
-```
+| `confirmation_required` | File write or code fix needs approval |
 
 ## File Structure
 
 ```
 pkg/core/
 ├── doc.md          # This file
-├── types.go        # Core interfaces and types
-├── agent.go        # Agent struct and tool management
+├── types.go        # Core interfaces
+├── agent.go        # Agent and tool management
 ├── react.go        # ReAct loop implementation
-├── prompt.go       # System prompt construction
-├── parser.go       # LLM response parsing
+├── prompt.go       # Autonomous workflow prompts
 ├── memory.go       # Persistent memory store
-├── session.go      # Session tracking and history
-├── analysis.go     # Error context extraction
 ├── init.go         # Initialization and config
-└── tools/          # Agent tool implementations
+└── tools/          # Tool implementations
+    ├── test_types.go    # Core testing data structures
+    ├── analyze.go       # AI endpoint & failure analysis
+    ├── generate.go      # AI test generation
+    ├── orchestrate.go   # Test parallelization & auto-flow
+    ├── handler.go       # Codebase handler discovery
+    ├── fix.go           # AI code fix generation
+    ├── test_gen.go      # Regression test generation
+    └── report.go        # Security scoring & reporting
 ```

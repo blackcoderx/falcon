@@ -90,23 +90,29 @@ go build -o zap.exe ./cmd/zap
 ZAP doesn't just show you errors—it explains them:
 
 - **Stack trace parsing** - Extracts file:line from Python, Go, and JavaScript tracebacks
-- **Code search** - Uses ripgrep to find relevant code (with native Go fallback)
-- **Framework hints** - Provides framework-specific debugging tips (15+ frameworks supported)
-- **Fix suggestions** - Suggests code changes with examples
+- **Autonomous Testing** - One-click `auto_test` workflow: Analyze -> Generate -> Execute -> Diagnose
+- **Intelligent Fixes** - Not just suggestions, but full unified diffs with `propose_fix`
+- **Regression Testing** - Automatically generate test files to ensure bugs stay fixed
+- **Framework patterns** - Detects endpoint handlers using framework-specific idioms (15+ frameworks)
 
 ### 28+ Tools for API Testing
 
 | Category | Tools |
 |----------|-------|
+| **AI Analysis** | `analyze_endpoint` (structure/risks), `analyze_failure` (expert assessment) |
+| **Orchestration** | `run_tests` (parallel), `auto_test` (autonomous cycle), `run_single_test` |
+| **Generation** | `generate_tests` (AI-driven comprehensive test scenarios) |
+| **Code Fixing** | `find_handler`, `propose_fix` (diffs), `create_test_file` (regression) |
+| **Reporting** | `security_report` (scoring/action plan), `export_results` (JSON/Markdown) |
 | **HTTP** | `http_request` - Full HTTP client with variable substitution |
-| **Persistence** | `save_request`, `load_request`, `list_requests`, `set_environment`, `list_environments` |
+| **Persistence** | `save_request`, `load_request`, `list_requests`, `set_environment` |
 | **Validation** | `assert_response`, `validate_json_schema` |
 | **Extraction** | `extract_value` (JSON path, headers, cookies, regex) |
 | **Variables** | `variable` (session/global with disk persistence) |
 | **Timing** | `wait`, `retry` (exponential backoff) |
 | **Auth** | `auth_bearer`, `auth_basic`, `auth_oauth2`, `auth_helper` |
 | **Testing** | `test_suite`, `compare_responses` (regression testing) |
-| **Performance** | `performance_test` (load testing with p50/p95/p99 metrics) |
+| **Performance** | `performance_test` (load testing with metrics) |
 | **Webhooks** | `webhook_listener` (temporary HTTP server) |
 | **Codebase** | `read_file`, `write_file`, `list_files`, `search_code` |
 
@@ -350,6 +356,22 @@ Perfect for CI/CD pipelines:
 
 ## Available Tools
 
+### AI Analysis & Generation
+
+| Tool | Description |
+|------|-------------|
+| `analyze_endpoint` | Deep analysis of endpoint structure, parameters, and security risks |
+| `analyze_failure` | Expert assessment of why a test failed with remediation steps |
+| `generate_tests` | AI-driven generation of comprehensive, categorized test scenarios |
+
+### Orchestration & Automation
+
+| Tool | Description |
+|------|-------------|
+| `run_tests` | Parallel execution of multiple scenarios with filtering |
+| `run_single_test` | Trigger a specific scenario (useful for fix verification) |
+| `auto_test` | Autonomous workflow: analyze → generate → execute → assess |
+
 ### Core API Tools
 
 | Tool | Description |
@@ -403,6 +425,16 @@ Perfect for CI/CD pipelines:
 | `write_file` | Write files with human-in-the-loop confirmation |
 | `list_files` | List files with glob patterns (`**/*.go`) |
 | `search_code` | Search patterns with ripgrep (native fallback) |
+| `find_handler` | Framework-aware discovery of endpoint source code |
+| `propose_fix` | Generate unified diffs to fix identified vulnerabilities |
+| `create_test_file` | Generate regression tests to ensure bugs stay fixed |
+
+### Reporting & Scoring
+
+| Tool | Description |
+|------|-------------|
+| `security_report` | Comprehensive security assessment and action plan |
+| `export_results` | Export results to JSON (CI/CD) or Markdown (Reporting) |
 
 ## Contributing
 
