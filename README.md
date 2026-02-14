@@ -95,26 +95,22 @@ ZAP doesn't just show you errors—it explains them:
 - **Regression Testing** - Automatically generate test files to ensure bugs stay fixed
 - **Framework patterns** - Detects endpoint handlers using framework-specific idioms (15+ frameworks)
 
-### 28+ Tools for API Testing
+### 33+ Advanced Tools for API Testing
 
-| Category | Tools |
-|----------|-------|
-| **AI Analysis** | `analyze_endpoint` (structure/risks), `analyze_failure` (expert assessment) |
-| **Orchestration** | `run_tests` (parallel), `auto_test` (autonomous cycle), `run_single_test` |
-| **Generation** | `generate_tests` (AI-driven comprehensive test scenarios) |
-| **Code Fixing** | `find_handler`, `propose_fix` (diffs), `create_test_file` (regression) |
-| **Reporting** | `security_report` (scoring/action plan), `export_results` (JSON/Markdown) |
-| **HTTP** | `http_request` - Full HTTP client with variable substitution |
-| **Persistence** | `save_request`, `load_request`, `list_requests`, `set_environment` |
-| **Validation** | `assert_response`, `validate_json_schema` |
-| **Extraction** | `extract_value` (JSON path, headers, cookies, regex) |
-| **Variables** | `variable` (session/global with disk persistence) |
-| **Timing** | `wait`, `retry` (exponential backoff) |
-| **Auth** | `auth_bearer`, `auth_basic`, `auth_oauth2`, `auth_helper` |
-| **Testing** | `test_suite`, `compare_responses` (regression testing) |
-| **Performance** | `performance_test` (load testing with metrics) |
-| **Webhooks** | `webhook_listener` (temporary HTTP server) |
-| **Codebase** | `read_file`, `write_file`, `list_files`, `search_code` |
+ZAP follows a tiered architecture, organizing 33+ tools into logical domains:
+
+| Tier | Category | Purpose |
+|------|----------|---------|
+| **1** | **Foundation** | Core HTTP, Auth, and Assertion primitives (`shared/`) |
+| **2** | **Codebase** | Deep codebase analysis and local fixing (`debugging/`) |
+| **3** | **Persistence** | state management for variables and environments (`persistence/`) |
+| **4** | **Modules** | Autonomous testing: Security, Performance, and Quality Assurance |
+
+#### Featured Capabilities:
+- **Autonomous cycle**: `auto_test` — Discovery -> Generation -> Execution -> Diagnosis.
+- **Spec Ingestion**: `ingest_spec` — Transforms OpenAPI/Swagger into a rich Knowledge Graph.
+- **Advanced QA**: `verify_idempotency`, `verify_schema_conformance`, `detect_breaking_changes`.
+- **Infrastructure**: `run_performance`, `scan_security`, `orchestrate_integration`.
 
 ### Beautiful Terminal Interface
 
@@ -140,23 +136,22 @@ No surprises, no unauthorized changes.
 
 ```
 zap/
-├── cmd/zap/              # Application entry point (Cobra CLI)
+├── cmd/zap/              # Application entry point
 ├── pkg/
-│   ├── core/             # Agent logic, ReAct loop, tool interface
-│   │   └── tools/        # 28+ tool implementations
-│   │       └── auth/     # Authentication tools (Bearer, Basic, OAuth2)
-│   ├── llm/              # LLM client implementations (Ollama, Gemini)
-│   ├── storage/          # Request persistence (YAML, environments)
-│   └── tui/              # Terminal UI (Bubble Tea)
-│       └── setup/        # Setup wizard components
-├── .zap/                 # Runtime configuration (created on first run)
-│   ├── config.json       # Main settings
-│   ├── history.jsonl     # Conversation log
-│   ├── memory.json       # Agent memory
-│   ├── requests/         # Saved API requests (YAML)
-│   └── environments/     # Environment configs
-├── go.mod                # Go module dependencies
-└── CLAUDE.md             # Development guidelines
+│   ├── core/             # Agent logic, ReAct loop
+│   │   └── tools/        # 33 modular tools
+│   │       ├── shared/   # Foundation (HTTP, Auth, Assert)
+│   │       ├── debugging/# Codebase intelligence
+│   │       ├── persistence/# Session & Environment state
+│   │       ├── agent/    # Agent lifecycle & memory
+│   │       ├── security_scanner/
+│   │       ├── performance_engine/
+│   │       └── ... (13+ other focused modules)
+│   ├── llm/              # LLM providers
+│   ├── storage/          # Low-level I/O
+│   └── tui/              # Terminal UI
+├── .zap/                 # User config & memory
+└── go.mod
 ```
 
 ### Core Components
