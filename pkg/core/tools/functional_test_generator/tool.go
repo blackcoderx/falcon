@@ -142,6 +142,7 @@ func (t *FunctionalTestGeneratorTool) Execute(args string) (string, error) {
 		Summary:        t.formatSummary(len(scenarios), strategyBreakdown, results, exportPath),
 	}
 
+	_ = result // Suppress unused write to field info lint
 	return result.Summary, nil
 }
 

@@ -5,7 +5,9 @@ import (
 	zapagent "github.com/blackcoderx/zap/pkg/core/tools/agent"
 	"github.com/blackcoderx/zap/pkg/core/tools/debugging"
 	"github.com/blackcoderx/zap/pkg/core/tools/functional_test_generator"
+	"github.com/blackcoderx/zap/pkg/core/tools/performance_engine"
 	"github.com/blackcoderx/zap/pkg/core/tools/persistence"
+	"github.com/blackcoderx/zap/pkg/core/tools/security_scanner"
 	"github.com/blackcoderx/zap/pkg/core/tools/shared"
 	"github.com/blackcoderx/zap/pkg/core/tools/spec_ingester"
 	"github.com/blackcoderx/zap/pkg/llm"
@@ -55,6 +57,8 @@ func (r *Registry) RegisterAllTools() {
 	r.registerAgentTools()
 	r.registerSpecIngesterTools()
 	r.registerFunctionalTestGeneratorTools()
+	r.registerSecurityScannerTools()
+	r.registerPerformanceEngineTools()
 	// Future: r.registerModuleTools()
 }
 
@@ -166,4 +170,16 @@ func (r *Registry) registerFunctionalTestGeneratorTools() {
 	httpTool := shared.NewHTTPTool(r.ResponseManager, r.VariableStore)
 	assertTool := shared.NewAssertTool(r.ResponseManager)
 	r.Agent.RegisterTool(functional_test_generator.NewFunctionalTestGeneratorTool(r.ZapDir, httpTool, assertTool))
+}
+
+// registerSecurityScannerTools registers the whole security scanner ecosystem.
+func (r *Registry) registerSecurityScannerTools() {
+	httpTool := shared.NewHTTPTool(r.ResponseManager, r.VariableStore)
+	r.Agent.RegisterTool(security_scanner.NewSecurityScannerTool(r.ZapDir, httpTool))
+}
+
+// registerPerformanceEngineTools registers the multi-mode performance engine.
+func (r *Registry) registerPerformanceEngineTools() {
+	httpTool := shared.NewHTTPTool(r.ResponseManager, r.VariableStore)
+	r.Agent.RegisterTool(performance_engine.NewPerformanceEngineTool(r.ZapDir, httpTool))
 }

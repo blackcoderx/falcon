@@ -422,7 +422,7 @@ func (s *BoundaryStrategy) generateMaxValueBody(params []shared.Parameter) map[s
 }
 
 // generateLargePayload creates a very large payload.
-func (s *BoundaryStrategy) generateLargePayload(params []shared.Parameter) map[string]interface{} {
+func (s *BoundaryStrategy) generateLargePayload(_ []shared.Parameter) map[string]interface{} {
 	body := make(map[string]interface{})
 
 	// Create a large nested structure
