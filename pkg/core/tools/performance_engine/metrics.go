@@ -89,11 +89,11 @@ func (c *MetricsCollector) Finalize() ExecutionMetrics {
 func (m *ExecutionMetrics) FormatSummary(mode string) string {
 	res := fmt.Sprintf("🚀 Performance Test Complete (Mode: %s)\n\n", mode)
 	res += fmt.Sprintf("Requests:   %d total, %d success, %d failed (%.2f%% success rate)\n", m.Total, m.Success, m.Fail, m.SuccessRate)
-	res += fmt.Sprintf("Latency:\n")
+	res += "Latency:\n"
 	res += fmt.Sprintf("  Avg: %v\n", m.AvgLatency)
 	res += fmt.Sprintf("  Min: %v\n", m.Min)
 	res += fmt.Sprintf("  Max: %v\n", m.Max)
-	res += fmt.Sprintf("Percentiles:\n")
+	res += "Percentiles:\n"
 	res += fmt.Sprintf("  p50: %v\n", m.P50)
 	res += fmt.Sprintf("  p95: %v\n", m.P95)
 	res += fmt.Sprintf("  p99: %v\n", m.P99)

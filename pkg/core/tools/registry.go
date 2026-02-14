@@ -3,13 +3,24 @@ package tools
 import (
 	"github.com/blackcoderx/zap/pkg/core"
 	zapagent "github.com/blackcoderx/zap/pkg/core/tools/agent"
+	"github.com/blackcoderx/zap/pkg/core/tools/api_drift_analyzer"
+	"github.com/blackcoderx/zap/pkg/core/tools/breaking_change_detector"
+	"github.com/blackcoderx/zap/pkg/core/tools/data_driven_engine"
 	"github.com/blackcoderx/zap/pkg/core/tools/debugging"
+	"github.com/blackcoderx/zap/pkg/core/tools/dependency_mapper"
+	"github.com/blackcoderx/zap/pkg/core/tools/documentation_validator"
 	"github.com/blackcoderx/zap/pkg/core/tools/functional_test_generator"
+	"github.com/blackcoderx/zap/pkg/core/tools/idempotency_verifier"
+	"github.com/blackcoderx/zap/pkg/core/tools/integration_orchestrator"
 	"github.com/blackcoderx/zap/pkg/core/tools/performance_engine"
 	"github.com/blackcoderx/zap/pkg/core/tools/persistence"
+	"github.com/blackcoderx/zap/pkg/core/tools/regression_watchdog"
+	"github.com/blackcoderx/zap/pkg/core/tools/schema_conformance"
 	"github.com/blackcoderx/zap/pkg/core/tools/security_scanner"
 	"github.com/blackcoderx/zap/pkg/core/tools/shared"
+	"github.com/blackcoderx/zap/pkg/core/tools/smoke_runner"
 	"github.com/blackcoderx/zap/pkg/core/tools/spec_ingester"
+	"github.com/blackcoderx/zap/pkg/core/tools/unit_test_scaffolder"
 	"github.com/blackcoderx/zap/pkg/llm"
 )
 
@@ -59,7 +70,8 @@ func (r *Registry) RegisterAllTools() {
 	r.registerFunctionalTestGeneratorTools()
 	r.registerSecurityScannerTools()
 	r.registerPerformanceEngineTools()
-	// Future: r.registerModuleTools()
+	r.registerModuleTools()
+	r.registerWorkflowTools()
 }
 
 // initServices initializes shared services used by multiple tools.
@@ -182,4 +194,29 @@ func (r *Registry) registerSecurityScannerTools() {
 func (r *Registry) registerPerformanceEngineTools() {
 	httpTool := shared.NewHTTPTool(r.ResponseManager, r.VariableStore)
 	r.Agent.RegisterTool(performance_engine.NewPerformanceEngineTool(r.ZapDir, httpTool))
+}
+
+// registerModuleTools registers the high-level capability modules (Smoke, Idempotency, etc).
+func (r *Registry) registerModuleTools() {
+	httpTool := shared.NewHTTPTool(r.ResponseManager, r.VariableStore)
+
+	r.Agent.RegisterTool(smoke_runner.NewSmokeRunnerTool(r.ZapDir, httpTool))
+	r.Agent.RegisterTool(unit_test_scaffolder.NewUnitTestCasefolderTool(r.LLMClient))
+	r.Agent.RegisterTool(idempotency_verifier.NewIdempotencyVerifierTool(r.ZapDir, httpTool))
+	r.Agent.RegisterTool(data_driven_engine.NewDataDrivenEngineTool(httpTool))
+
+	// Sprint 9 registrations
+	r.Agent.RegisterTool(schema_conformance.NewSchemaConformanceTool(r.ZapDir, httpTool))
+	r.Agent.RegisterTool(breaking_change_detector.NewBreakingChangeDetectorTool(r.ZapDir))
+	r.Agent.RegisterTool(dependency_mapper.NewDependencyMapperTool(r.ZapDir))
+	r.Agent.RegisterTool(documentation_validator.NewDocumentationValidatorTool(r.ZapDir))
+	r.Agent.RegisterTool(api_drift_analyzer.NewAPIDriftAnalyzerTool(r.ZapDir, httpTool))
+}
+
+// registerWorkflowTools registers integration and regression modules.
+func (r *Registry) registerWorkflowTools() {
+	httpTool := shared.NewHTTPTool(r.ResponseManager, r.VariableStore)
+
+	r.Agent.RegisterTool(integration_orchestrator.NewIntegrationOrchestratorTool(r.ZapDir, httpTool))
+	r.Agent.RegisterTool(regression_watchdog.NewRegressionWatchdogTool(r.ZapDir, httpTool))
 }
