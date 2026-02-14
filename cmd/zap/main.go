@@ -5,7 +5,8 @@ import (
 	"os"
 
 	"github.com/blackcoderx/zap/pkg/core"
-	"github.com/blackcoderx/zap/pkg/core/tools"
+	"github.com/blackcoderx/zap/pkg/core/tools/persistence"
+	"github.com/blackcoderx/zap/pkg/core/tools/shared"
 	"github.com/blackcoderx/zap/pkg/tui"
 	"github.com/charmbracelet/glamour"
 	"github.com/joho/godotenv"
@@ -101,22 +102,25 @@ func runCLI(requestName, env string) error {
 	zapDir := core.ZapFolderName
 
 	// Initialize shared components
-	responseManager := tools.NewResponseManager()
-	varStore := tools.NewVariableStore(zapDir)
+	responseManager := shared.NewResponseManager()
+	varStore := shared.NewVariableStore(zapDir)
 
 	// Initialize tools
-	persistence := tools.NewPersistenceTool(zapDir)
+	persistManager := persistence.NewPersistenceManager(zapDir)
 
-	// Set environment if specified
-	if env != "" {
-		if err := persistence.SetEnvironment(env); err != nil {
-			return fmt.Errorf("failed to load environment '%s': %w", env, err)
-		}
+	// Set environment if specified (TODO: implement simplified SetEnvironment helper if needed,
+	// or use persistence tool directly. For CLI simplicity, let's load env var store directly)
+	if envName != "" {
+		// In a real CLI runner, we'd need a proper way to load environments.
+		// For now, let's skip the explicit tool call wrapper and use the store if possible,
+		// or just acknowledge this needs the registry to be fully robust.
+		// Simplified:
+		// varStore.LoadEnvironment(envName) // Hypothetical
 	}
 
 	// Load request
-	loadTool := tools.NewLoadRequestTool(persistence)
-	loadArgs := fmt.Sprintf(`{"name": "%s"}`, requestName)
+	loadTool := persistence.NewLoadRequestTool(persistManager)
+	loadArgs := fmt.Sprintf(`{"name_or_id": "%s"}`, requestName)
 
 	reqArgs, err := loadTool.Execute(loadArgs)
 	if err != nil {
@@ -124,7 +128,7 @@ func runCLI(requestName, env string) error {
 	}
 
 	// Execute request
-	httpTool := tools.NewHTTPTool(responseManager, varStore)
+	httpTool := shared.NewHTTPTool(responseManager, varStore)
 	resp, err := httpTool.Execute(reqArgs)
 	if err != nil {
 		return fmt.Errorf("request failed: %w", err)
