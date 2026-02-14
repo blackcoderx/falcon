@@ -4,6 +4,7 @@ import (
 	"github.com/blackcoderx/zap/pkg/core"
 	zapagent "github.com/blackcoderx/zap/pkg/core/tools/agent"
 	"github.com/blackcoderx/zap/pkg/core/tools/debugging"
+	"github.com/blackcoderx/zap/pkg/core/tools/functional_test_generator"
 	"github.com/blackcoderx/zap/pkg/core/tools/persistence"
 	"github.com/blackcoderx/zap/pkg/core/tools/shared"
 	"github.com/blackcoderx/zap/pkg/core/tools/spec_ingester"
@@ -53,6 +54,7 @@ func (r *Registry) RegisterAllTools() {
 	r.registerPersistenceTools()
 	r.registerAgentTools()
 	r.registerSpecIngesterTools()
+	r.registerFunctionalTestGeneratorTools()
 	// Future: r.registerModuleTools()
 }
 
@@ -157,4 +159,11 @@ func (r *Registry) registerAgentTools() {
 // registerSpecIngesterTools registers spec-to-graph transformation tools.
 func (r *Registry) registerSpecIngesterTools() {
 	r.Agent.RegisterTool(spec_ingester.NewIngestSpecTool(r.LLMClient, r.ZapDir))
+}
+
+// registerFunctionalTestGeneratorTools registers spec-driven functional test generator.
+func (r *Registry) registerFunctionalTestGeneratorTools() {
+	httpTool := shared.NewHTTPTool(r.ResponseManager, r.VariableStore)
+	assertTool := shared.NewAssertTool(r.ResponseManager)
+	r.Agent.RegisterTool(functional_test_generator.NewFunctionalTestGeneratorTool(r.ZapDir, httpTool, assertTool))
 }
