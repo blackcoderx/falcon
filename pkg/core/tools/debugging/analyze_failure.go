@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/blackcoderx/zap/pkg/core/tools/shared"
 	"github.com/blackcoderx/zap/pkg/llm"
 )
 
@@ -20,22 +21,13 @@ func NewAnalyzeFailureTool(llmClient llm.LLMClient) *AnalyzeFailureTool {
 	}
 }
 
-// TestResult represents the result of a test execution (simplified for this tool)
-// Note: In a real scenario, this might need to import shared types or define its own if decoupling is strict.
-// For now, we assume the input JSON will match this structure or be generic.
-type TestResult struct {
-	Passed       bool     `json:"passed"`
-	TotalChecks  int      `json:"total_checks"`
-	PassedChecks int      `json:"passed_checks"`
-	FailedChecks int      `json:"failed_checks"`
-	Failures     []string `json:"failures,omitempty"`
-}
+// TestResult is now imported from shared.TestResult
 
 // AnalyzeFailureParams defines input for analyze_failure
 type AnalyzeFailureParams struct {
-	TestResult       TestResult `json:"test_result"`
-	ResponseBody     string     `json:"response_body"`
-	ExpectedBehavior string     `json:"expected_behavior"`
+	TestResult       shared.TestResult `json:"test_result"`
+	ResponseBody     string            `json:"response_body"`
+	ExpectedBehavior string            `json:"expected_behavior"`
 }
 
 func (t *AnalyzeFailureTool) Name() string {

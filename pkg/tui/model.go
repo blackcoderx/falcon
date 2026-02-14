@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/blackcoderx/zap/pkg/core"
-	"github.com/blackcoderx/zap/pkg/core/tools"
+	"github.com/blackcoderx/zap/pkg/core/tools/shared"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -17,7 +17,7 @@ import (
 
 // logEntry represents a single log line in the UI
 type logEntry struct {
-	Type      string        // "user", "thinking", "tool", "observation", "response", "error", "separator", "streaming"
+	Type      string // "user", "thinking", "tool", "observation", "response", "error", "separator", "streaming"
 	Content   string
 	ToolArgs  string        // Tool arguments (for "tool" entries)
 	ToolUsed  int           // Current usage count (for "tool" entries)
@@ -59,18 +59,18 @@ type Model struct {
 	modelName       string   // current LLM model name for badge display
 
 	// Tool usage tracking for display
-	toolUsage      []ToolUsageDisplay // Current tool usage stats
-	totalCalls     int                // Total tool calls in session
-	totalLimit     int                // Total limit
-	lastToolName   string             // Last tool that was called
-	lastToolCount  int                // Last tool's current count
-	lastToolLimit  int                // Last tool's limit
-	toolStartTime  time.Time          // When the current tool call started
+	toolUsage     []ToolUsageDisplay // Current tool usage stats
+	totalCalls    int                // Total tool calls in session
+	totalLimit    int                // Total limit
+	lastToolName  string             // Last tool that was called
+	lastToolCount int                // Last tool's current count
+	lastToolLimit int                // Last tool's limit
+	toolStartTime time.Time          // When the current tool call started
 
 	// Confirmation state for file write approval
-	confirmationMode    bool                      // True when awaiting user confirmation
-	pendingConfirmation *core.FileConfirmation    // Details of the pending file change
-	confirmManager      *tools.ConfirmationManager // Shared confirmation manager
+	confirmationMode    bool                        // True when awaiting user confirmation
+	pendingConfirmation *core.FileConfirmation      // Details of the pending file change
+	confirmManager      *shared.ConfirmationManager // Shared confirmation manager
 
 	// Persistent memory store
 	memoryStore *core.MemoryStore

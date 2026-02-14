@@ -49,3 +49,30 @@ type TestResult struct {
 	OWASPRef       string   `json:"owasp_ref,omitempty"`
 	Timestamp      string   `json:"timestamp"`
 }
+
+// EndpointAnalysis represents the structured output of analysis
+type EndpointAnalysis struct {
+	Summary    string          `json:"summary"`
+	Parameters []Parameter     `json:"parameters"`
+	AuthType   string          `json:"auth_type"`
+	Responses  []Response      `json:"responses"`
+	Security   []SecurityRisks `json:"security_risks"`
+}
+
+type Parameter struct {
+	Name        string `json:"name"`
+	Type        string `json:"type"`
+	Required    bool   `json:"required"`
+	Description string `json:"description"`
+}
+
+type Response struct {
+	StatusCode  int    `json:"status_code"`
+	Description string `json:"description"`
+}
+
+type SecurityRisks struct {
+	Risk        string `json:"risk"`
+	Severity    string `json:"severity"`
+	Description string `json:"description"`
+}

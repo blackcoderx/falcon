@@ -6,7 +6,7 @@ import (
 
 	"github.com/blackcoderx/zap/pkg/core"
 	"github.com/blackcoderx/zap/pkg/core/tools"
-	"github.com/blackcoderx/zap/pkg/core/tools/auth"
+	"github.com/blackcoderx/zap/pkg/core/tools/shared"
 	"github.com/blackcoderx/zap/pkg/llm"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -108,73 +108,11 @@ func configureToolLimits(agent *core.Agent) {
 
 // registerTools adds all tools to the agent.
 // This includes codebase tools, persistence tools, and testing tools from all sprints.
-func registerTools(agent *core.Agent, zapDir, workDir string, confirmManager *tools.ConfirmationManager, memStore *core.MemoryStore) {
-	// Initialize shared components
-	responseManager := tools.NewResponseManager()
-	varStore := tools.NewVariableStore(zapDir)
-
-	// Register codebase tools
-	httpTool := tools.NewHTTPTool(responseManager, varStore)
-	agent.RegisterTool(httpTool)
-	agent.RegisterTool(tools.NewReadFileTool(workDir))
-	agent.RegisterTool(tools.NewWriteFileTool(workDir, confirmManager))
-	agent.RegisterTool(tools.NewListFilesTool(workDir))
-	agent.RegisterTool(tools.NewSearchCodeTool(workDir))
-
-	// Register persistence tools
-	persistence := tools.NewPersistenceTool(zapDir)
-	agent.RegisterTool(tools.NewSaveRequestTool(persistence))
-	agent.RegisterTool(tools.NewLoadRequestTool(persistence))
-	agent.RegisterTool(tools.NewListRequestsTool(persistence))
-	agent.RegisterTool(tools.NewListEnvironmentsTool(persistence))
-	agent.RegisterTool(tools.NewSetEnvironmentTool(persistence))
-
-	// Register Sprint 1 testing tools
-	assertTool := tools.NewAssertTool(responseManager)
-	extractTool := tools.NewExtractTool(responseManager, varStore)
-	agent.RegisterTool(assertTool)
-	agent.RegisterTool(extractTool)
-	agent.RegisterTool(tools.NewVariableTool(varStore))
-	agent.RegisterTool(tools.NewWaitTool())
-	agent.RegisterTool(tools.NewRetryTool(agent))
-
-	// Register Sprint 2 tools
-	agent.RegisterTool(tools.NewSchemaValidationTool(responseManager))
-	agent.RegisterTool(auth.NewBearerTool(varStore))
-	agent.RegisterTool(auth.NewBasicTool(varStore))
-	agent.RegisterTool(auth.NewHelperTool(responseManager, varStore))
-	agent.RegisterTool(tools.NewTestSuiteTool(httpTool, assertTool, extractTool, responseManager, varStore, zapDir))
-	agent.RegisterTool(tools.NewCompareResponsesTool(responseManager, zapDir))
-
-	// Register Sprint 3 tools (MVP)
-	agent.RegisterTool(tools.NewPerformanceTool(httpTool, varStore))
-	agent.RegisterTool(tools.NewWebhookListenerTool(varStore))
-	agent.RegisterTool(auth.NewOAuth2Tool(varStore))
-
-	// AI Analysis & Orchestration (Sprint 1 & 2 additions)
-	analyzeEndpoint := tools.NewAnalyzeEndpointTool(agent.LLMClient())
-	analyzeFailure := tools.NewAnalyzeFailureTool(agent.LLMClient())
-	generateTests := tools.NewGenerateTestsTool(agent.LLMClient())
-	runTests := tools.NewRunTestsTool(httpTool, assertTool, varStore)
-
-	agent.RegisterTool(analyzeEndpoint)
-	agent.RegisterTool(analyzeFailure)
-	agent.RegisterTool(generateTests)
-	agent.RegisterTool(runTests)
-	agent.RegisterTool(tools.NewRunSingleTestTool(httpTool, assertTool, varStore))
-	agent.RegisterTool(tools.NewAutoTestTool(analyzeEndpoint, generateTests, runTests, analyzeFailure))
-
-	// Register Sprint 3 tools
-	agent.RegisterTool(tools.NewFindHandlerTool(workDir))
-	agent.RegisterTool(tools.NewProposeFixTool(agent.LLMClient()))
-	agent.RegisterTool(tools.NewCreateTestFileTool(agent.LLMClient()))
-
-	// Register Sprint 4 tools
-	agent.RegisterTool(tools.NewSecurityReportTool(zapDir))
-	agent.RegisterTool(tools.NewExportResultsTool(zapDir))
-
-	// Register memory tool
-	agent.RegisterTool(tools.NewMemoryTool(memStore))
+// registerTools adds all tools to the agent using the central registry.
+// This switches ZAP to use the new modular tool packages (shared, debugging, persistence, agent).
+func registerTools(agent *core.Agent, zapDir, workDir string, confirmManager *shared.ConfirmationManager, memStore *core.MemoryStore) {
+	registry := tools.NewRegistry(agent, agent.LLMClient(), workDir, zapDir, memStore, confirmManager)
+	registry.RegisterAllTools()
 }
 
 // newLLMClient creates and configures the LLM client from Viper config.
@@ -369,7 +307,7 @@ func InitialModel() Model {
 	configureToolLimits(agent)
 
 	// Create confirmation manager for file write approvals (shared between tool and TUI)
-	confirmManager := tools.NewConfirmationManager()
+	confirmManager := shared.NewConfirmationManager()
 
 	// Set up timeout callback to notify TUI when confirmation times out
 	confirmManager.SetTimeoutCallback(func() {

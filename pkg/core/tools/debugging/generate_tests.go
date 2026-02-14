@@ -1,10 +1,11 @@
-package tools
+package debugging
 
 import (
 	"encoding/json"
 	"fmt"
 	"strings"
 
+	"github.com/blackcoderx/zap/pkg/core/tools/shared"
 	"github.com/blackcoderx/zap/pkg/llm"
 )
 
@@ -22,9 +23,9 @@ func NewGenerateTestsTool(llmClient llm.LLMClient) *GenerateTestsTool {
 
 // GenerateTestsParams defines input for generate_tests
 type GenerateTestsParams struct {
-	Analysis   EndpointAnalysis `json:"analysis"`
-	Categories []string         `json:"categories,omitempty"`
-	Count      int              `json:"count"`
+	Analysis   shared.EndpointAnalysis `json:"analysis"`
+	Categories []string                `json:"categories,omitempty"`
+	Count      int                     `json:"count"`
 }
 
 func (t *GenerateTestsTool) Name() string {
@@ -122,12 +123,8 @@ Return ONLY a valid JSON array of TestScenario objects matching this schema:
 	response = strings.TrimSuffix(response, "```")
 
 	// Validate that it parses as []TestScenario
-	var scenarios []TestScenario
+	var scenarios []shared.TestScenario
 	if err := json.Unmarshal([]byte(response), &scenarios); err != nil {
-		// If strict parsing fails, it might be due to minor LLM formatting issues.
-		// We return the raw string but log the error context in the error return?
-		// No, let's just return the string and let the caller handle parsing or fail.
-		// But giving a warning in the string output might corrupt the JSON.
 		return strings.TrimSpace(response), nil
 	}
 
