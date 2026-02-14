@@ -6,6 +6,7 @@ import (
 	"github.com/blackcoderx/zap/pkg/core/tools/debugging"
 	"github.com/blackcoderx/zap/pkg/core/tools/persistence"
 	"github.com/blackcoderx/zap/pkg/core/tools/shared"
+	"github.com/blackcoderx/zap/pkg/core/tools/spec_ingester"
 	"github.com/blackcoderx/zap/pkg/llm"
 )
 
@@ -51,6 +52,7 @@ func (r *Registry) RegisterAllTools() {
 	r.registerDebuggingTools()
 	r.registerPersistenceTools()
 	r.registerAgentTools()
+	r.registerSpecIngesterTools()
 	// Future: r.registerModuleTools()
 }
 
@@ -150,4 +152,9 @@ func (r *Registry) registerAgentTools() {
 		runTests,
 		debugging.NewAnalyzeFailureTool(r.LLMClient),
 	))
+}
+
+// registerSpecIngesterTools registers spec-to-graph transformation tools.
+func (r *Registry) registerSpecIngesterTools() {
+	r.Agent.RegisterTool(spec_ingester.NewIngestSpecTool(r.LLMClient, r.ZapDir))
 }

@@ -24,6 +24,7 @@ var (
 	requestFile string
 	envName     string
 	framework   string
+	noIndex     bool
 	rootCmd     = &cobra.Command{
 		Use:   "zap",
 		Short: "ZAP - AI-powered API testing in your terminal",
@@ -37,7 +38,7 @@ agent that understands your code and can interact with your APIs naturally.`,
 			}
 
 			// Initialize .zap folder (runs setup wizard on first run)
-			if err := core.InitializeZapFolder(framework); err != nil {
+			if err := core.InitializeZapFolder(framework, noIndex); err != nil {
 				fmt.Fprintf(os.Stderr, "Error initializing config folder: %v\n", err)
 				os.Exit(1)
 			}
@@ -72,6 +73,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&requestFile, "request", "r", "", "Execute a saved request file (YAML)")
 	rootCmd.Flags().StringVarP(&envName, "env", "e", "dev", "Environment to use for variable substitution")
 	rootCmd.Flags().StringVarP(&framework, "framework", "f", "", "API framework (gin, fastapi, express, etc.)")
+	rootCmd.Flags().BoolVar(&noIndex, "no-index", false, "Skip automatic API specification indexing")
 
 	// Version command
 	rootCmd.AddCommand(&cobra.Command{

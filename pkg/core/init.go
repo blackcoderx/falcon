@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/blackcoderx/zap/pkg/core/tools/shared"
+	"github.com/blackcoderx/zap/pkg/core/tools/spec_ingester"
 	"github.com/charmbracelet/huh"
 )
 
@@ -67,13 +69,13 @@ var SupportedFrameworks = []string{
 
 // SetupResult holds the collected values from the first-run setup wizard.
 type SetupResult struct {
-	Framework   string
-	Provider    string // "ollama" or "gemini"
-	OllamaMode  string // "local" or "cloud" (for Ollama only)
-	OllamaURL   string // Ollama API URL
-	GeminiKey   string // Gemini API key
-	OllamaKey   string // Ollama API key (for cloud mode)
-	Model       string
+	Framework  string
+	Provider   string // "ollama" or "gemini"
+	OllamaMode string // "local" or "cloud" (for Ollama only)
+	OllamaURL  string // Ollama API URL
+	GeminiKey  string // Gemini API key
+	OllamaKey  string // Ollama API key (for cloud mode)
+	Model      string
 }
 
 // frameworkGroup organizes frameworks by language for the setup wizard.
@@ -368,7 +370,8 @@ func maskAPIKey(key string) string {
 
 // InitializeZapFolder creates the .zap directory and initializes default files if they don't exist.
 // If framework is empty and this is a first-time setup, prompts the user to select one.
-func InitializeZapFolder(framework string) error {
+// skipIndex determines if we should auto-run the spec ingester.
+func InitializeZapFolder(framework string, skipIndex bool) error {
 	// Check if .zap exists
 	if _, err := os.Stat(ZapFolderName); os.IsNotExist(err) {
 		// Run interactive setup wizard on first run
@@ -413,11 +416,44 @@ func InitializeZapFolder(framework string) error {
 		}
 
 		// Create manifest.json
-		if err := CreateManifest(ZapFolderName); err != nil {
+		if err := shared.CreateManifest(ZapFolderName); err != nil {
 			return err
 		}
 
 		fmt.Printf("\nInitialized .zap folder with framework: %s\n", setup.Framework)
+
+		// Auto-Index if not skipped
+		if !skipIndex {
+			fmt.Println("\nScanning for API specifications...")
+			// TODO: Find specs. For now we look for common files
+			specFiles := []string{"openapi.yaml", "openapi.json", "swagger.yaml", "swagger.json", "postman_collection.json"}
+			var foundSpec string
+			for _, f := range specFiles {
+				if _, err := os.Stat(f); err == nil {
+					foundSpec = f
+					break
+				}
+			}
+
+			if foundSpec != "" {
+				fmt.Printf("Found spec file: %s. Indexing...\n", foundSpec)
+				// We create a temporary tool instance to run the logic
+				// Note: LLM client is nil here as initial indexing (parsing) might not need it yet
+				// If parsing needs LLM, we'd need to init it. But our current implementation describes
+				// LLM for fusion. Let's stick to parsing for now.
+				tool := spec_ingester.NewIngestSpecTool(nil, ZapFolderName)
+
+				params := fmt.Sprintf(`{"action":"index", "source":"%s"}`, foundSpec)
+				if out, err := tool.Execute(params); err != nil {
+					fmt.Printf("Warning: Failed to index spec: %v\n", err)
+				} else {
+					fmt.Println(out)
+				}
+			} else {
+				fmt.Println("No common API spec files found. Skipping auto-index.")
+			}
+		}
+
 	} else if framework != "" {
 		// Update framework in existing config if provided via flag
 		if err := updateConfigFramework(framework); err != nil {
@@ -432,8 +468,8 @@ func InitializeZapFolder(framework string) error {
 	ensureDir(filepath.Join(ZapFolderName, "baselines"))
 
 	// Ensure manifest exists (for upgrades)
-	if _, err := os.Stat(filepath.Join(ZapFolderName, ManifestFilename)); os.IsNotExist(err) {
-		CreateManifest(ZapFolderName)
+	if _, err := os.Stat(filepath.Join(ZapFolderName, shared.ManifestFilename)); os.IsNotExist(err) {
+		shared.CreateManifest(ZapFolderName)
 	}
 
 	return nil

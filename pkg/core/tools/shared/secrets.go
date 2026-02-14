@@ -1,4 +1,4 @@
-package core
+package shared
 
 import (
 	"regexp"
@@ -12,25 +12,25 @@ var SecretPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)[a-zA-Z0-9]{32,}`), // Long random strings (likely tokens)
 
 	// Specific provider patterns
-	regexp.MustCompile(`sk-[a-zA-Z0-9]{20,}`),                           // OpenAI
-	regexp.MustCompile(`(?i)^bearer\s+[a-zA-Z0-9_\-\.]+`),               // Bearer tokens
-	regexp.MustCompile(`(?i)^basic\s+[a-zA-Z0-9+/=]+`),                  // Basic auth
-	regexp.MustCompile(`ghp_[a-zA-Z0-9]{36}`),                           // GitHub PAT
-	regexp.MustCompile(`gho_[a-zA-Z0-9]{36}`),                           // GitHub OAuth
-	regexp.MustCompile(`github_pat_[a-zA-Z0-9_]{22,}`),                  // GitHub PAT (new)
-	regexp.MustCompile(`xox[baprs]-[a-zA-Z0-9\-]+`),                     // Slack tokens
-	regexp.MustCompile(`(?i)^ey[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-]+\.`),     // JWT
-	regexp.MustCompile(`AKIA[0-9A-Z]{16}`),                              // AWS Access Key
-	regexp.MustCompile(`(?i)^[a-z0-9]{32}$`),                            // Generic 32-char hex
-	regexp.MustCompile(`(?i)^[a-f0-9]{40}$`),                            // SHA-1 (40 hex chars)
-	regexp.MustCompile(`(?i)^[a-f0-9]{64}$`),                            // SHA-256 (64 hex chars)
-	regexp.MustCompile(`AIza[0-9A-Za-z_\-]{35}`),                        // Google API Key
-	regexp.MustCompile(`(?i)^SG\.[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-]+`),     // SendGrid API Key
-	regexp.MustCompile(`(?i)^sk_live_[a-zA-Z0-9]{24,}`),                 // Stripe Live Key
-	regexp.MustCompile(`(?i)^sk_test_[a-zA-Z0-9]{24,}`),                 // Stripe Test Key
-	regexp.MustCompile(`(?i)^rk_live_[a-zA-Z0-9]{24,}`),                 // Stripe Restricted Key
-	regexp.MustCompile(`(?i)^rk_test_[a-zA-Z0-9]{24,}`),                 // Stripe Restricted Test Key
-	regexp.MustCompile(`sq0[a-z]{3}-[a-zA-Z0-9_\-]{22,}`),               // Square
+	regexp.MustCompile(`sk-[a-zA-Z0-9]{20,}`),                                                // OpenAI
+	regexp.MustCompile(`(?i)^bearer\s+[a-zA-Z0-9_\-\.]+`),                                    // Bearer tokens
+	regexp.MustCompile(`(?i)^basic\s+[a-zA-Z0-9+/=]+`),                                       // Basic auth
+	regexp.MustCompile(`ghp_[a-zA-Z0-9]{36}`),                                                // GitHub PAT
+	regexp.MustCompile(`gho_[a-zA-Z0-9]{36}`),                                                // GitHub OAuth
+	regexp.MustCompile(`github_pat_[a-zA-Z0-9_]{22,}`),                                       // GitHub PAT (new)
+	regexp.MustCompile(`xox[baprs]-[a-zA-Z0-9\-]+`),                                          // Slack tokens
+	regexp.MustCompile(`(?i)^ey[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-]+\.`),                          // JWT
+	regexp.MustCompile(`AKIA[0-9A-Z]{16}`),                                                   // AWS Access Key
+	regexp.MustCompile(`(?i)^[a-z0-9]{32}$`),                                                 // Generic 32-char hex
+	regexp.MustCompile(`(?i)^[a-f0-9]{40}$`),                                                 // SHA-1 (40 hex chars)
+	regexp.MustCompile(`(?i)^[a-f0-9]{64}$`),                                                 // SHA-256 (64 hex chars)
+	regexp.MustCompile(`AIza[0-9A-Za-z_\-]{35}`),                                             // Google API Key
+	regexp.MustCompile(`(?i)^SG\.[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-]+`),                          // SendGrid API Key
+	regexp.MustCompile(`(?i)^sk_live_[a-zA-Z0-9]{24,}`),                                      // Stripe Live Key
+	regexp.MustCompile(`(?i)^sk_test_[a-zA-Z0-9]{24,}`),                                      // Stripe Test Key
+	regexp.MustCompile(`(?i)^rk_live_[a-zA-Z0-9]{24,}`),                                      // Stripe Restricted Key
+	regexp.MustCompile(`(?i)^rk_test_[a-zA-Z0-9]{24,}`),                                      // Stripe Restricted Test Key
+	regexp.MustCompile(`sq0[a-z]{3}-[a-zA-Z0-9_\-]{22,}`),                                    // Square
 	regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`), // UUID (sometimes used as API keys)
 }
 

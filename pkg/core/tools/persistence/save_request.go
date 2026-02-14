@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/blackcoderx/zap/pkg/core"
+	"github.com/blackcoderx/zap/pkg/core/tools/shared"
 	"github.com/blackcoderx/zap/pkg/storage"
 )
 
@@ -59,7 +59,8 @@ func (t *SaveRequestTool) Execute(args string) (string, error) {
 	}
 
 	// Validate for plaintext secrets
-	if secretErr := core.ValidateRequestForSecrets(params.URL, params.Headers, params.Body); secretErr != "" {
+	// Validate for plaintext secrets
+	if secretErr := shared.ValidateRequestForSecrets(params.URL, params.Headers, params.Body); secretErr != "" {
 		return "", fmt.Errorf("cannot save request: %s", secretErr)
 	}
 
@@ -80,7 +81,7 @@ func (t *SaveRequestTool) Execute(args string) (string, error) {
 	}
 
 	// Update manifest counts
-	core.UpdateManifestCounts(t.manager.GetBaseDir())
+	shared.UpdateManifestCounts(t.manager.GetBaseDir())
 
 	return fmt.Sprintf("Request saved to %s", filePath), nil
 }

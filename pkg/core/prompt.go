@@ -3,6 +3,8 @@ package core
 import (
 	"fmt"
 	"strings"
+
+	"github.com/blackcoderx/zap/pkg/core/tools/shared"
 )
 
 // buildSystemPrompt constructs the complete system prompt for the LLM.
@@ -180,7 +182,7 @@ Parse user request to identify: method, URL, headers, body, expected outcome.
 
 // buildZapFolderSync returns rules for .zap folder usage.
 func (a *Agent) buildZapFolderSync() string {
-	summary := GetManifestSummary(ZapFolderName)
+	summary := shared.GetManifestSummary(ZapFolderName)
 	var sb strings.Builder
 
 	sb.WriteString(`## .ZAP FOLDER SYNC

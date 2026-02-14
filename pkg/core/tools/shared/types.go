@@ -76,3 +76,34 @@ type SecurityRisks struct {
 	Severity    string `json:"severity"`
 	Description string `json:"description"`
 }
+
+// ProjectContext stores metadata about the project itself
+type ProjectContext struct {
+	Framework string `json:"framework"`
+	SpecPath  string `json:"spec_path"`
+	RootPath  string `json:"root_path"`
+	Language  string `json:"language"`
+}
+
+// APIKnowledgeGraph is the core intelligence of ZAP, storing everything it knows about the API
+type APIKnowledgeGraph struct {
+	Endpoints map[string]EndpointAnalysis `json:"endpoints"`
+	Models    map[string]ModelDefinition  `json:"models"`
+	Context   ProjectContext              `json:"context"`
+	Version   string                      `json:"version"`
+}
+
+// ModelDefinition describes a data structure used in the API
+type ModelDefinition struct {
+	Name        string              `json:"name"`
+	Fields      map[string]Variable `json:"fields"`
+	Description string              `json:"description"`
+}
+
+// Variable represents a schema field or parameter
+type Variable struct {
+	Type        string `json:"type"`
+	Format      string `json:"format,omitempty"`
+	Required    bool   `json:"required"`
+	Description string `json:"description,omitempty"`
+}

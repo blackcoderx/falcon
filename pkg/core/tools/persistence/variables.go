@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blackcoderx/zap/pkg/core"
 	"github.com/blackcoderx/zap/pkg/core/tools/shared"
 )
 
@@ -68,7 +67,7 @@ func (t *VariableTool) Execute(args string) (string, error) {
 			if err != nil {
 				return "", fmt.Errorf("failed to set global variable: %w", err)
 			}
-			result := fmt.Sprintf("Set global variable: {{%s}} = '%s'\n(Persisted to disk)", params.Name, core.MaskSecret(params.Value))
+			result := fmt.Sprintf("Set global variable: {{%s}} = '%s'\n(Persisted to disk)", params.Name, shared.MaskSecret(params.Value))
 			if warning != "" {
 				result = warning + "\n\n" + result
 			}
@@ -76,7 +75,7 @@ func (t *VariableTool) Execute(args string) (string, error) {
 		}
 
 		t.store.Set(params.Name, params.Value)
-		return fmt.Sprintf("Set session variable: {{%s}} = '%s'\n(Available until ZAP exits)", params.Name, core.MaskSecret(params.Value)), nil
+		return fmt.Sprintf("Set session variable: {{%s}} = '%s'\n(Available until ZAP exits)", params.Name, shared.MaskSecret(params.Value)), nil
 
 	case "get":
 		if params.Name == "" {

@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-
-	"github.com/blackcoderx/zap/pkg/core"
 )
 
 // VariableStore manages session and global variables
@@ -44,7 +42,8 @@ func (vs *VariableStore) SetGlobal(name, value string) (warning string, err erro
 	defer vs.mu.Unlock()
 
 	// Warn on potential secrets
-	if core.IsSecret(name, value) {
+	// Warn on potential secrets
+	if IsSecret(name, value) {
 		warning = fmt.Sprintf("WARNING: '%s' appears to be a secret. Consider using session scope instead (secrets are cleared on exit for security).", name)
 	}
 
@@ -142,7 +141,7 @@ func (vs *VariableStore) saveGlobalVariables() error {
 	}
 
 	// Update manifest counts
-	core.UpdateManifestCounts(vs.zapDir)
+	UpdateManifestCounts(vs.zapDir)
 	return nil
 }
 
@@ -205,7 +204,10 @@ func (t *VariableTool) Execute(args string) (string, error) {
 			if err != nil {
 				return "", fmt.Errorf("failed to set global variable: %w", err)
 			}
-			result := fmt.Sprintf("Set global variable: {{%s}} = '%s'\n(Persisted to disk)", params.Name, core.MaskSecret(params.Value))
+			if err := t.store.saveGlobalVariables(); err != nil {
+				return "", fmt.Errorf("failed to save global variable: %w", err)
+			}
+			result := fmt.Sprintf("Set global variable: {{%s}} = '%s'\n(Persisted to disk)", params.Name, MaskSecret(params.Value))
 			if warning != "" {
 				result = warning + "\n\n" + result
 			}
@@ -213,7 +215,7 @@ func (t *VariableTool) Execute(args string) (string, error) {
 		}
 
 		t.store.Set(params.Name, params.Value)
-		return fmt.Sprintf("Set session variable: {{%s}} = '%s'\n(Available until ZAP exits)", params.Name, core.MaskSecret(params.Value)), nil
+		return fmt.Sprintf("Set session variable: {{%s}} = '%s'\n(Available until ZAP exits)", params.Name, MaskSecret(params.Value)), nil
 
 	case "get":
 		if params.Name == "" {
