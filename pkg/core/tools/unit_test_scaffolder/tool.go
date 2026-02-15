@@ -136,7 +136,7 @@ func (t *UnitTestCasefolderTool) getMockPath(srcPath, outputDir string) string {
 }
 
 func (t *UnitTestCasefolderTool) formatSummary(r ScaffoldResult) string {
-	summary := fmt.Sprintf("🏗️ Unit Test Scaffolding Complete\n\n")
+	summary := "🏗️ Unit Test Scaffolding Complete\n\n"
 	summary += fmt.Sprintf("Scanned Files: %d\n", len(r.ScannedFiles))
 	summary += fmt.Sprintf("Generated Tests: %d\n", len(r.GeneratedTests))
 	summary += fmt.Sprintf("Generated Mocks: %d\n\n", len(r.GeneratedMocks))

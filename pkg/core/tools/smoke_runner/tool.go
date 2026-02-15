@@ -151,9 +151,10 @@ func (t *SmokeRunnerTool) getCriticalEndpoints(specified []string) ([]string, er
 
 func (t *SmokeRunnerTool) formatSummary(r SmokeResult) string {
 	icon := "✅"
-	if r.Status == "fail" {
+	switch r.Status {
+case "fail":
 		icon = "❌"
-	} else if r.Status == "partial" {
+	case "partial":
 		icon = "⚠️"
 	}
 

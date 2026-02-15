@@ -18,7 +18,7 @@ type RepeatEngine struct {
 func (e *RepeatEngine) Verify(endpoints map[string]shared.EndpointAnalysis) IdempotencyResult {
 	var result IdempotencyResult
 
-	for epKey, _ := range endpoints {
+	for epKey := range endpoints {
 		result.TotalVerified++
 
 		parts := strings.SplitN(epKey, " ", 2)

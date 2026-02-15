@@ -195,10 +195,7 @@ func (a *Agent) GetToolUsageStats() (stats []ToolUsageStats, totalCalls, totalLi
 		if count > 0 {
 			limit := a.getToolLimit(toolName)
 			// Use float64 to avoid potential overflow with large counts
-			percent := int((float64(count) / float64(limit)) * 100)
-			if percent > 100 {
-				percent = 100
-			}
+			percent := min(int((float64(count)/float64(limit))*100), 100)
 			stats = append(stats, ToolUsageStats{
 				Name:    toolName,
 				Current: count,

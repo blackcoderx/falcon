@@ -1,6 +1,6 @@
 # ZAP Toolset
 
-ZAP (Zero-configuration API Pentester/Prober) features a modular, tier-based tool system.
+ZAP features a modular, tier-based tool system.
 
 ## Tool Categories
 

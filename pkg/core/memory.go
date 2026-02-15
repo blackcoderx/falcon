@@ -180,7 +180,7 @@ func (ms *MemoryStore) GetCompactSummary() string {
 	// Recent sessions summary
 	if len(sessions) > 0 {
 		last := sessions[len(sessions)-1]
-		sb.WriteString(fmt.Sprintf("Recent sessions: %d sessions, last: \"%s\"\n\n", len(sessions), last.Summary))
+		fmt.Fprintf(&sb, "Recent sessions: %d sessions, last: \"%s\"\n\n", len(sessions), last.Summary)
 	}
 
 	// Remembered facts

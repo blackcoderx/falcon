@@ -100,9 +100,10 @@ func (t *IntegrationOrchestratorTool) formatSummary(r OrchestrateResult) string 
 
 	for _, step := range r.StepResults {
 		icon := "✓"
-		if step.Status == "fail" {
+		switch step.Status {
+case "fail":
 			icon = "❌"
-		} else if step.Status == "skipped" {
+		case "skipped":
 			icon = "⏭️"
 		}
 		summary += fmt.Sprintf("  %s [%s] %s\n", icon, step.StepID, step.Description)

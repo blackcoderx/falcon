@@ -260,6 +260,8 @@ func (a *Agent) buildToolUsageRules() string {
 | auth_* | Set up authentication headers |
 | analyze_endpoint | Analyze endpoint structure and security |
 | generate_tests | Create comprehensive test scenarios |
+| ingest_spec | Ingest API specs and build Knowledge Graph |
+| map_dependencies | Map resource relationships |
 
 ### Making API Calls:
 | Tool | When to Use |
@@ -268,6 +270,10 @@ func (a *Agent) buildToolUsageRules() string {
 | auto_test | Run full autonomous test cycle |
 | run_tests | Run multiple scenarios in parallel |
 | run_single_test | Re-run a specific test |
+| run_smoke | Execute fast post-deployment health checks |
+| verify_idempotency | Detect side effects of repeated requests |
+| verify_schema_conformance | Validate responses against spec schemas |
+| run_data_driven | Bulk testing with external data sources |
 | assert_response | Validate response matches expectations |
 | extract_value | Pull values for request chaining |
 | variable | Store extracted values |
@@ -279,6 +285,12 @@ func (a *Agent) buildToolUsageRules() string {
 | read_file | Examine specific code files |
 | find_handler | Locate endpoint handlers in code |
 | analyze_failure | Intelligent assessment of failed tests |
+| detect_breaking_changes | Identify differences between API versions |
+| check_regression | Compare behavior against baseline snapshots |
+| analyze_drift | Detect shadow endpoints or functional drift |
+| validate_docs | Verify implementation matches README/docs |
+| orchestrate_integration | Run multi-step integration workflows |
+| scaffold_unit_tests | Auto-generate unit tests and mocks |
 | propose_fix | Generate secure code changes (diff) |
 | create_test_file | Create regression tests for fixes |
 | security_report | Generate comprehensive analysis |
