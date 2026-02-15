@@ -410,6 +410,14 @@ func InitializeZapFolder(framework string, skipIndex bool) error {
 			return fmt.Errorf("failed to create environments folder: %w", err)
 		}
 
+		// Create new folder structure
+		newFolders := []string{"baselines", "snapshots", "runs", "exports", "logs", "state"}
+		for _, folder := range newFolders {
+			if err := os.Mkdir(filepath.Join(ZapFolderName, folder), 0755); err != nil {
+				return fmt.Errorf("failed to create %s folder: %w", folder, err)
+			}
+		}
+
 		// Create default dev environment
 		if err := createDefaultEnvironment(); err != nil {
 			return err
@@ -466,6 +474,11 @@ func InitializeZapFolder(framework string, skipIndex bool) error {
 	ensureDir(filepath.Join(ZapFolderName, "requests"))
 	ensureDir(filepath.Join(ZapFolderName, "environments"))
 	ensureDir(filepath.Join(ZapFolderName, "baselines"))
+	ensureDir(filepath.Join(ZapFolderName, "snapshots"))
+	ensureDir(filepath.Join(ZapFolderName, "runs"))
+	ensureDir(filepath.Join(ZapFolderName, "exports"))
+	ensureDir(filepath.Join(ZapFolderName, "logs"))
+	ensureDir(filepath.Join(ZapFolderName, "state"))
 
 	// Ensure manifest exists (for upgrades)
 	if _, err := os.Stat(filepath.Join(ZapFolderName, shared.ManifestFilename)); os.IsNotExist(err) {
