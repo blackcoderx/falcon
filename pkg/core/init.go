@@ -574,6 +574,50 @@ func createDefaultEnvironment() error {
 	return nil
 }
 
+// DefaultToolLimits defines the default per-tool call limits.
+var DefaultToolLimits = map[string]int{
+	// High-risk tools (external I/O)
+	"http_request":     25,
+	"performance_test": 5,
+	"webhook_listener": 10,
+	"auth_oauth2":      10,
+	// Medium-risk tools (file system)
+	"read_file":    50,
+	"list_files":   50,
+	"search_code":  30,
+	"save_request": 20,
+	"load_request": 30,
+	// Low-risk tools (in-memory)
+	"variable":             100,
+	"assert_response":      100,
+	"extract_value":        100,
+	"auth_bearer":          50,
+	"auth_basic":           50,
+	"auth_helper":          50,
+	"validate_json_schema": 50,
+	"compare_responses":    30,
+	// Special tools
+	"retry":      15,
+	"wait":       20,
+	"test_suite": 10,
+	// AI Analysis & Orchestration
+	"analyze_endpoint": 15,
+	"analyze_failure":  15,
+	"generate_tests":   10,
+	"run_tests":        10,
+	"run_single_test":  20,
+	"auto_test":        5,
+	// Sprint 3: Codebase Intelligence & Fixing
+	"find_handler":     20,
+	"propose_fix":      10,
+	"create_test_file": 10,
+	// Sprint 4: Reporting
+	"security_report": 20,
+	"export_results":  20,
+	// Memory tool
+	"memory": 50,
+}
+
 // createDefaultConfig creates a default configuration file with the setup wizard results.
 func createDefaultConfig(setup *SetupResult) error {
 	config := Config{
@@ -584,34 +628,7 @@ func createDefaultConfig(setup *SetupResult) error {
 		ToolLimits: ToolLimitsConfig{
 			DefaultLimit: 50,  // Default: 50 calls per tool
 			TotalLimit:   200, // Safety cap: 200 total calls per session
-			PerTool: map[string]int{
-				// High-risk tools (external I/O)
-				"http_request":     25,
-				"performance_test": 5,
-				"webhook_listener": 10,
-				"auth_oauth2":      10,
-				// Medium-risk tools (file system)
-				"read_file":    50,
-				"list_files":   50,
-				"search_code":  30,
-				"save_request": 20,
-				"load_request": 30,
-				// Low-risk tools (in-memory)
-				"variable":             100,
-				"assert_response":      100,
-				"extract_value":        100,
-				"auth_bearer":          50,
-				"auth_basic":           50,
-				"auth_helper":          50,
-				"validate_json_schema": 50,
-				"compare_responses":    30,
-				// Special tools
-				"retry":      15,
-				"wait":       20,
-				"test_suite": 10,
-				// Memory tool
-				"memory": 50,
-			},
+			PerTool:      DefaultToolLimits,
 		},
 	}
 

@@ -23,49 +23,8 @@ import (
 // Low-risk tools (in-memory, no side effects) have higher limits.
 func configureToolLimits(agent *core.Agent) {
 	// Default limits (used if config doesn't specify)
-	defaultLimits := map[string]int{
-		// High-risk tools (external I/O, side effects)
-		"http_request":     25,
-		"performance_test": 5,
-		"webhook_listener": 10,
-		"auth_oauth2":      10,
-		"write_file":       10, // File writes require confirmation
-		// Medium-risk tools (file system I/O)
-		"read_file":    50,
-		"list_files":   50,
-		"search_code":  30,
-		"save_request": 20,
-		"load_request": 30,
-		// Low-risk tools (in-memory, fast)
-		"variable":             100,
-		"assert_response":      100,
-		"extract_value":        100,
-		"auth_bearer":          50,
-		"auth_basic":           50,
-		"auth_helper":          50,
-		"validate_json_schema": 50,
-		"compare_responses":    30,
-		// Special tools (prevent infinite loops)
-		"retry":      15,
-		"wait":       20,
-		"test_suite": 10,
-		// AI Analysis & Orchestration
-		"analyze_endpoint": 15,
-		"analyze_failure":  15,
-		"generate_tests":   10,
-		"run_tests":        10,
-		"run_single_test":  20,
-		"auto_test":        5,
-		// Sprint 3: Codebase Intelligence & Fixing
-		"find_handler":     20,
-		"propose_fix":      10,
-		"create_test_file": 10,
-		// Sprint 4: Reporting
-		"security_report": 20,
-		"export_results":  20,
-		// Memory tool
-		"memory": 50,
-	}
+	// We use the core defaults as the source of truth
+	defaultLimits := core.DefaultToolLimits
 
 	// Set global limits from config (with defaults)
 	defaultLimit := viper.GetInt("tool_limits.default_limit")

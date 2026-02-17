@@ -15,8 +15,8 @@ type UnitTestCasefolderTool struct {
 	llmClient llm.LLMClient
 }
 
-// NewUnitTestCasefolderTool creates a new unit test scaffolder tool.
-func NewUnitTestCasefolderTool(llmClient llm.LLMClient) *UnitTestCasefolderTool {
+// NewUnitTestScaffolderTool creates a new unit test scaffolder tool.
+func NewUnitTestScaffolderTool(llmClient llm.LLMClient) *UnitTestCasefolderTool {
 	return &UnitTestCasefolderTool{
 		llmClient: llmClient,
 	}

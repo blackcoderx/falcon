@@ -196,7 +196,7 @@ func (r *Registry) registerPerformanceEngineTools() {
 // registerModuleTools registers the high-level capability modules (Smoke, Idempotency, etc).
 func (r *Registry) registerModuleTools() {
 	r.Agent.RegisterTool(smoke_runner.NewSmokeRunnerTool(r.ZapDir, r.HTTPTool))
-	r.Agent.RegisterTool(unit_test_scaffolder.NewUnitTestCasefolderTool(r.LLMClient))
+	r.Agent.RegisterTool(unit_test_scaffolder.NewUnitTestScaffolderTool(r.LLMClient))
 	r.Agent.RegisterTool(idempotency_verifier.NewIdempotencyVerifierTool(r.ZapDir, r.HTTPTool))
 	r.Agent.RegisterTool(data_driven_engine.NewDataDrivenEngineTool(r.HTTPTool))
 
