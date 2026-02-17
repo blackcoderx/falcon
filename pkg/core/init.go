@@ -471,14 +471,30 @@ func InitializeZapFolder(framework string, skipIndex bool) error {
 	}
 
 	// Ensure subdirectories exist (for upgrades from older versions)
-	ensureDir(filepath.Join(ZapFolderName, "requests"))
-	ensureDir(filepath.Join(ZapFolderName, "environments"))
-	ensureDir(filepath.Join(ZapFolderName, "baselines"))
-	ensureDir(filepath.Join(ZapFolderName, "snapshots"))
-	ensureDir(filepath.Join(ZapFolderName, "runs"))
-	ensureDir(filepath.Join(ZapFolderName, "exports"))
-	ensureDir(filepath.Join(ZapFolderName, "logs"))
-	ensureDir(filepath.Join(ZapFolderName, "state"))
+	if err := ensureDir(filepath.Join(ZapFolderName, "requests")); err != nil {
+		return err
+	}
+	if err := ensureDir(filepath.Join(ZapFolderName, "environments")); err != nil {
+		return err
+	}
+	if err := ensureDir(filepath.Join(ZapFolderName, "baselines")); err != nil {
+		return err
+	}
+	if err := ensureDir(filepath.Join(ZapFolderName, "snapshots")); err != nil {
+		return err
+	}
+	if err := ensureDir(filepath.Join(ZapFolderName, "runs")); err != nil {
+		return err
+	}
+	if err := ensureDir(filepath.Join(ZapFolderName, "exports")); err != nil {
+		return err
+	}
+	if err := ensureDir(filepath.Join(ZapFolderName, "logs")); err != nil {
+		return err
+	}
+	if err := ensureDir(filepath.Join(ZapFolderName, "state")); err != nil {
+		return err
+	}
 
 	// Ensure manifest exists (for upgrades)
 	if _, err := os.Stat(filepath.Join(ZapFolderName, shared.ManifestFilename)); os.IsNotExist(err) {
@@ -533,11 +549,15 @@ func GetConfigFramework() string {
 	return config.Framework
 }
 
-// ensureDir creates a directory if it doesn't exist
-func ensureDir(path string) {
+// ensureDir creates a directory if it doesn't exist.
+// Returns an error if directory creation fails.
+func ensureDir(path string) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		os.Mkdir(path, 0755)
+		if err := os.Mkdir(path, 0755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", path, err)
+		}
 	}
+	return nil
 }
 
 // createDefaultEnvironment creates a default dev environment file

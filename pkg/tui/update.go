@@ -293,18 +293,9 @@ func (m Model) handleAgentDone(msg agentDoneMsg) Model {
 	m.currentTool = ""
 	m.cancelAgent = nil // Clear the cancel function
 
-	// Reset tool usage display
-	m.toolUsage = nil
-	m.totalCalls = 0
-	m.totalLimit = 0
-	m.lastToolName = ""
-	m.lastToolCount = 0
-	m.lastToolLimit = 0
-
-	// Reset animation
-	m.animPos = 0.0
-	m.animVel = 0.0
-	m.animTarget = 1.0
+	// Reset tool usage display and animation state
+	m.resetToolDisplayState()
+	m.resetAnimState()
 
 	// Only show error if not cancelled and there's an actual error
 	if !wasCancelled && msg.err != nil && msg.err != context.Canceled {

@@ -132,3 +132,20 @@ func (p *programRef) Send(msg tea.Msg) {
 // Global program reference with thread-safe accessors.
 // This is still a package-level variable but access is now synchronized.
 var globalProgram = &programRef{}
+
+// resetToolDisplayState resets all tool usage display fields to their zero values.
+func (m *Model) resetToolDisplayState() {
+	m.toolUsage = nil
+	m.totalCalls = 0
+	m.totalLimit = 0
+	m.lastToolName = ""
+	m.lastToolCount = 0
+	m.lastToolLimit = 0
+}
+
+// resetAnimState resets all animation state fields to their initial values.
+func (m *Model) resetAnimState() {
+	m.animPos = 0.0
+	m.animVel = 0.0
+	m.animTarget = 1.0
+}

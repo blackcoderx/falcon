@@ -262,13 +262,3 @@ func (a *Agent) truncateHistory() {
 		}
 	}
 }
-
-// getHistorySnapshot returns a copy of the current history for safe iteration.
-// This method is thread-safe.
-func (a *Agent) getHistorySnapshot() []llm.Message {
-	a.historyMu.RLock()
-	defer a.historyMu.RUnlock()
-	snapshot := make([]llm.Message, len(a.history))
-	copy(snapshot, a.history)
-	return snapshot
-}
