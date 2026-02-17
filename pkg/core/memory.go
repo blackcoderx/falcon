@@ -220,12 +220,14 @@ func (ms *MemoryStore) TrackTopic(topic string) {
 
 // SaveSessionSummary generates a session summary from the conversation history
 // and appends it to history.jsonl.
-func (ms *MemoryStore) SaveSessionSummary(history []llm.Message) {
+// SaveSessionSummary generates a session summary from the conversation history
+// and appends it to history.jsonl.
+func (ms *MemoryStore) SaveSessionSummary(history []llm.Message) error {
 	ms.mu.RLock()
 	defer ms.mu.RUnlock()
 
 	if ms.turnCount == 0 && len(history) == 0 {
-		return // Nothing happened in this session
+		return nil // Nothing happened in this session
 	}
 
 	// Build summary deterministically from first user message + topics + tools
@@ -257,19 +259,23 @@ func (ms *MemoryStore) SaveSessionSummary(history []llm.Message) {
 	historyPath := filepath.Join(ms.zapDir, "history.jsonl")
 	f, err := os.OpenFile(historyPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "MEMORY: Failed to open history.jsonl: %v\n", err)
-		return
+		return fmt.Errorf("failed to open history.jsonl: %w", err)
 	}
 	defer f.Close()
 
 	data, err := json.Marshal(entry)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "MEMORY: Failed to marshal session entry: %v\n", err)
-		return
+		return fmt.Errorf("failed to marshal session entry: %w", err)
 	}
 
-	f.Write(data)
-	f.Write([]byte("\n"))
+	if _, err := f.Write(data); err != nil {
+		return fmt.Errorf("failed to write session entry: %w", err)
+	}
+	if _, err := f.Write([]byte("\n")); err != nil {
+		return fmt.Errorf("failed to write newline: %w", err)
+	}
+
+	return nil
 }
 
 // GetRecentSessions reads the last N sessions from history.jsonl.

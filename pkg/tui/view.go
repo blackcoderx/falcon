@@ -165,32 +165,6 @@ func formatDuration(d time.Duration) string {
 	return fmt.Sprintf("%.1fs", d.Seconds())
 }
 
-// formatObservationCard formats a tool observation/result in a card style.
-func (m *Model) formatObservationCard(entry logEntry, contentWidth int) string {
-	content := entry.Content
-
-	// Truncate very long observations
-	if len(content) > 500 {
-		content = content[:400] + "\n... (truncated)"
-	}
-
-	// If contains markdown code blocks, render with glamour
-	if strings.Contains(content, "```") && m.renderer != nil {
-		rendered, err := m.renderer.Render(content)
-		if err == nil {
-			content = strings.TrimSpace(rendered)
-		}
-	}
-
-	// Render in response card
-	cardWidth := contentWidth - 4 // Account for card border/padding
-	if cardWidth < 30 {
-		cardWidth = 30
-	}
-
-	return ResponseCardStyle.Width(cardWidth).Render(content)
-}
-
 // renderStatus renders the current agent status text (without circle).
 func (m Model) renderStatusText() string {
 	switch m.status {
@@ -263,49 +237,6 @@ func (m Model) renderFooter() string {
 	}
 
 	return FooterStyle.Width(m.width).Render(left + strings.Repeat(" ", gap) + right)
-}
-
-// renderToolUsage renders the current tool usage statistics (used in footer during thinking)
-func (m Model) renderToolUsage() string {
-	var parts []string
-
-	// Show last tool usage with color coding
-	if m.lastToolName != "" && m.lastToolLimit > 0 {
-		percent := (m.lastToolCount * 100) / m.lastToolLimit
-		usageStr := fmt.Sprintf("%s:%d/%d", m.lastToolName, m.lastToolCount, m.lastToolLimit)
-
-		var styled string
-		if percent >= 90 {
-			styled = ToolUsageCriticalStyle.Render(usageStr)
-		} else if percent >= 70 {
-			styled = ToolUsageWarningStyle.Render(usageStr)
-		} else {
-			styled = ToolUsageNormalStyle.Render(usageStr)
-		}
-		parts = append(parts, styled)
-	}
-
-	// Show total usage
-	if m.totalLimit > 0 {
-		totalPercent := (m.totalCalls * 100) / m.totalLimit
-		totalStr := fmt.Sprintf("total:%d/%d", m.totalCalls, m.totalLimit)
-
-		var styled string
-		if totalPercent >= 90 {
-			styled = ToolUsageCriticalStyle.Render(totalStr)
-		} else if totalPercent >= 70 {
-			styled = ToolUsageWarningStyle.Render(totalStr)
-		} else {
-			styled = TotalUsageStyle.Render(totalStr)
-		}
-		parts = append(parts, styled)
-	}
-
-	if len(parts) == 0 {
-		return ShortcutDescStyle.Render("working...")
-	}
-
-	return strings.Join(parts, " ")
 }
 
 // lipglossWidth calculates the width of a styled string.

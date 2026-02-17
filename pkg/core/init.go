@@ -501,6 +501,65 @@ func InitializeZapFolder(framework string, skipIndex bool) error {
 		shared.CreateManifest(ZapFolderName)
 	}
 
+	// Migrate legacy config fields if present
+	if err := migrateLegacyConfig(); err != nil {
+		return fmt.Errorf("failed to migrate config: %w", err)
+	}
+
+	return nil
+}
+
+// migrateLegacyConfig moves legacy top-level Ollama fields to the new OllamaConfig struct.
+func migrateLegacyConfig() error {
+	configPath := filepath.Join(ZapFolderName, "config.json")
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // No config to migrate
+		}
+		return err
+	}
+
+	var config Config
+	if err := json.Unmarshal(data, &config); err != nil {
+		return err // Malformed config, skip migration
+	}
+
+	changed := false
+
+	// Check for legacy fields
+	if (config.OllamaURL != "" || config.OllamaAPIKey != "") && config.OllamaConfig == nil {
+		config.OllamaConfig = &OllamaConfig{
+			Mode:   "local",
+			URL:    config.OllamaURL,
+			APIKey: config.OllamaAPIKey,
+		}
+		// If API key is present, assume cloud or authenticated instance
+		if config.OllamaAPIKey != "" {
+			if config.OllamaURL == "https://ollama.com" || config.OllamaURL == "" {
+				config.OllamaConfig.Mode = "cloud"
+				if config.OllamaConfig.URL == "" {
+					config.OllamaConfig.URL = "https://ollama.com"
+				}
+			}
+		} else if config.OllamaURL == "" {
+			config.OllamaConfig.URL = "http://localhost:11434"
+		}
+
+		// Clear legacy fields
+		config.OllamaURL = ""
+		config.OllamaAPIKey = ""
+		changed = true
+	}
+
+	if changed {
+		newData, err := json.MarshalIndent(config, "", "  ")
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(configPath, newData, 0644)
+	}
+
 	return nil
 }
 

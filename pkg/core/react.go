@@ -50,42 +50,11 @@ func (a *Agent) ProcessMessage(input string) (string, error) {
 		}
 
 		if toolName != "" {
-			a.toolsMu.RLock()
-			tool, ok := a.tools[toolName]
-			a.toolsMu.RUnlock()
-			if !ok {
-				observation := fmt.Sprintf("Error: Tool '%s' not found.", toolName)
-				a.AppendHistoryPair(
-					llm.Message{Role: "assistant", Content: response},
-					llm.Message{Role: "user", Content: fmt.Sprintf("Observation: %s", observation)},
-				)
-				continue
-			}
-
-			// Check per-tool limit
-			if a.isToolLimitReached(toolName) {
-				limit := a.getToolLimit(toolName)
-				observation := fmt.Sprintf("Tool '%s' has reached its limit (%d calls). Use other tools or provide a final answer.", toolName, limit)
-				a.AppendHistoryPair(
-					llm.Message{Role: "assistant", Content: response},
-					llm.Message{Role: "user", Content: fmt.Sprintf("Observation: %s", observation)},
-				)
-				continue
-			}
-
-			// Execute tool and increment counters (thread-safe)
-			a.IncrementToolCount(toolName)
-
-			observation, err := tool.Execute(toolArgs)
-			if err != nil {
-				observation = fmt.Sprintf("Error executing tool: %v", err)
-			}
+			// Execute tool with common logic
+			observation := a.executeTool(toolName, toolArgs, nil)
 
 			// Add interaction to history
-			a.AppendHistoryPair(
-				llm.Message{Role: "assistant", Content: response},
-				llm.Message{Role: "user", Content: fmt.Sprintf("Observation: %s", observation)},
-			)
+			a.appendReActTurn(response, observation)
 			continue
 		}
 
@@ -176,80 +145,11 @@ func (a *Agent) ProcessMessageWithEvents(ctx context.Context, input string, call
 		}
 
 		if toolName != "" {
-			a.toolsMu.RLock()
-			tool, ok := a.tools[toolName]
-			a.toolsMu.RUnlock()
-			if !ok {
-				// Agent sees this error
-				observation := fmt.Sprintf("System Error: Tool '%s' does not exist. Please use only available tools.", toolName)
-				// User sees this error
-				callback(AgentEvent{Type: "error", Content: fmt.Sprintf("The agent tried to use an unknown tool '%s'.", toolName)})
-
-				a.AppendHistoryPair(
-					llm.Message{Role: "assistant", Content: response},
-					llm.Message{Role: "user", Content: fmt.Sprintf("Observation: %s", observation)},
-				)
-				continue
-			}
-
-			// Check per-tool limit
-			if a.isToolLimitReached(toolName) {
-				limit := a.getToolLimit(toolName)
-				observation := fmt.Sprintf("Tool '%s' has reached its limit (%d calls). Use other tools or provide a final answer.", toolName, limit)
-				callback(AgentEvent{Type: "error", Content: fmt.Sprintf("Tool '%s' limit reached (%d calls)", toolName, limit)})
-
-				a.AppendHistoryPair(
-					llm.Message{Role: "assistant", Content: response},
-					llm.Message{Role: "user", Content: fmt.Sprintf("Observation: %s", observation)},
-				)
-				continue
-			}
-
-			// Emit tool call event with arguments
-			callback(AgentEvent{Type: "tool_call", Content: toolName, ToolArgs: toolArgs})
-
-			// Increment counters before execution (thread-safe)
-			toolCount, toolLimit := a.IncrementToolCount(toolName)
-
-			// Track tool usage in memory
-			if a.memoryStore != nil {
-				a.memoryStore.TrackTool(toolName)
-			}
-
-			// If tool implements ConfirmableTool, set the callback so it can emit events
-			if confirmable, ok := tool.(ConfirmableTool); ok {
-				confirmable.SetEventCallback(callback)
-			}
-
-			// Execute tool
-			observation, err := tool.Execute(toolArgs)
-			if err != nil {
-				// Detailed error for the agent to self-correct
-				observation = fmt.Sprintf("Tool Execution Error: %v", err)
-			}
-
-			// Emit observation event
-			callback(AgentEvent{Type: "observation", Content: observation})
-
-			// Emit tool usage event for TUI display
-			stats, totalCallsNow, totalLimitNow := a.GetToolUsageStats()
-			callback(AgentEvent{
-				Type: "tool_usage",
-				ToolUsage: &ToolUsageEvent{
-					ToolName:    toolName,
-					ToolCurrent: toolCount,
-					ToolLimit:   toolLimit,
-					TotalCalls:  totalCallsNow,
-					TotalLimit:  totalLimitNow,
-					AllStats:    stats,
-				},
-			})
+			// Execute tool with events
+			observation := a.executeTool(toolName, toolArgs, callback)
 
 			// Add interaction to history
-			a.AppendHistoryPair(
-				llm.Message{Role: "assistant", Content: response},
-				llm.Message{Role: "user", Content: fmt.Sprintf("Observation: %s", observation)},
-			)
+			a.appendReActTurn(response, observation)
 			continue
 		}
 
@@ -469,4 +369,88 @@ func extractFinalAnswer(response string) string {
 	}
 
 	return ""
+}
+
+// executeTool handles the common logic for executing a tool:
+// 1. Checks if tool exists
+// 2. Checks limits
+// 3. Emits events (if callback provided)
+// 4. Updates usage stats
+// 5. runs Execute()
+func (a *Agent) executeTool(toolName, toolArgs string, callback EventCallback) string {
+	a.toolsMu.RLock()
+	tool, ok := a.tools[toolName]
+	a.toolsMu.RUnlock()
+
+	if !ok {
+		observation := fmt.Sprintf("Error: Tool '%s' not found.", toolName)
+		if callback != nil {
+			callback(AgentEvent{Type: "error", Content: fmt.Sprintf("The agent tried to use an unknown tool '%s'.", toolName)})
+		}
+		return observation
+	}
+
+	// Check per-tool limit
+	if a.isToolLimitReached(toolName) {
+		limit := a.getToolLimit(toolName)
+		observation := fmt.Sprintf("Tool '%s' has reached its limit (%d calls). Use other tools or provide a final answer.", toolName, limit)
+		if callback != nil {
+			callback(AgentEvent{Type: "error", Content: fmt.Sprintf("Tool '%s' limit reached (%d calls)", toolName, limit)})
+		}
+		return observation
+	}
+
+	// Emit tool call event
+	if callback != nil {
+		callback(AgentEvent{Type: "tool_call", Content: toolName, ToolArgs: toolArgs})
+	}
+
+	// Increment counters
+	toolCount, toolLimit := a.IncrementToolCount(toolName)
+
+	// Track tool usage in memory
+	if a.memoryStore != nil {
+		a.memoryStore.TrackTool(toolName)
+	}
+
+	// Set confirmation callback if applicable
+	if callback != nil {
+		if confirmable, ok := tool.(ConfirmableTool); ok {
+			confirmable.SetEventCallback(callback)
+		}
+	}
+
+	// Execute tool
+	observation, err := tool.Execute(toolArgs)
+	if err != nil {
+		observation = fmt.Sprintf("Error executing tool: %v", err)
+	}
+
+	// Emit observation & usage events
+	if callback != nil {
+		callback(AgentEvent{Type: "observation", Content: observation})
+
+		stats, totalCalls, totalLimit := a.GetToolUsageStats()
+		callback(AgentEvent{
+			Type: "tool_usage",
+			ToolUsage: &ToolUsageEvent{
+				ToolName:    toolName,
+				ToolCurrent: toolCount,
+				ToolLimit:   toolLimit,
+				TotalCalls:  totalCalls,
+				TotalLimit:  totalLimit,
+				AllStats:    stats,
+			},
+		})
+	}
+
+	return observation
+}
+
+// appendReActTurn adds the assistant's response and the tool observation to history.
+func (a *Agent) appendReActTurn(response, observation string) {
+	a.AppendHistoryPair(
+		llm.Message{Role: "assistant", Content: response},
+		llm.Message{Role: "user", Content: fmt.Sprintf("Observation: %s", observation)},
+	)
 }

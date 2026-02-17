@@ -19,7 +19,7 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (Model, tea.Cmd) {
 	case "ctrl+c":
 		// Save session summary before quitting
 		if m.memoryStore != nil {
-			m.memoryStore.SaveSessionSummary(m.agent.GetHistory())
+			_ = m.memoryStore.SaveSessionSummary(m.agent.GetHistory())
 		}
 		// Cancel any pending confirmation when quitting
 		if m.confirmManager != nil {
@@ -45,7 +45,7 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (Model, tea.Cmd) {
 		}
 		// If not thinking, quit the application
 		if m.memoryStore != nil {
-			m.memoryStore.SaveSessionSummary(m.agent.GetHistory())
+			_ = m.memoryStore.SaveSessionSummary(m.agent.GetHistory())
 		}
 		if m.confirmManager != nil {
 			m.confirmManager.Cancel()
@@ -223,7 +223,7 @@ func (m Model) handleConfirmationKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
 		if msg.String() == "ctrl+c" {
 			// Save session summary before quitting
 			if m.memoryStore != nil {
-				m.memoryStore.SaveSessionSummary(m.agent.GetHistory())
+				_ = m.memoryStore.SaveSessionSummary(m.agent.GetHistory())
 			}
 			return m, tea.Quit
 		}

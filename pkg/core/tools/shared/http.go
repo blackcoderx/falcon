@@ -214,18 +214,7 @@ func (r *HTTPResponse) FormatResponse() string {
 			sb.WriteString(fmt.Sprintf("  %s: %s\n", key, value))
 		}
 	}
-	if ct, ok := r.Headers["Content-Type"]; ok {
-		found := false
-		for _, h := range importantHeaders {
-			if h == "Content-Type" {
-				found = true
-				break
-			}
-		}
-		if !found {
-			sb.WriteString(fmt.Sprintf("  Content-Type: %s\n", ct))
-		}
-	}
+
 	sb.WriteString("\n")
 
 	sb.WriteString("Body:\n")
