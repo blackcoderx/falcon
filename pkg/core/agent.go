@@ -90,7 +90,10 @@ func (a *Agent) SetLastResponse(response interface{}) {
 }
 
 // SetToolLimit sets the maximum number of calls allowed for a specific tool per session.
+// This method is thread-safe.
 func (a *Agent) SetToolLimit(toolName string, limit int) {
+	a.countersMu.Lock()
+	defer a.countersMu.Unlock()
 	a.toolLimits[toolName] = limit
 }
 
@@ -126,9 +129,14 @@ func (a *Agent) SetMemoryStore(store *MemoryStore) {
 	a.memoryStore = store
 }
 
-// GetHistory returns the agent's conversation history.
+// GetHistory returns a copy of the agent's conversation history.
+// This method is thread-safe.
 func (a *Agent) GetHistory() []llm.Message {
-	return a.history
+	a.historyMu.RLock()
+	defer a.historyMu.RUnlock()
+	cp := make([]llm.Message, len(a.history))
+	copy(cp, a.history)
+	return cp
 }
 
 // ResetToolCounts resets all tool call counters.
@@ -142,7 +150,7 @@ func (a *Agent) ResetToolCounts() {
 }
 
 // getToolLimit returns the limit for a specific tool, or the default if not set.
-// Note: toolLimits is only written during setup, so no lock needed for reads.
+// Caller must hold countersMu lock.
 func (a *Agent) getToolLimit(toolName string) int {
 	if limit, ok := a.toolLimits[toolName]; ok {
 		return limit
@@ -218,20 +226,27 @@ func (a *Agent) GetTotalUsage() (current, limit int) {
 // AppendHistory adds a message to the history and truncates if necessary.
 // When maxHistory is reached, older messages are removed to make room.
 // The truncation keeps the most recent messages while preserving context.
+// This method is thread-safe.
 func (a *Agent) AppendHistory(msg llm.Message) {
+	a.historyMu.Lock()
+	defer a.historyMu.Unlock()
 	a.history = append(a.history, msg)
 	a.truncateHistory()
 }
 
 // AppendHistoryPair adds an assistant message and observation to history atomically.
 // This ensures tool call and observation stay together during truncation.
+// This method is thread-safe.
 func (a *Agent) AppendHistoryPair(assistantMsg, observationMsg llm.Message) {
+	a.historyMu.Lock()
+	defer a.historyMu.Unlock()
 	a.history = append(a.history, assistantMsg, observationMsg)
 	a.truncateHistory()
 }
 
 // truncateHistory removes old messages if history exceeds maxHistory.
 // Keeps the most recent messages. If maxHistory is 0, no truncation occurs.
+// Caller must hold historyMu lock.
 func (a *Agent) truncateHistory() {
 	if a.maxHistory <= 0 {
 		return // Unlimited history

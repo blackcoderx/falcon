@@ -66,7 +66,10 @@ func (t *AutoTestTool) Execute(args string) (string, error) {
 		URL:                 url,
 		Context:             params.Context,
 	}
-	analyzeJSON, _ := json.Marshal(analyzeParams)
+	analyzeJSON, err := json.Marshal(analyzeParams)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal analyze params: %w", err)
+	}
 	analysisResult, err := t.analyzeTool.Execute(string(analyzeJSON))
 	if err != nil {
 		return "", fmt.Errorf("analysis failed: %w", err)
@@ -82,7 +85,10 @@ func (t *AutoTestTool) Execute(args string) (string, error) {
 		Analysis: analysis,
 		Count:    20,
 	}
-	genJSON, _ := json.Marshal(genParams)
+	genJSON, err := json.Marshal(genParams)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal generate params: %w", err)
+	}
 	genResult, err := t.generateTool.Execute(string(genJSON))
 	if err != nil {
 		return "", fmt.Errorf("generation failed: %w", err)
@@ -126,10 +132,15 @@ func (t *AutoTestTool) Execute(args string) (string, error) {
 			ResponseBody:     res.ResponseBody,
 			ExpectedBehavior: fmt.Sprintf("Status %d", res.ExpectedStatus),
 		}
-		failJSON, _ := json.Marshal(failParams)
-		failAnalysis, err := t.analyzeFailureTool.Execute(string(failJSON))
+		var failAnalysis string
+		failJSON, err := json.Marshal(failParams)
 		if err != nil {
-			failAnalysis = fmt.Sprintf("Failed to analyze failure: %v", err)
+			failAnalysis = fmt.Sprintf("Failed to marshal failure params: %v", err)
+		} else {
+			failAnalysis, err = t.analyzeFailureTool.Execute(string(failJSON))
+			if err != nil {
+				failAnalysis = fmt.Sprintf("Failed to analyze failure: %v", err)
+			}
 		}
 		failureReports = append(failureReports, fmt.Sprintf("## Failure: %s\n%s\n", res.ScenarioName, failAnalysis))
 	}

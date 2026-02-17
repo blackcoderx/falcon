@@ -204,9 +204,7 @@ func (t *VariableTool) Execute(args string) (string, error) {
 			if err != nil {
 				return "", fmt.Errorf("failed to set global variable: %w", err)
 			}
-			if err := t.store.saveGlobalVariables(); err != nil {
-				return "", fmt.Errorf("failed to save global variable: %w", err)
-			}
+
 			result := fmt.Sprintf("Set global variable: {{%s}} = '%s'\n(Persisted to disk)", params.Name, MaskSecret(params.Value))
 			if warning != "" {
 				result = warning + "\n\n" + result

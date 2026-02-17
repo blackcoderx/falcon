@@ -38,6 +38,7 @@ type Registry struct {
 	ResponseManager *shared.ResponseManager
 	VariableStore   *shared.VariableStore
 	PersistManager  *persistence.PersistenceManager
+	HTTPTool        *shared.HTTPTool // Shared HTTP tool instance
 }
 
 // NewRegistry creates a new tool registry with the necessary dependencies.
@@ -79,13 +80,13 @@ func (r *Registry) initServices() {
 	r.ResponseManager = shared.NewResponseManager()
 	r.VariableStore = shared.NewVariableStore(r.ZapDir)
 	r.PersistManager = persistence.NewPersistenceManager(r.ZapDir)
+	r.HTTPTool = shared.NewHTTPTool(r.ResponseManager, r.VariableStore) // Initialize once
 }
 
 // registerSharedTools registers foundational tools (HTTP, Assertions, Auth, etc).
 func (r *Registry) registerSharedTools() {
-	// core tools
-	httpTool := shared.NewHTTPTool(r.ResponseManager, r.VariableStore)
-	r.Agent.RegisterTool(httpTool)
+	// core tools - use the shared instance
+	r.Agent.RegisterTool(r.HTTPTool)
 
 	// assertions & extraction
 	r.Agent.RegisterTool(shared.NewAssertTool(r.ResponseManager))
@@ -105,11 +106,11 @@ func (r *Registry) registerSharedTools() {
 
 	// webhooks & performance
 	r.Agent.RegisterTool(shared.NewWebhookListenerTool(r.VariableStore))
-	r.Agent.RegisterTool(shared.NewPerformanceTool(httpTool, r.VariableStore))
+	r.Agent.RegisterTool(shared.NewPerformanceTool(r.HTTPTool, r.VariableStore))
 
 	// suites
 	r.Agent.RegisterTool(shared.NewTestSuiteTool(
-		httpTool,
+		r.HTTPTool,
 		shared.NewAssertTool(r.ResponseManager),
 		shared.NewExtractTool(r.ResponseManager, r.VariableStore),
 		r.ResponseManager,
@@ -155,13 +156,12 @@ func (r *Registry) registerAgentTools() {
 	r.Agent.RegisterTool(zapagent.NewMemoryTool(r.MemStore))
 	r.Agent.RegisterTool(zapagent.NewExportResultsTool(r.ZapDir))
 
-	// orchestration dependencies
-	httpTool := shared.NewHTTPTool(r.ResponseManager, r.VariableStore)
+	// orchestration dependencies - use shared instances
 	assertTool := shared.NewAssertTool(r.ResponseManager)
 
-	runTests := zapagent.NewRunTestsTool(httpTool, assertTool, r.VariableStore)
+	runTests := zapagent.NewRunTestsTool(r.HTTPTool, assertTool, r.VariableStore)
 	r.Agent.RegisterTool(runTests)
-	r.Agent.RegisterTool(zapagent.NewRunSingleTestTool(httpTool, assertTool, r.VariableStore))
+	r.Agent.RegisterTool(zapagent.NewRunSingleTestTool(r.HTTPTool, assertTool, r.VariableStore))
 
 	// auto test orchestrator
 	r.Agent.RegisterTool(zapagent.NewAutoTestTool(
@@ -179,44 +179,37 @@ func (r *Registry) registerSpecIngesterTools() {
 
 // registerFunctionalTestGeneratorTools registers spec-driven functional test generator.
 func (r *Registry) registerFunctionalTestGeneratorTools() {
-	httpTool := shared.NewHTTPTool(r.ResponseManager, r.VariableStore)
 	assertTool := shared.NewAssertTool(r.ResponseManager)
-	r.Agent.RegisterTool(functional_test_generator.NewFunctionalTestGeneratorTool(r.ZapDir, httpTool, assertTool))
+	r.Agent.RegisterTool(functional_test_generator.NewFunctionalTestGeneratorTool(r.ZapDir, r.HTTPTool, assertTool))
 }
 
 // registerSecurityScannerTools registers the whole security scanner ecosystem.
 func (r *Registry) registerSecurityScannerTools() {
-	httpTool := shared.NewHTTPTool(r.ResponseManager, r.VariableStore)
-	r.Agent.RegisterTool(security_scanner.NewSecurityScannerTool(r.ZapDir, httpTool))
+	r.Agent.RegisterTool(security_scanner.NewSecurityScannerTool(r.ZapDir, r.HTTPTool))
 }
 
 // registerPerformanceEngineTools registers the multi-mode performance engine.
 func (r *Registry) registerPerformanceEngineTools() {
-	httpTool := shared.NewHTTPTool(r.ResponseManager, r.VariableStore)
-	r.Agent.RegisterTool(performance_engine.NewPerformanceEngineTool(r.ZapDir, httpTool))
+	r.Agent.RegisterTool(performance_engine.NewPerformanceEngineTool(r.ZapDir, r.HTTPTool))
 }
 
 // registerModuleTools registers the high-level capability modules (Smoke, Idempotency, etc).
 func (r *Registry) registerModuleTools() {
-	httpTool := shared.NewHTTPTool(r.ResponseManager, r.VariableStore)
-
-	r.Agent.RegisterTool(smoke_runner.NewSmokeRunnerTool(r.ZapDir, httpTool))
+	r.Agent.RegisterTool(smoke_runner.NewSmokeRunnerTool(r.ZapDir, r.HTTPTool))
 	r.Agent.RegisterTool(unit_test_scaffolder.NewUnitTestCasefolderTool(r.LLMClient))
-	r.Agent.RegisterTool(idempotency_verifier.NewIdempotencyVerifierTool(r.ZapDir, httpTool))
-	r.Agent.RegisterTool(data_driven_engine.NewDataDrivenEngineTool(httpTool))
+	r.Agent.RegisterTool(idempotency_verifier.NewIdempotencyVerifierTool(r.ZapDir, r.HTTPTool))
+	r.Agent.RegisterTool(data_driven_engine.NewDataDrivenEngineTool(r.HTTPTool))
 
 	// Sprint 9 registrations
-	r.Agent.RegisterTool(schema_conformance.NewSchemaConformanceTool(r.ZapDir, httpTool))
+	r.Agent.RegisterTool(schema_conformance.NewSchemaConformanceTool(r.ZapDir, r.HTTPTool))
 	r.Agent.RegisterTool(breaking_change_detector.NewBreakingChangeDetectorTool(r.ZapDir))
 	r.Agent.RegisterTool(dependency_mapper.NewDependencyMapperTool(r.ZapDir))
 	r.Agent.RegisterTool(documentation_validator.NewDocumentationValidatorTool(r.ZapDir))
-	r.Agent.RegisterTool(api_drift_analyzer.NewAPIDriftAnalyzerTool(r.ZapDir, httpTool))
+	r.Agent.RegisterTool(api_drift_analyzer.NewAPIDriftAnalyzerTool(r.ZapDir, r.HTTPTool))
 }
 
 // registerWorkflowTools registers integration and regression modules.
 func (r *Registry) registerWorkflowTools() {
-	httpTool := shared.NewHTTPTool(r.ResponseManager, r.VariableStore)
-
-	r.Agent.RegisterTool(integration_orchestrator.NewIntegrationOrchestratorTool(r.ZapDir, httpTool))
-	r.Agent.RegisterTool(regression_watchdog.NewRegressionWatchdogTool(r.ZapDir, httpTool))
+	r.Agent.RegisterTool(integration_orchestrator.NewIntegrationOrchestratorTool(r.ZapDir, r.HTTPTool))
+	r.Agent.RegisterTool(regression_watchdog.NewRegressionWatchdogTool(r.ZapDir, r.HTTPTool))
 }
