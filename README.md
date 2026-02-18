@@ -1,4 +1,4 @@
-# Falcon ( formerly ZAP )
+# ZAP
 
 > AI-powered API testing that understands your codebase
 
@@ -99,18 +99,32 @@ ZAP doesn't just show you errors—it explains them:
 
 ZAP follows a tiered architecture, organizing 33+ tools into logical domains:
 
-| Tier | Category | Purpose |
-|------|----------|---------|
-| **1** | **Foundation** | Core HTTP, Auth, and Assertion primitives (`shared/`) |
-| **2** | **Codebase** | Deep codebase analysis and local fixing (`debugging/`) |
-| **3** | **Persistence** | state management for variables and environments (`persistence/`) |
-| **4** | **Modules** | Autonomous testing: Security, Performance, and Quality Assurance |
+| Tier | Category | Purpose | Included Tools |
+|------|----------|---------|----------------|
+| **1** | **Foundation** | Core HTTP, Auth, and Assertion primitives | `http_request`, `assert_response`, `validate_json_schema`, `extract_value`, `auth_bearer`, `auth_basic`, `auth_oauth2` |
+| **2** | **Codebase** | Deep codebase analysis and local fixing | `read_file`, `write_file`, `search_code`, `find_handler`, `propose_fix`, `analyze_failure` |
+| **3** | **Persistence** | State management and environments | `variable`, `save_request`, `load_request`, `set_environment`, `list_environments` |
+| **4** | **Modules** | Autonomous testing and API Intelligence | `ingest_spec`, `generate_functional_tests`, `scan_security`, `run_performance`, `run_smoke` |
 
-#### Featured Capabilities:
-- **Autonomous cycle**: `auto_test` — Discovery -> Generation -> Execution -> Diagnosis.
-- **Spec Ingestion**: `ingest_spec` — Transforms OpenAPI/Swagger into a rich Knowledge Graph.
-- **Advanced QA**: `verify_idempotency`, `verify_schema_conformance`, `detect_breaking_changes`.
-- **Infrastructure**: `run_performance`, `scan_security`, `orchestrate_integration`.
+#### Detailed Tool Tiering:
+
+- **Tier 1: Foundation (`shared/`)**
+  - **HTTP & Auth**: `http_request`, `auth_bearer`, `auth_basic`, `auth_oauth2`, `auth_helper`.
+  - **Validation**: `assert_response`, `validate_json_schema`, `compare_responses`, `extract_value`.
+  - **Flow control**: `wait`, `retry`, `test_suite`.
+
+- **Tier 2: Codebase & Persistence**
+  - **Debugging (`debugging/`)**: `read_file`, `write_file`, `list_files`, `search_code`, `find_handler`, `analyze_endpoint`, `analyze_failure`, `propose_fix`, `create_test_file`.
+  - **Persistence (`persistence/`)**: `variable`, `save_request`, `load_request`, `list_requests`, `set_environment`, `list_environments`.
+  - **Agent Lifecycle (`agent/`)**: `memory`, `export_results`, `run_tests`, `run_single_test`, `auto_test`.
+
+- **Tier 3: API Intelligence (`spec_ingester/`)**
+  - **Ingestion**: `ingest_spec` — Transforms OpenAPI/Swagger into a Knowledge Graph.
+
+- **Tier 4: Autonomous Modules**
+  - **High-level QA**: `generate_functional_tests`, `run_smoke`, `verify_idempotency`, `run_data_driven`, `verify_schema_conformance`.
+  - **Security & Performance**: `scan_security`, `run_performance`.
+  - **Operations**: `orchestrate_integration`, `check_regression`, `map_dependencies`, `scaffold_unit_tests`.
 
 ### Beautiful Terminal Interface
 
@@ -139,18 +153,17 @@ zap/
 ├── cmd/zap/              # Application entry point
 ├── pkg/
 │   ├── core/             # Agent logic, ReAct loop
-│   │   └── tools/        # 33 modular tools
-│   │       ├── shared/   # Foundation (HTTP, Auth, Assert)
-│   │       ├── debugging/# Codebase intelligence
-│   │       ├── persistence/# Session & Environment state
-│   │       ├── agent/    # Agent lifecycle & memory
-│   │       ├── security_scanner/
-│   │       ├── performance_engine/
-│   │       └── ... (13+ other focused modules)
+│   │   └── tools/        # 33 modular tools (4-tier system)
+│   │       ├── shared/   # Tier 1: Foundation (HTTP, Auth, Assert)
+│   │       ├── debugging/# Tier 2: Codebase intelligence
+│   │       ├── persistence/# Tier 2: Session & Environment state
+│   │       ├── agent/    # Tier 2: Agent lifecycle & memory
+│   │       ├── spec_ingester/ # Tier 3: API Intelligence
+│   │       └── ... (autonomous modules: security, performance, etc.)
 │   ├── llm/              # LLM providers
 │   ├── storage/          # Low-level I/O
 │   └── tui/              # Terminal UI
-├── .zap/                 # User config & memory
+├── .zap/                 # User config & memory (see folder structure below)
 └── go.mod
 ```
 
@@ -213,33 +226,20 @@ On first run, ZAP walks you through configuration:
 ./zap --help
 ```
 
-### Configuration Files
+### .zap Folder Structure
 
-**`.zap/config.json`** - Main settings:
+The `.zap` directory serves as the brain, memory, and output center for the agent.
 
-```json
-{
-  "provider": "ollama",
-  "ollama": {
-    "mode": "local",
-    "url": "http://localhost:11434",
-    "api_key": ""
-  },
-  "gemini": {
-    "api_key": ""
-  },
-  "default_model": "llama3",
-  "framework": "gin",
-  "tool_limits": {
-    "default_limit": 50,
-    "total_limit": 200,
-    "per_tool": {
-      "http_request": 25,
-      "read_file": 50,
-      "search_code": 30
-    }
-  }
-}
+```
+.zap/
+├── baselines/          # "The Standard of Truth" - Reference snapshots
+├── snapshots/          # "The Current Reality" - Knowledge Graph (api-graph.json)
+├── requests/           # "Saved Actions" - Library of reusable requests
+├── runs/               # "The History Book" - Immutable execution records
+├── exports/            # "The Filing Cabinet" - Human-readable reports
+├── logs/               # "The Diary" - Internal tool logs
+├── state/              # "The Brain" - Agent memory and context
+└── config/             # "The Settings" - Tool configuration (config.json)
 ```
 
 **`.env`** - API keys (optional, at project root):

@@ -33,14 +33,18 @@ Thank you for your interest in contributing to ZAP! This document provides guide
 zap/
 ├── cmd/zap/           # Application entry point
 ├── pkg/
-│   ├── core/          # Agent logic and tools
-│   │   └── tools/     # Tool implementations
-│   │       └── auth/  # Authentication tools
+│   ├── core/          # Agent logic and ReAct loop
+│   │   └── tools/     # 4-tier tool system
+│   │       ├── shared/      # Foundation & dependencies
+│   │       ├── debugging/   # Code investigation
+│   │       ├── persistence/ # State & Environments
+│   │       ├── agent/       # Agent lifecycle
+│   │       ├── spec_ingester/ # API Intelligence
+│   │       └── (modules)/   # Security, Performance, QA, etc.
 │   ├── llm/           # LLM client implementations
-│   ├── storage/       # Request persistence
+│   ├── storage/       # Low-level I/O
 │   └── tui/           # Terminal UI
-│       └── setup/     # Setup wizard
-├── .zap/              # Runtime config (created on first run)
+├── .zap/              # Runtime config & memory
 ├── CLAUDE.md          # Development guidelines
 └── README.md          # User documentation
 ```
@@ -130,43 +134,28 @@ test: add tests for variable substitution
 
 ### Adding a New Tool
 
-1. Create `pkg/core/tools/mytool.go`:
+1. **Choose a tier**: Place your tool in the appropriate folder under `pkg/core/tools/`:
+   - `shared/`: Foundation tools used by other tools.
+   - `debugging/`: Tools for codebase analysis/fixing.
+   - `persistence/`: Tools for state/environment management.
+   - `agent/`: Agent-internal management tools.
+   - `(module)/`: Specific autonomous modules (e.g., `security_scanner/`).
+
+2. **Implement the tool**:
    ```go
-   package tools
+   package mytier
 
    type MyTool struct{}
 
-   func NewMyTool() *MyTool {
-       return &MyTool{}
-   }
-
-   func (t *MyTool) Name() string {
-       return "my_tool"
-   }
-
-   func (t *MyTool) Description() string {
-       return "Does something useful"
-   }
-
-   func (t *MyTool) Parameters() string {
-       return `{"type": "object", "properties": {...}}`
-   }
-
-   func (t *MyTool) Execute(args string) (string, error) {
-       // Implementation
-   }
+   func (t *MyTool) Name() string { return "my_tool" }
+   // ... implement Description(), Parameters(), and Execute()
    ```
 
-2. Register in `pkg/tui/init.go`:
-   ```go
-   agent.RegisterTool(tools.NewMyTool())
-   ```
+3. **Register in `pkg/core/tools/registry.go`**: Add your tool to the `RegisterAllTools` function so it's wired into the agent.
 
-3. Add tests in `pkg/core/tools/mytool_test.go`
+4. **Add tests**: Create `tool_test.go` in the same directory.
 
-4. Update system prompt in `pkg/core/prompt.go` if needed
-
-5. Update documentation
+5. **Update system prompt**: If it's a new capability, update the documentation in `pkg/core/prompt.go`.
 
 ### Adding a New LLM Provider
 
