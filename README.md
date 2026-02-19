@@ -1,4 +1,4 @@
-# ZAP
+# ZAP (Rebranding to Falcon Soon) 
 
 > AI-powered API testing that understands your codebase
 
