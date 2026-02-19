@@ -1,6 +1,6 @@
 # pkg/tui
 
-This package implements ZAP's terminal user interface using the [Charm](https://charm.sh/) ecosystem, specifically Bubble Tea for the application framework.
+This package implements Falcon's terminal user interface using the [Charm](https://charm.sh/) ecosystem, specifically Bubble Tea for the application framework.
 
 ## Package Overview
 
@@ -92,6 +92,7 @@ type logEntry struct {
 | `observation` | Tool result | Dimmed result text |
 | `response` | Final answer | Markdown rendered |
 | `error` | Error message | Red `✗` prefix |
+| `splash` | Startup brand art | Indented Falcon ASCII art |
 | `separator` | Visual break | Hidden |
 
 ### Initialization (init.go)
@@ -141,7 +142,7 @@ func initialModel() Model {
         agent:     agent,
         viewport:  viewport.New(80, 20),
         textinput: textinput.New(),
-        spinner:   spinner.New(),
+        spinner:   newSpinner(), // Returns spinner.Points
         // ...
     }
 }

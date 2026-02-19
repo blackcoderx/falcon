@@ -152,8 +152,8 @@ func (m Model) handleWindowResize(msg tea.WindowSizeMsg) Model {
 
 	if !m.ready {
 		m.viewport = viewport.New(viewportWidth, viewportHeight)
-		m.viewport.SetContent("")
 		m.ready = true
+		m.updateViewportContent()
 	} else {
 		m.viewport.Width = viewportWidth
 		m.viewport.Height = viewportHeight

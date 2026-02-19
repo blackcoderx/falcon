@@ -28,7 +28,7 @@ var (
 	ToolUseColor  = lipgloss.Color("#545454") // Very muted for usage fraction
 
 	// Response card
-	ResponseCardBg    = lipgloss.Color("#1e1e2e") // Slightly elevated background
+	ResponseCardBg     = lipgloss.Color("#1e1e2e") // Slightly elevated background
 	ResponseCardBorder = lipgloss.Color("#3b3b5c") // Subtle border
 )
 
@@ -101,6 +101,22 @@ var (
 
 	FooterInfoStyle = lipgloss.NewStyle().
 			Foreground(DimColor)
+
+	// Splash screen styles
+	SplashStyle = lipgloss.NewStyle().
+			Foreground(AccentColor).
+			Bold(true).
+			MarginLeft(ContentPadLeft).
+			MarginTop(1).
+			MarginBottom(1)
+
+	SplashInfoStyle = lipgloss.NewStyle().
+			Foreground(DimColor).
+			MarginLeft(ContentPadLeft)
+
+	SplashVersionStyle = lipgloss.NewStyle().
+				Foreground(TextColor).
+				Bold(true)
 )
 
 // OpenCode-style message block styles

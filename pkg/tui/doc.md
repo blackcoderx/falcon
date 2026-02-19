@@ -4,8 +4,8 @@ The `tui` package provides the terminal user interface for the ZAP API debugging
 
 ## Overview
 
-This package implements a minimal, Claude Code-inspired terminal interface with:
-
+- **Falcon Splash Screen** on first run
+- **Points Spinner** for active states
 - **Scrollable viewport** for conversation history (PgUp/PgDown, mouse wheel)
 - **Text input** with command history navigation (Shift+↑/↓)
 - **Real-time streaming** of LLM responses as they arrive
@@ -39,9 +39,9 @@ Event handling and state transitions:
 ### Styles (`styles.go`)
 Visual styling with Lipgloss:
 - 7-color minimal palette
-- Log entry prefixes (`> `, `thinking`, `tool`, `result`, `error`)
+- Log entry prefixes (`> `, `thinking`, `tool`, `result`, `error`, `splash`)
 - Conversation separators
-- Status line styling
+- Status line styling (including points spinner)
 
 ### Keys (`keys.go`)
 Keyboard shortcut definitions:

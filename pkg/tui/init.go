@@ -1,8 +1,8 @@
 package tui
 
 import (
+	"fmt"
 	"os"
-	"time"
 
 	"github.com/blackcoderx/zap/pkg/core"
 	"github.com/blackcoderx/zap/pkg/core/tools"
@@ -154,25 +154,20 @@ func newOllamaClientFallback(defaultModel string) *llm.OllamaClient {
 	return llm.NewOllamaClient(ollamaURL, defaultModel, ollamaAPIKey)
 }
 
-// newSpinner creates a spinner with the ZAP style (dots animation).
+// newSpinner creates a spinner with the Falcon style (points animation).
 func newSpinner() spinner.Model {
 	sp := spinner.New()
-	sp.Spinner = spinner.Spinner{
-		Frames: []string{
-			".       ",
-			"..      ",
-			"...     ",
-			"....    ",
-			".....   ",
-			"......  ",
-			"....... ",
-			"........",
-		},
-		FPS: time.Second / 5,
-	}
+	sp.Spinner = spinner.Points
 	sp.Style = lipgloss.NewStyle().Foreground(AccentColor)
 	return sp
 }
+
+const FalconASCII = `███████╗ █████╗ ██╗      ██████╗ ██████╗ ███╗   ██╗
+██╔════╝██╔══██╗██║     ██╔════╝██╔═══██╗████╗  ██║
+█████╗  ███████║██║     ██║     ██║   ██║██╔██╗ ██║
+██╔══╝  ██╔══██║██║     ██║     ██║   ██║██║╚██╗██║
+██║     ██║  ██║███████╗╚██████╗╚██████╔╝██║ ╚████║
+╚═╝     ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝`
 
 // newTextInput creates a text input with the ZAP style.
 // No prompt prefix - clean input area.
@@ -279,7 +274,7 @@ func InitialModel() Model {
 
 	registerTools(agent, zapDir, workDir, confirmManager, memStore)
 
-	return Model{
+	m := Model{
 		textinput:        newTextInput(),
 		spinner:          newSpinner(),
 		logs:             []logEntry{},
@@ -305,6 +300,30 @@ func InitialModel() Model {
 		animVel:    0.0,
 		animTarget: 1.0,
 	}
+
+	// Add splash screen to logs
+	m.logs = append(m.logs, logEntry{
+		Type:    "splash",
+		Content: SplashStyle.Render(FalconASCII),
+	})
+
+	version := "0.1.0" // Default version
+	splashInfo := fmt.Sprintf("Falcon v%s • Current dir: %s",
+		SplashVersionStyle.Render(version),
+		SplashInfoStyle.Render(workDir),
+	)
+
+	m.logs = append(m.logs, logEntry{
+		Type:    "splash",
+		Content: SplashInfoStyle.Render(splashInfo),
+	})
+
+	m.logs = append(m.logs, logEntry{
+		Type:    "splash",
+		Content: "\n",
+	})
+
+	return m
 }
 
 // Init initializes the Bubble Tea model.

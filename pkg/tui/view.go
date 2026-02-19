@@ -118,6 +118,9 @@ func (m *Model) formatLogEntry(entry logEntry) string {
 	case "interrupted":
 		return pad + InterruptedStyle.Render("  interrupted")
 
+	case "splash":
+		return entry.Content
+
 	case "separator":
 		return ""
 
@@ -165,37 +168,24 @@ func formatDuration(d time.Duration) string {
 	return fmt.Sprintf("%.1fs", d.Seconds())
 }
 
-// renderStatus renders the current agent status text (without circle).
+// renderStatus renders the current agent status text including the spinner.
 func (m Model) renderStatusText() string {
 	switch m.status {
 	case "thinking":
-		return StatusLabelStyle.Render("thinking")
+		return m.spinner.View() + " " + StatusLabelStyle.Render("thinking")
 	case "streaming":
 		return StatusLabelStyle.Render("streaming")
 	case "tool":
-		return StatusLabelStyle.Render("tool calling")
+		return m.spinner.View() + " " + StatusLabelStyle.Render("tool calling")
 	default:
 		return StatusIdleStyle.Render("ready")
 	}
 }
 
 // renderAnimatedCircle renders the pulsing status circle using harmonica spring values.
+// Deprecated: No longer used in Falcon UI
 func (m Model) renderAnimatedCircle() string {
-	if !m.thinking {
-		// Static dim circle when idle
-		return lipgloss.NewStyle().Foreground(MutedColor).Render("●")
-	}
-
-	// Map spring position (0.0-1.0) to color index
-	idx := int(m.animPos * float64(len(PulseColors)-1))
-	if idx < 0 {
-		idx = 0
-	}
-	if idx >= len(PulseColors) {
-		idx = len(PulseColors) - 1
-	}
-
-	return lipgloss.NewStyle().Foreground(PulseColors[idx]).Render("●")
+	return ""
 }
 
 // renderInputArea renders the input area — same width as user message box.
@@ -211,12 +201,11 @@ func (m Model) renderFooter() string {
 		return m.renderConfirmationFooter()
 	}
 
-	// Left side: animated circle + status + model name
-	circle := m.renderAnimatedCircle()
+	// Left side: status + model name
 	status := m.renderStatusText()
 	modelInfo := FooterModelStyle.Render(m.modelName)
 
-	left := circle + " " + status + "  " + modelInfo
+	left := status + "  " + modelInfo
 
 	// Right side: keyboard shortcuts
 	var parts []string

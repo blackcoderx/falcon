@@ -1,6 +1,6 @@
 # TUI Package Documentation
 
-The `pkg/tui` package provides the terminal user interface for ZAP. It uses [Bubble Tea](https://github.com/charmbracelet/bubbletea) for the TUI framework with a minimal, Claude Code-inspired design.
+The `pkg/tui` package provides the terminal user interface for Falcon. It uses [Bubble Tea](https://github.com/charmbracelet/bubbletea) for the TUI framework with a minimal, Claude Code-inspired design.
 
 ## File Structure
 
@@ -53,8 +53,8 @@ Handles initialization and setup:
 - `Init()` - Bubble Tea initialization (called once at startup)
 - `registerTools()` - Registers all agent tools (HTTP, file, search, testing, etc.)
 - `newLLMClient()` - Creates the Ollama LLM client from config
-- `newSpinner()` - Creates the loading spinner with ZAP styling
-- `newTextInput()` - Creates the input field with ZAP styling
+- `newSpinner()` - Creates the "Points" loading spinner
+- `newTextInput()` - Creates the input field with Falcon styling
 - `newGlamourRenderer()` - Creates the markdown renderer
 
 ### update.go
@@ -164,6 +164,7 @@ View() [view.go]
 | `observation` | Tool result | Dimmed, truncated |
 | `response` | Final agent answer | Markdown rendered |
 | `error` | Error message | Red text |
+| `splash` | Startup brand art | Aligned ASCII art and info |
 | `separator` | Visual break | Hidden |
 
 ### Keyboard Shortcuts
