@@ -182,12 +182,6 @@ func (m Model) renderStatusText() string {
 	}
 }
 
-// renderAnimatedCircle renders the pulsing status circle using harmonica spring values.
-// Deprecated: No longer used in Falcon UI
-func (m Model) renderAnimatedCircle() string {
-	return ""
-}
-
 // renderInputArea renders the input area — same width as user message box.
 func (m Model) renderInputArea() string {
 	// MarginLeft is on InputAreaStyle — no manual pad needed
