@@ -1,10 +1,24 @@
-# ZAP (Rebranding to Falcon Soon) 
+# Falcon (ZAP) - Rebranding soon...
 
 > AI-powered API testing that understands your codebase
 
-**ZAP** is a terminal-based AI assistant that doesn't just test your APIs—it debugs them. When an endpoint returns an error, ZAP searches your actual code to find the cause and suggests fixes. Works with local LLMs (Ollama) or cloud providers (Gemini).
+**Falcon** (formerly ZAP) is a terminal-based AI assistant that doesn't just test your APIs—it debugs them. When an endpoint returns an error, Falcon searches your actual code to find the cause and suggests fixes. Works with local LLMs (Ollama) or cloud providers (Gemini).
 
-![A picture of the TUI of ZAP](falcon-UI.png)
+![A picture of the TUI of Falcon](falcon-UI.png)
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Available Tools](#available-tools)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
 
 ## Installation
 
@@ -28,27 +42,17 @@ Download the latest pre-built binary for your operating system from [Releases](h
 go install github.com/blackcoderx/zap/cmd/zap@latest
 ```
 
-## Updating ZAP
+## Updating
 
-ZAP includes a self-update command to easily upgrade to the latest version:
+Falcon includes a self-update command to easily upgrade to the latest version:
 
 ```bash
 zap update
 ```
 
-This will check for the latest release on GitHub and update your binary in place (requires write permissions to the binary location).
+This checks for the latest release on GitHub and updates your binary in place (requires write permissions to the binary location).
 
-## Table of Contents
-
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Configuration](#configuration)
-- [Usage](#usage)
-- [Available Tools](#available-tools)
-- [Contributing](#contributing)
-- [License](#license)
+---
 
 ## Quick Start
 
@@ -68,10 +72,10 @@ go build -o zap.exe ./cmd/zap
 
 ### First Run
 
-1. ZAP creates a `.zap/` folder with config, history, and memory
+1. Falcon creates a `.zap/` folder with config, history, and memory
 2. Select your LLM provider (Ollama local, Ollama cloud, or Gemini)
 3. Choose your API framework (gin, fastapi, express, etc.)
-4. The interactive TUI launches
+4. The interactive TUI launches with a Falcon ASCII splash screen
 
 ### Try It
 
@@ -79,177 +83,253 @@ go build -o zap.exe ./cmd/zap
 # In the TUI, type natural language commands:
 > GET http://localhost:8000/api/users
 
-# ZAP makes the request, shows the response, and if there's an error,
+# Falcon makes the request, shows the response, and if there's an error,
 # searches your code to find and explain the cause
 ```
+
+---
 
 ## Features
 
 ### Codebase-Aware Debugging
 
-ZAP doesn't just show you errors—it explains them:
+Falcon doesn't just show you errors—it explains them:
 
-- **Stack trace parsing** - Extracts file:line from Python, Go, and JavaScript tracebacks
-- **Autonomous Testing** - One-click `auto_test` workflow: Analyze -> Generate -> Execute -> Diagnose
-- **Intelligent Fixes** - Not just suggestions, but full unified diffs with `propose_fix`
-- **Regression Testing** - Automatically generate test files to ensure bugs stay fixed
-- **Framework patterns** - Detects endpoint handlers using framework-specific idioms (15+ frameworks)
+- **Stack trace parsing** — Extracts file:line from Python, Go, and JavaScript tracebacks
+- **Autonomous Testing** — One-click `auto_test` workflow: Analyze → Generate → Execute → Diagnose
+- **Intelligent Fixes** — Full unified diffs with `propose_fix` (not just suggestions)
+- **Regression Testing** — Auto-generate test files so bugs stay fixed
+- **Framework patterns** — Detects endpoint handlers across 15+ frameworks using framework-specific idioms
 
-### 33+ Advanced Tools for API Testing
+### 40+ Advanced Tools
 
-ZAP follows a tiered architecture, organizing 33+ tools into logical domains:
-
-| Tier | Category | Purpose | Included Tools |
-|------|----------|---------|----------------|
-| **1** | **Foundation** | Core HTTP, Auth, and Assertion primitives | `http_request`, `assert_response`, `validate_json_schema`, `extract_value`, `auth_bearer`, `auth_basic`, `auth_oauth2` |
-| **2** | **Codebase** | Deep codebase analysis and local fixing | `read_file`, `write_file`, `search_code`, `find_handler`, `propose_fix`, `analyze_failure` |
-| **3** | **Persistence** | State management and environments | `variable`, `save_request`, `load_request`, `set_environment`, `list_environments` |
-| **4** | **Modules** | Autonomous testing and API Intelligence | `ingest_spec`, `generate_functional_tests`, `scan_security`, `run_performance`, `run_smoke` |
-
-#### Detailed Tool Tiering:
-
-- **Tier 1: Foundation (`shared/`)**
-  - **HTTP & Auth**: `http_request`, `auth_bearer`, `auth_basic`, `auth_oauth2`, `auth_helper`.
-  - **Validation**: `assert_response`, `validate_json_schema`, `compare_responses`, `extract_value`.
-  - **Flow control**: `wait`, `retry`, `test_suite`.
-
-- **Tier 2: Codebase & Persistence**
-  - **Debugging (`debugging/`)**: `read_file`, `write_file`, `list_files`, `search_code`, `find_handler`, `analyze_endpoint`, `analyze_failure`, `propose_fix`, `create_test_file`.
-  - **Persistence (`persistence/`)**: `variable`, `save_request`, `load_request`, `list_requests`, `set_environment`, `list_environments`.
-  - **Agent Lifecycle (`agent/`)**: `memory`, `export_results`, `run_tests`, `run_single_test`, `auto_test`.
-
-- **Tier 3: API Intelligence (`spec_ingester/`)**
-  - **Ingestion**: `ingest_spec` — Transforms OpenAPI/Swagger into a Knowledge Graph.
-
-- **Tier 4: Autonomous Modules**
-  - **High-level QA**: `generate_functional_tests`, `run_smoke`, `verify_idempotency`, `run_data_driven`, `verify_schema_conformance`.
-  - **Security & Performance**: `scan_security`, `run_performance`.
-  - **Operations**: `orchestrate_integration`, `check_regression`, `map_dependencies`, `scaffold_unit_tests`.
+Falcon organizes 40+ tools into logical packages via a central `Registry`. See [Available Tools](#available-tools) for the complete list.
 
 ### Beautiful Terminal Interface
 
 Built with the [Charm](https://charm.sh/) ecosystem:
 
-- **Streaming responses** - Text appears as the LLM generates it
-- **Markdown rendering** - Responses are beautifully formatted with syntax highlighting
-- **Input history** - Navigate with Shift+Up/Down
-- **Clipboard support** - Copy responses with Ctrl+Y
-- **Status line** - See what ZAP is doing (thinking, executing tool, streaming)
+- **Falcon ASCII splash screen** — Branded intro on startup
+- **Streaming responses** — Text appears as the LLM generates it (real-time token streaming)
+- **Markdown rendering** — Responses are beautifully formatted with Glamour syntax highlighting
+- **Input history** — Navigate previous commands with Shift+Up/Down
+- **Clipboard support** — Copy last response with Ctrl+Y
+- **Status line** — Live status (thinking, executing tool, streaming, idle)
+- **Harmonica spring animations** — Smooth pulsing animation during thinking
 
 ### Human-in-the-Loop Safety
 
-When ZAP wants to modify a file:
+When Falcon wants to modify a file:
 
-1. Shows a colored diff of the proposed changes
-2. Waits for your approval (Y/N)
-3. Only writes the file if you confirm
+1. Shows a colored unified diff of the proposed changes
+2. Waits for your approval (Y/N) — with scrollable diff view
+3. Only writes the file if you confirm, with a configurable timeout
 
 No surprises, no unauthorized changes.
+
+### Persistent Memory
+
+Falcon maintains a `MemoryStore` across sessions stored in `.zap/memory.json`. The agent tracks conversation turns, tool usage patterns, and key facts to provide more contextual assistance over time.
+
+---
 
 ## Architecture
 
 ```
 zap/
-├── cmd/zap/              # Application entry point
+├── cmd/zap/                  # Application entry point (Cobra CLI)
+│   ├── main.go               # Root command, CLI flags, runCLI() for CLI mode
+│   └── update.go             # Self-update command via go-github-selfupdate
 ├── pkg/
-│   ├── core/             # Agent logic, ReAct loop
-│   │   └── tools/        # 33 modular tools (4-tier system)
-│   │       ├── shared/   # Tier 1: Foundation (HTTP, Auth, Assert)
-│   │       ├── debugging/# Tier 2: Codebase intelligence
-│   │       ├── persistence/# Tier 2: Session & Environment state
-│   │       ├── agent/    # Tier 2: Agent lifecycle & memory
-│   │       ├── spec_ingester/ # Tier 3: API Intelligence
-│   │       └── ... (autonomous modules: security, performance, etc.)
-│   ├── llm/              # LLM providers
-│   ├── storage/          # Low-level I/O
-│   └── tui/              # Terminal UI
-├── .zap/                 # User config & memory (see folder structure below)
-└── go.mod
+│   ├── core/                 # Agent logic, ReAct loop, initialization
+│   │   ├── agent.go          # Agent struct: tool registry, limits, history mgmt
+│   │   ├── react.go          # ReAct loop: ProcessMessage / ProcessMessageWithEvents
+│   │   ├── init.go           # .zap folder setup, setup wizard, config migration
+│   │   ├── memory.go         # MemoryStore: persistent agent memory (memory.json)
+│   │   ├── analysis.go       # LLM-powered analysis helpers
+│   │   ├── prompt/           # System prompt builder (20-section LLM instructions)
+│   │   ├── types.go          # Core interfaces: Tool, AgentEvent, ConfirmableTool
+│   │   └── tools/            # 40+ tools organized in 19 packages
+│   │       ├── registry.go   # Central tool registry (RegisterAllTools)
+│   │       ├── shared/       # Tier 1: HTTP, Auth, Assert, Validate, Webhooks
+│   │       ├── debugging/    # Tier 2: Read/Write file, Search, Fix, Analyze
+│   │       ├── persistence/  # Tier 2: Variables, Requests, Environments
+│   │       ├── agent/        # Tier 2: Memory, Export, RunTests, AutoTest
+│   │       ├── spec_ingester/         # Tier 3: OpenAPI/Swagger → Knowledge Graph
+│   │       ├── functional_test_generator/ # Generate+run functional test suites
+│   │       ├── security_scanner/      # OWASP-style security scanning
+│   │       ├── performance_engine/    # Multi-mode load testing (burst, ramp, soak)
+│   │       ├── smoke_runner/          # Quick smoke test suite
+│   │       ├── idempotency_verifier/  # Verify PUT/POST idempotency
+│   │       ├── data_driven_engine/    # Data-driven test execution
+│   │       ├── schema_conformance/    # Schema conformance checks
+│   │       ├── breaking_change_detector/ # Breaking change detection
+│   │       ├── dependency_mapper/     # API dependency graph mapping
+│   │       ├── documentation_validator/ # API doc accuracy validation
+│   │       ├── api_drift_analyzer/    # Detect runtime drift from spec
+│   │       ├── integration_orchestrator/ # Multi-service integration flows
+│   │       ├── regression_watchdog/   # Automated regression detection
+│   │       └── unit_test_scaffolder/  # LLM-powered unit test generation
+│   ├── llm/                  # LLM provider clients
+│   │   ├── client.go         # LLMClient interface
+│   │   ├── ollama.go         # Ollama client (local & cloud, streaming)
+│   │   └── gemini.go         # Google Gemini client (streaming)
+│   ├── storage/              # Low-level I/O layer
+│   │   ├── yaml.go           # YAML read/write for requests & environments
+│   │   ├── env.go            # .env file loading, variable substitution
+│   │   └── schema.go         # JSON Schema helpers
+│   └── tui/                  # Terminal UI (Bubble Tea)
+│       ├── app.go            # tui.Run() entry point
+│       ├── init.go           # InitialModel, tool registration, LLM client setup
+│       ├── model.go          # Model struct, state definition
+│       ├── update.go         # Bubble Tea Update() — event → state transitions
+│       ├── view.go           # Bubble Tea View() — state → rendered string
+│       ├── keys.go           # Key bindings, input handling, history navigation
+│       ├── styles.go         # Lip Gloss style definitions, color palette
+│       └── highlight.go      # Syntax highlighting helpers
+├── .zap/                     # User config & runtime data (created on first run)
+└── go.mod                    # Go module (go 1.25.3)
 ```
 
 ### Core Components
 
 | Component | Location | Purpose |
-|-----------|----------|---------|
-| **Agent** | `pkg/core/agent.go` | Tool registration, call counting, limit enforcement |
-| **ReAct Loop** | `pkg/core/react.go` | Reason-Act-Observe loop for tool execution |
-| **System Prompt** | `pkg/core/prompt.go` | 20-section LLM instructions |
-| **Tools** | `pkg/core/tools/` | 28+ tool implementations |
-| **LLM Clients** | `pkg/llm/` | Ollama and Gemini implementations |
-| **TUI** | `pkg/tui/` | Bubble Tea-based terminal interface |
-| **Storage** | `pkg/storage/` | YAML I/O, variable substitution |
+|-----------|----------|---------| 
+| **Agent** | `pkg/core/agent.go` | Tool registry, per-tool & total call limits, history management |
+| **ReAct Loop** | `pkg/core/react.go` | Reason-Act-Observe cycle; streaming via `ProcessMessageWithEvents` |
+| **System Prompt** | `pkg/core/prompt/` | 20-section LLM instructions with tool schemas |
+| **Tool Registry** | `pkg/core/tools/registry.go` | Centralized registration of all 40+ tools |
+| **LLM Clients** | `pkg/llm/` | Ollama (local/cloud) and Gemini with streaming support |
+| **TUI** | `pkg/tui/` | Bubble Tea UI with harmonica spring animations |
+| **Storage** | `pkg/storage/` | YAML I/O, variable substitution, .env loading |
+| **Memory Store** | `pkg/core/memory.go` | Persistent memory in `.zap/memory.json` |
 
 ### Message Flow
 
 ```
-User Input → TUI (keys.go)
+User Input → TUI keys.go
            → runAgentAsync() goroutine
-           → Agent.ProcessMessageWithEvents()
-           → LLM generates response
-           → Parse for tool calls
-           → Execute tool → Observe result → Loop or Final Answer
-           → Events emitted to TUI
-           → View rendered
+           → Agent.ProcessMessageWithEvents(ctx, input, callback)
+           → LLM ChatStream() → streaming chunks → "streaming" events → TUI
+           → parseResponse() → toolName + toolArgs extracted (ReAct format)
+           → executeTool() → tool.Execute(args)
+               → "tool_call" event → TUI status update
+               → "observation" event → appended to history
+               → "tool_usage" event → per-tool counter displayed
+           → Loop or Final Answer
+           → "answer" event → TUI renders markdown response
 ```
 
+### ReAct Response Format
+
+The LLM follows this structured format:
+```
+Thought: <reasoning about what to do next>
+ACTION: tool_name({"arg": "value"})
+```
+or
+```
+Final Answer: <response to user>
+```
+
+The parser handles LLM formatting variations, including missing `ACTION:` prefixes and raw `tool_name(...)` calls.
+
 See [pkg/core/README.md](pkg/core/README.md) for detailed architecture documentation.
+
+---
 
 ## Configuration
 
 ### Setup Wizard
 
-On first run, ZAP walks you through configuration:
+On first run, Falcon walks you through a guided Huh-powered wizard:
 
 ```bash
 ./zap
 
-# Step 1: Select LLM provider
-# 1. Ollama (local)
-# 2. Ollama (cloud)
-# 3. Gemini
+# Step 1: Select your API framework
+#   gin (Go), echo (Go), chi (Go), fiber (Go)
+#   fastapi (Python), flask (Python), django (Python)
+#   express (Node.js), nestjs (Node.js), hono (Node.js)
+#   spring (Java), laravel (PHP), rails (Ruby)
+#   actix (Rust), axum (Rust), other
 
-# Step 2: Select your API framework
-# gin, echo, chi, fiber, fastapi, flask, django, express, nestjs, hono, spring, laravel, rails, actix, axum, other
+# Step 2: Select LLM provider
+#   Ollama (local or cloud)
+#   Gemini (Google AI)
+
+# Step 3: Provider-specific config (URL, model, API key)
+
+# Step 4: Confirm and create .zap/config.json
 ```
 
 ### CLI Flags
 
 ```bash
-# Skip wizard with flags
-./zap --framework gin
-
-# Execute saved request
-./zap --request get-users --env prod
-./zap -r get-users -e dev
-
-# Show help
-./zap --help
+zap                                  # Launch interactive TUI
+zap --framework gin                  # Skip framework selection in wizard
+zap --request get-users --env prod   # CLI mode: run saved request
+zap -r get-users -e dev              # Short form
+zap --no-index                       # Skip automatic API spec indexing
+zap --help                           # Show all flags
+zap version                          # Print version, commit, build date
+zap update                           # Self-update to latest release
 ```
 
 ### .zap Folder Structure
 
-The `.zap` directory serves as the brain, memory, and output center for the agent.
+The `.zap` directory is the brain, memory, and output center for the agent.
 
 ```
 .zap/
-├── baselines/          # "The Standard of Truth" - Reference snapshots
-├── snapshots/          # "The Current Reality" - Knowledge Graph (api-graph.json)
-├── requests/           # "Saved Actions" - Library of reusable requests
-├── runs/               # "The History Book" - Immutable execution records
-├── exports/            # "The Filing Cabinet" - Human-readable reports
-├── logs/               # "The Diary" - Internal tool logs
-├── state/              # "The Brain" - Agent memory and context
-└── config/             # "The Settings" - Tool configuration (config.json)
+├── config.json         # LLM provider, model, framework, tool limits
+├── memory.json         # Persistent agent memory (versioned)
+├── history.jsonl       # Conversation history
+├── manifest.json       # Workspace manifest
+├── requests/           # Saved API requests (YAML with {{VAR}} placeholders)
+├── environments/       # Environment variable files (dev.yaml, prod.yaml, ...)
+├── baselines/          # Reference response snapshots for regression testing
+├── snapshots/          # Current API knowledge graph (api-graph.json from spec_ingester)
+├── runs/               # Immutable execution records from test runs
+├── exports/            # Human-readable reports (Markdown/JSON)
+├── logs/               # Internal tool logs
+└── state/              # Agent state files
 ```
 
-**`.env`** - API keys (optional, at project root):
+### config.json Schema
 
+```json
+{
+  "provider": "ollama",
+  "ollama": {
+    "mode": "local",
+    "url": "http://localhost:11434",
+    "api_key": ""
+  },
+  "default_model": "llama3",
+  "framework": "gin",
+  "theme": "dark",
+  "tool_limits": {
+    "default_limit": 50,
+    "total_limit": 200,
+    "per_tool": {
+      "http_request": 25,
+      "performance_test": 5,
+      "auto_test": 5
+    }
+  }
+}
+```
+
+**Supported providers:** `ollama` (local or cloud) · `gemini`
+
+**Optional `.env` file** at project root:
 ```env
 OLLAMA_API_KEY=your_key_here
 GEMINI_API_KEY=your_key_here
 ```
 
-**`.zap/requests/`** - Saved requests with variable substitution:
+### Saved Requests
 
 ```yaml
 # .zap/requests/get-users.yaml
@@ -260,7 +340,7 @@ headers:
   Authorization: "Bearer {{API_TOKEN}}"
 ```
 
-**`.zap/environments/`** - Environment variables:
+### Environments
 
 ```yaml
 # .zap/environments/dev.yaml
@@ -274,9 +354,11 @@ Prevent runaway execution with per-tool and global limits:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `default_limit` | 50 | Fallback for tools without specific limits |
+| `default_limit` | 50 | Fallback for tools without a specific limit |
 | `total_limit` | 200 | Safety cap on total calls per session |
-| `per_tool` | varies | Per-tool overrides by name |
+| `per_tool` | varies | Per-tool overrides (see `init.go:DefaultToolLimits`) |
+
+---
 
 ## Usage
 
@@ -289,7 +371,7 @@ Prevent runaway execution with per-tool and global limits:
 #### Natural Language Commands
 
 ```bash
-# Make HTTP requests
+# HTTP requests
 > GET http://localhost:8000/api/users
 > POST /api/users with {"name": "John"}
 
@@ -302,15 +384,26 @@ Prevent runaway execution with per-tool and global limits:
 > switch to prod environment
 > show available environments
 
-# Code analysis
-> search for the /users endpoint
+# Code analysis & debugging
+> search for the /users endpoint handler
 > read the file api/handlers.go
 > find where UserService is defined
+> why did this 500 error happen?
+> propose a fix for this authentication bug
 
-# Testing
+# Testing workflows
 > validate the response matches this schema: {...}
-> run a load test with 10 concurrent users
-> compare this response to the baseline
+> run the auto_test workflow for /api/orders
+> run a smoke test against staging
+> run a load test with 50 concurrent users for 30s
+> check for security vulnerabilities in /api/auth/*
+> verify that PUT /api/items is idempotent
+
+# API intelligence
+> ingest my openapi.yaml spec
+> generate functional tests from the spec
+> check if the API has drifted from the spec
+> detect breaking changes since last baseline
 ```
 
 #### Keyboard Shortcuts
@@ -322,144 +415,174 @@ Prevent runaway execution with per-tool and global limits:
 | `PgUp/PgDown` | Scroll output |
 | `Ctrl+L` | Clear screen |
 | `Ctrl+U` | Clear input line |
-| `Ctrl+Y` | Copy last response |
+| `Ctrl+Y` | Copy last response to clipboard |
 | `Esc` | Stop agent (running) / Quit (idle) |
 | `Ctrl+C` | Quit |
 
 #### File Write Confirmation
 
-When ZAP wants to modify a file:
+When Falcon wants to modify a file, it enters confirmation mode:
 
 | Key | Action |
 |-----|--------|
-| `Y` | Approve change |
+| `Y` | Approve change and write file |
 | `N` | Reject change |
-| `PgUp/PgDown` | Scroll diff |
+| `PgUp/PgDown` | Scroll diff view |
 | `Esc` | Reject and continue |
 
-### CLI Mode (Automation)
-
-Perfect for CI/CD pipelines:
+### CLI Mode (Automation / CI/CD)
 
 ```bash
-# Execute saved request with environment
+# Execute saved request with environment variable substitution
 ./zap --request get-users --env prod
 
 # Combine with framework setup
-./zap --framework gin --request health-check
+./zap --framework gin --request health-check --env staging
 ```
+
+---
 
 ## Available Tools
 
-### AI Analysis & Generation
+All tools are registered via `pkg/core/tools/registry.go` using a component-based `Registry` struct. Tools are grouped into packages by domain.
+
+### Foundation (`shared/`)
 
 | Tool | Description |
 |------|-------------|
-| `analyze_endpoint` | Deep analysis of endpoint structure, parameters, and security risks |
-| `analyze_failure` | Expert assessment of why a test failed with remediation steps |
-| `generate_tests` | AI-driven generation of comprehensive, categorized test scenarios |
-
-### Orchestration & Automation
-
-| Tool | Description |
-|------|-------------|
-| `run_tests` | Parallel execution of multiple scenarios with filtering |
-| `run_single_test` | Trigger a specific scenario (useful for fix verification) |
-| `auto_test` | Autonomous workflow: analyze → generate → execute → assess |
-
-### Core API Tools
-
-| Tool | Description |
-|------|-------------|
-| `http_request` | Make HTTP requests with status code meanings and error hints |
-| `save_request` | Save API request to YAML with `{{VAR}}` placeholders |
-| `load_request` | Load saved request with environment variable substitution |
-| `list_requests` | List all saved requests in `.zap/requests/` |
-| `set_environment` | Set active environment (dev, prod, staging) |
-| `list_environments` | List available environments |
-
-### Testing & Validation
-
-| Tool | Description |
-|------|-------------|
-| `assert_response` | Validate status codes, headers, body, JSON path, timing |
-| `extract_value` | Extract values using JSON path, headers, cookies, regex |
-| `validate_json_schema` | Validate against JSON Schema (draft-07, draft-2020-12) |
-| `test_suite` | Run organized test suites with assertions |
-| `compare_responses` | Regression testing with baseline comparison |
-
-### Variables & Timing
-
-| Tool | Description |
-|------|-------------|
-| `variable` | Manage session/global variables with disk persistence |
-| `wait` | Add delays for async operations |
-| `retry` | Retry with configurable attempts and exponential backoff |
-
-### Authentication
-
-| Tool | Description |
-|------|-------------|
+| `http_request` | Make HTTP requests with status code hints and variable substitution |
+| `assert_response` | Validate status codes, headers, body content, JSON path, timing |
+| `extract_value` | Extract values via JSON path, headers, cookies, or regex |
+| `validate_json_schema` | Validate responses against JSON Schema (draft-07, draft-2020-12) |
+| `compare_responses` | Regression testing via baseline comparison |
 | `auth_bearer` | Create Bearer token headers (JWT, API tokens) |
 | `auth_basic` | Create HTTP Basic authentication headers |
-| `auth_oauth2` | OAuth2 flows (client_credentials, password) |
+| `auth_oauth2` | OAuth2 flows (client_credentials, password grant) |
 | `auth_helper` | Parse JWT tokens, decode Basic auth |
+| `wait` | Add delays for async operations |
+| `retry` | Retry with configurable attempts and exponential backoff |
+| `test_suite` | Run organized test suites with grouped assertions |
+| `webhook_listener` | Temporary HTTP server to capture webhook callbacks |
+| `performance_test` | Basic load test with concurrent users, p50/p95/p99 latency |
 
-### Performance & Webhooks
-
-| Tool | Description |
-|------|-------------|
-| `performance_test` | Load test with concurrent users, p50/p95/p99 latency |
-| `webhook_listener` | Temporary HTTP server to capture callbacks |
-
-### Codebase Analysis
+### Codebase Intelligence (`debugging/`)
 
 | Tool | Description |
 |------|-------------|
 | `read_file` | Read file contents (100KB security limit) |
-| `write_file` | Write files with human-in-the-loop confirmation |
-| `list_files` | List files with glob patterns (`**/*.go`) |
-| `search_code` | Search patterns with ripgrep (native fallback) |
-| `find_handler` | Framework-aware discovery of endpoint source code |
-| `propose_fix` | Generate unified diffs to fix identified vulnerabilities |
-| `create_test_file` | Generate regression tests to ensure bugs stay fixed |
+| `write_file` | Write files with human-in-the-loop confirmation and diff view |
+| `list_files` | List files with glob patterns (e.g., `**/*.go`) |
+| `search_code` | Search patterns with ripgrep (native Go fallback) |
+| `find_handler` | Framework-aware discovery of endpoint source code handlers |
+| `analyze_endpoint` | LLM-powered deep analysis of endpoint structure and security risks |
+| `analyze_failure` | Expert LLM assessment of why a test failed, with remediation steps |
+| `generate_tests` | LLM-driven generation of comprehensive, categorized test scenarios |
+| `propose_fix` | Generate unified diffs to fix identified bugs or vulnerabilities |
+| `create_test_file` | Generate regression test files so bugs stay fixed |
 
-### Reporting & Scoring
+### Persistence (`persistence/`)
 
 | Tool | Description |
 |------|-------------|
-| `security_report` | Comprehensive security assessment and action plan |
-| `export_results` | Export results to JSON (CI/CD) or Markdown (Reporting) |
+| `variable` | Manage session/global variables with disk persistence |
+| `save_request` | Save API request as YAML with `{{VAR}}` placeholders |
+| `load_request` | Load saved request with environment variable substitution |
+| `list_requests` | List all saved requests in `.zap/requests/` |
+| `set_environment` | Set active environment (dev, prod, staging) |
+| `list_environments` | List available environment files |
+
+### Agent Lifecycle (`agent/`)
+
+| Tool | Description |
+|------|-------------|
+| `memory` | Read/write persistent agent memory across sessions |
+| `export_results` | Export results to JSON (CI/CD) or Markdown (reporting) |
+| `run_tests` | Parallel execution of multiple test scenarios with filtering |
+| `run_single_test` | Trigger a specific test scenario (useful for fix verification) |
+| `auto_test` | Autonomous workflow: analyze → generate → execute → assess |
+
+### API Intelligence (`spec_ingester/`)
+
+| Tool | Description |
+|------|-------------|
+| `ingest_spec` | Transform OpenAPI/Swagger or Postman specs into a Knowledge Graph (`api-graph.json`) |
+
+### Functional Test Generation (`functional_test_generator/`)
+
+| Tool | Description |
+|------|-------------|
+| `generate_functional_tests` | Generate and run spec-driven functional test suites from the Knowledge Graph |
+
+### Security & Performance
+
+| Tool | Package | Description |
+|------|---------|-------------|
+| `security_scanner` | `security_scanner/` | OWASP-style security vulnerability scanning across endpoints |
+| `performance_engine` | `performance_engine/` | Multi-mode performance testing: burst, ramp-up, soak testing |
+
+### Quality & Contract Testing
+
+| Tool | Package | Description |
+|------|---------|-------------|
+| `smoke_runner` | `smoke_runner/` | Quick smoke test suite against live endpoints |
+| `idempotency_verifier` | `idempotency_verifier/` | Verify that PUT/POST requests are idempotent |
+| `data_driven_engine` | `data_driven_engine/` | Execute tests driven by external data sets |
+| `schema_conformance` | `schema_conformance/` | Check that live API responses conform to spec schema |
+| `unit_test_scaffolder` | `unit_test_scaffolder/` | LLM-powered unit test code generation |
+
+### Observability & Evolution
+
+| Tool | Package | Description |
+|------|---------|-------------|
+| `breaking_change_detector` | `breaking_change_detector/` | Detect breaking API changes vs. stored baselines |
+| `dependency_mapper` | `dependency_mapper/` | Map API dependency relationships for impact analysis |
+| `documentation_validator` | `documentation_validator/` | Validate API documentation accuracy against live behavior |
+| `api_drift_analyzer` | `api_drift_analyzer/` | Detect runtime drift between live API and its spec |
+
+### Workflow Orchestration
+
+| Tool | Package | Description |
+|------|---------|-------------|
+| `integration_orchestrator` | `integration_orchestrator/` | Orchestrate multi-service integration test flows |
+| `regression_watchdog` | `regression_watchdog/` | Automated regression detection against saved baselines |
+
+---
 
 ## Contributing
 
 Contributions are welcome! See the package-level documentation for understanding the codebase:
 
-- [pkg/core/README.md](pkg/core/README.md) - Agent and ReAct loop
-- [pkg/core/tools/README.md](pkg/core/tools/README.md) - Tool implementation guide
-- [pkg/llm/README.md](pkg/llm/README.md) - Adding new LLM providers
-- [pkg/storage/README.md](pkg/storage/README.md) - Persistence layer
-- [pkg/tui/README.md](pkg/tui/README.md) - Terminal UI
+- [pkg/core/README.md](pkg/core/README.md) — Agent, ReAct loop, and tool interface
+- [pkg/core/tools/README.md](pkg/core/tools/README.md) — Tool implementation guide
+- [pkg/llm/README.md](pkg/llm/README.md) — Adding new LLM providers
+- [pkg/storage/README.md](pkg/storage/README.md) — Persistence layer
+- [pkg/tui/README.md](pkg/tui/README.md) — Terminal UI
+- [CONTRIBUTING.md](CONTRIBUTING.md) — Contribution guidelines
+- [CLAUDE.md](CLAUDE.md) — Development guidelines and conventions
 
 ### Adding a New Tool
 
-1. Create a new file in `pkg/core/tools/`
+1. Create a new `.go` file in an appropriate package under `pkg/core/tools/`
 2. Implement the `core.Tool` interface:
 
 ```go
 type Tool interface {
     Name() string
     Description() string
-    Parameters() string  // JSON Schema
+    Parameters() string  // JSON Schema string
     Execute(args string) (string, error)
 }
 ```
 
-3. Register in `pkg/tui/init.go` via `agent.RegisterTool()`
+3. Register it in the relevant `register*` method in `pkg/core/tools/registry.go`
+
+For tools requiring human approval (e.g., file writes), implement `core.ConfirmableTool` to get a `SetEventCallback` hook.
 
 ### Development Guidelines
 
-See [CLAUDE.md](CLAUDE.md) for detailed development guidelines.
+See [CLAUDE.md](CLAUDE.md) for detailed development guidelines, including coding conventions, testing requirements, and the sprint-based development process.
+
+---
 
 ## Tech Stack
 
@@ -467,11 +590,18 @@ See [CLAUDE.md](CLAUDE.md) for detailed development guidelines.
 |-----------|------------|
 | Language | Go 1.25.3 |
 | CLI Framework | Cobra + Viper |
-| TUI | Bubble Tea, Lip Gloss, Bubbles, Glamour, Huh |
-| LLM Providers | Ollama, Google Gemini |
-| Search | ripgrep (with native Go fallback) |
-| Data | YAML for requests/environments |
-| Validation | gojsonschema |
+| TUI | Bubble Tea · Lip Gloss · Bubbles · Glamour · Huh · Harmonica |
+| LLM Providers | Ollama (local/cloud) · Google Gemini (`google.golang.org/genai`) |
+| OpenAPI Parsing | `pb33f/libopenapi` |
+| Postman Parsing | `rbretecher/go-postman-collection` |
+| OAuth2 | `golang.org/x/oauth2` |
+| Self-Update | `rhysd/go-github-selfupdate` |
+| Code Search | ripgrep (with native Go fallback) |
+| Diff Generation | `aymanbagabas/go-udiff` |
+| JSON Schema | `xeipuuv/gojsonschema` |
+| Data Format | YAML (requests/environments) · JSON (config/memory/graph) |
+
+---
 
 ## License
 
