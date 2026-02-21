@@ -135,6 +135,16 @@ var (
 				MarginTop(1).
 				MarginBottom(1)
 
+	// Tool block: groups all tool calls in one agent turn into a styled container
+	ToolBlockStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.ThickBorder()).
+			BorderForeground(ToolNameColor).
+			BorderLeft(true).
+			BorderTop(false).
+			BorderRight(false).
+			BorderBottom(false).
+			MarginLeft(ContentPadLeft)
+
 	// Compact tool call styles
 	ToolNameCompactStyle = lipgloss.NewStyle().
 				Foreground(ToolNameColor)

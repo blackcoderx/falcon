@@ -43,7 +43,28 @@ func (m *Model) updateViewportContent() {
 	if m.confirmationMode && m.pendingConfirmation != nil {
 		content.WriteString(m.renderConfirmationView())
 	} else {
+		var toolLines []string
+		flushToolBlock := func() {
+			if len(toolLines) == 0 {
+				return
+			}
+			blockWidth := m.width - ContentPadLeft - ContentPadRight - 4
+			if blockWidth < 40 {
+				blockWidth = 40
+			}
+			block := ToolBlockStyle.Width(blockWidth).Render(strings.Join(toolLines, "\n"))
+			content.WriteString(block)
+			content.WriteString("\n")
+			toolLines = nil
+		}
+
 		for _, entry := range m.logs {
+			if entry.Type == "tool" {
+				toolLines = append(toolLines, strings.TrimRight(m.formatCompactToolCall(entry), "\n"))
+				continue
+			}
+			// Flush any buffered tool lines before rendering a non-tool entry
+			flushToolBlock()
 			line := m.formatLogEntry(entry)
 			if line == "" {
 				continue
@@ -51,6 +72,8 @@ func (m *Model) updateViewportContent() {
 			content.WriteString(line)
 			content.WriteString("\n")
 		}
+		// Flush any remaining tool lines at end of log
+		flushToolBlock()
 	}
 
 	// Check if we were at the bottom before updating
