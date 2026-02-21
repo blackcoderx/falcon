@@ -17,9 +17,9 @@ import (
 )
 
 // Run starts the TUI application.
-// This is the main entry point for the ZAP terminal interface.
-func Run() error {
-	m := InitialModel()
+// webPort is the port the web UI is listening on (0 if disabled).
+func Run(webPort int) error {
+	m := InitialModel(webPort)
 	prog := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 
 	// Store program reference for goroutines to send messages

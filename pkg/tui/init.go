@@ -232,8 +232,8 @@ func (m *Model) updateGlamourWidth(width int) {
 }
 
 // InitialModel creates and returns the initial TUI model.
-// This sets up the agent, tools, and all UI components.
-func InitialModel() Model {
+// webPort is the port the web UI is listening on (0 if disabled).
+func InitialModel(webPort int) Model {
 	// Get current working directory for codebase tools
 	workDir, _ := os.Getwd()
 
@@ -307,10 +307,17 @@ func InitialModel() Model {
 		Content: SplashStyle.Render(FalconASCII),
 	})
 
-	version := "0.1.0" // Default version
-	splashInfo := fmt.Sprintf("Falcon v%s • Current dir: %s",
+	version := "1.0.0"
+	webUIInfo := ""
+	if webPort > 0 {
+		webUIInfo = fmt.Sprintf(" • Web UI: %s",
+			SplashVersionStyle.Render(fmt.Sprintf("http://localhost:%d", webPort)),
+		)
+	}
+	splashInfo := fmt.Sprintf("Falcon v%s • Current dir: %s%s",
 		SplashVersionStyle.Render(version),
 		SplashInfoStyle.Render(workDir),
+		webUIInfo,
 	)
 
 	m.logs = append(m.logs, logEntry{

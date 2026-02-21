@@ -11,6 +11,7 @@
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Features](#features)
+- [Web Dashboard](#web-dashboard)
 - [Architecture](#architecture)
 - [Configuration](#configuration)
 - [Usage](#usage)
@@ -75,7 +76,8 @@ go build -o zap.exe ./cmd/zap
 1. Falcon creates a `.zap/` folder with config, history, and memory
 2. Select your LLM provider (Ollama local, Ollama cloud, or Gemini)
 3. Choose your API framework (gin, fastapi, express, etc.)
-4. The interactive TUI launches with a Falcon ASCII splash screen
+4. The web dashboard starts on a random localhost port — URL printed to terminal
+5. The interactive TUI launches with a Falcon ASCII splash screen showing version, working directory, and web UI URL
 
 ### Try It
 
@@ -109,13 +111,14 @@ Falcon organizes 40+ tools into logical packages via a central `Registry`. See [
 
 Built with the [Charm](https://charm.sh/) ecosystem:
 
-- **Falcon ASCII splash screen** — Branded intro on startup
+- **Falcon ASCII splash screen** — Branded intro showing version, working directory, and web UI URL
 - **Streaming responses** — Text appears as the LLM generates it (real-time token streaming)
 - **Markdown rendering** — Responses are beautifully formatted with Glamour syntax highlighting
 - **Input history** — Navigate previous commands with Shift+Up/Down
 - **Clipboard support** — Copy last response with Ctrl+Y
 - **Status line** — Live status (thinking, executing tool, streaming, idle)
 - **Harmonica spring animations** — Smooth pulsing animation during thinking
+- **Companion web dashboard** — Automatically opens alongside the TUI at a random localhost port
 
 ### Human-in-the-Loop Safety
 
@@ -130,6 +133,58 @@ No surprises, no unauthorized changes.
 ### Persistent Memory
 
 Falcon maintains a `MemoryStore` across sessions stored in `.zap/memory.json`. The agent tracks conversation turns, tool usage patterns, and key facts to provide more contextual assistance over time.
+
+---
+
+## Web Dashboard
+
+When you start Falcon, a companion web dashboard spins up automatically alongside the TUI:
+
+```
+Falcon Web UI -> http://localhost:54821
+```
+
+The port is random by default (OS-assigned) and is also shown in the TUI splash screen:
+
+```
+Falcon v1.0.0 • Current dir: /your/project • Web UI: http://localhost:54821
+```
+
+The dashboard is a read/write interface over your `.zap` workspace — no separate server to run, no build step, embedded directly in the binary.
+
+### Dashboard Sections
+
+| Section | Access | Description |
+|---------|--------|-------------|
+| **Dashboard** | Read | Workspace stats (request count, environments, baselines) and active config summary |
+| **Config** | Read/Write | Edit LLM provider, model, API keys, framework, and per-tool limits |
+| **Requests** | Read/Write | Browse, create, edit, and delete saved API requests with inline body/header editor |
+| **Environments** | Read/Write | Manage environment variable files (dev, prod, staging, etc.) with key-value editor |
+| **Memory** | Read/Write | View and edit persistent agent memory entries, grouped by category |
+| **Variables** | Read/Write | Manage global variables used in `{{VAR}}` substitution |
+| **History** | Read | Session timeline — start time, duration, tools used, turn count |
+| **API Graph** | Read | Collapsible endpoint explorer from ingested OpenAPI/Postman specs, with security risk badges |
+| **Exports** | Read | Browse and view test result exports (JSON/Markdown reports) |
+
+### Web UI Configuration
+
+Control the web dashboard via `config.json`:
+
+```json
+{
+  "web_ui": {
+    "enabled": true,
+    "port": 0
+  }
+}
+```
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `enabled` | `true` | Set to `false` to disable the web dashboard |
+| `port` | `0` | Fixed port to bind to. `0` = OS-assigned random port |
+
+The web server only binds to `127.0.0.1` (localhost) — it is never exposed to the network.
 
 ---
 
@@ -178,6 +233,16 @@ zap/
 │   │   ├── yaml.go           # YAML read/write for requests & environments
 │   │   ├── env.go            # .env file loading, variable substitution
 │   │   └── schema.go         # JSON Schema helpers
+│   ├── web/                  # Embedded web dashboard (pkg/web)
+│   │   ├── server.go         # Start(): port binding, embed, CORS, graceful shutdown
+│   │   ├── routes.go         # All 20 REST API routes on net/http ServeMux
+│   │   ├── handlers.go       # HTTP handlers + path traversal protection
+│   │   ├── readers.go        # Disk read helpers (wraps storage.*)
+│   │   ├── writers.go        # Atomic disk writes (temp + rename)
+│   │   └── static/           # Embedded frontend (served from binary)
+│   │       ├── index.html    # Shell markup
+│   │       ├── style.css     # Japanese minimal dark theme (charcoal + Falcon blue)
+│   │       └── app.js        # Vanilla JS router, API client, section renderers
 │   └── tui/                  # Terminal UI (Bubble Tea)
 │       ├── app.go            # tui.Run() entry point
 │       ├── init.go           # InitialModel, tool registration, LLM client setup
@@ -201,6 +266,7 @@ zap/
 | **Tool Registry** | `pkg/core/tools/registry.go` | Centralized registration of all 40+ tools |
 | **LLM Clients** | `pkg/llm/` | Ollama (local/cloud) and Gemini with streaming support |
 | **TUI** | `pkg/tui/` | Bubble Tea UI with harmonica spring animations |
+| **Web Dashboard** | `pkg/web/` | Embedded localhost web UI — read/write over `.zap` workspace |
 | **Storage** | `pkg/storage/` | YAML I/O, variable substitution, .env loading |
 | **Memory Store** | `pkg/core/memory.go` | Persistent memory in `.zap/memory.json` |
 
@@ -317,6 +383,10 @@ The `.zap` directory is the brain, memory, and output center for the agent.
       "performance_test": 5,
       "auto_test": 5
     }
+  },
+  "web_ui": {
+    "enabled": true,
+    "port": 0
   }
 }
 ```

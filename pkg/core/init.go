@@ -32,6 +32,12 @@ type GeminiConfig struct {
 	APIKey string `json:"api_key"` // Gemini API key
 }
 
+// WebUIConfig controls the embedded web dashboard
+type WebUIConfig struct {
+	Enabled bool `json:"enabled"` // default true
+	Port    int  `json:"port"`    // 0 = OS-assigned random port
+}
+
 // Config represents the user's ZAP configuration
 type Config struct {
 	Provider     string           `json:"provider"` // "ollama" or "gemini"
@@ -41,6 +47,7 @@ type Config struct {
 	Theme        string           `json:"theme"`
 	Framework    string           `json:"framework"` // API framework (e.g., gin, fastapi, express)
 	ToolLimits   ToolLimitsConfig `json:"tool_limits"`
+	WebUI        WebUIConfig      `json:"web_ui"`
 
 	// Legacy fields for backward compatibility (deprecated)
 	OllamaURL    string `json:"ollama_url,omitempty"`

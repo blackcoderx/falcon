@@ -8,6 +8,7 @@ import (
 	"github.com/blackcoderx/zap/pkg/core/tools/persistence"
 	"github.com/blackcoderx/zap/pkg/core/tools/shared"
 	"github.com/blackcoderx/zap/pkg/tui"
+	"github.com/blackcoderx/zap/pkg/web"
 	"github.com/charmbracelet/glamour"
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
@@ -56,10 +57,30 @@ agent that understands your code and can interact with your APIs naturally.`,
 				return
 			}
 
+			// Start Web UI (alongside TUI, disabled only if explicitly set to false)
+			var webShutdown func()
+			var webPort int
+			if !viper.IsSet("web_ui.enabled") || viper.GetBool("web_ui.enabled") {
+				port := viper.GetInt("web_ui.port")
+				actualPort, shutdown, err := web.Start(core.ZapFolderName, port)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Warning: Web UI failed to start: %v\n", err)
+				} else {
+					fmt.Printf("Falcon Web UI -> http://localhost:%d\n\n", actualPort)
+					webPort = actualPort
+					webShutdown = shutdown
+				}
+			}
+
 			// Interactive Mode: Start TUI
-			if err := tui.Run(); err != nil {
+			if err := tui.Run(webPort); err != nil {
 				fmt.Fprintf(os.Stderr, "Error running ZAP: %v\n", err)
 				os.Exit(1)
+			}
+
+			// Shut down web server after TUI exits
+			if webShutdown != nil {
+				webShutdown()
 			}
 		},
 	}
