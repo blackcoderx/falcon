@@ -17,17 +17,16 @@ func BuildContextSection(zapFolder, framework, manifestSummary, memoryPreview st
 		result += fmt.Sprintf("**State**: %s\n", manifestSummary)
 	}
 
-	result += "\n**Folder Structure**:\n"
+	result += "\n**Folder Structure** (tool → path):\n"
 	result += "```\n"
 	result += ".zap/\n"
-	result += "├── snapshots/      # API Knowledge Graph (from ingest_spec)\n"
-	result += "├── baselines/      # Regression test baselines\n"
-	result += "├── requests/       # Saved HTTP requests (YAML with {{VAR}})\n"
-	result += "├── runs/           # Test execution history\n"
-	result += "├── exports/        # Generated reports\n"
-	result += "├── logs/           # Internal logs\n"
-	result += "├── state/          # Agent memory + global variables\n"
-	result += "└── config/         # Tool configuration\n"
+	result += "├── snapshots/      # ingest_spec → api-graph.json\n"
+	result += "├── baselines/      # check_regression (read + write)\n"
+	result += "├── requests/       # save_request / load_request / list_requests\n"
+	result += "├── environments/   # set_environment / list_environments\n"
+	result += "├── exports/        # export_results\n"
+	result += "├── runs/           # run_tests / run_single_test\n"
+	result += "└── state/          # variable(scope=global) + memory\n"
 	result += "```\n\n"
 
 	// Framework-specific hints (if configured)

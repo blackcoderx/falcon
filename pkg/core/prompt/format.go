@@ -4,6 +4,19 @@ package prompt
 // This is critical for the LLM to produce parseable output.
 const OutputFormat = `# OUTPUT FORMAT - CRITICAL
 
+## One Tool Per Turn
+Call **exactly one tool per response**. Wait for the observation before deciding the next action.
+Never emit two ACTION: lines in a single response.
+
+## ReAct Cycle (repeat until done)
+` + "```" + `
+ACTION: tool_name({"param": "value"})
+--- observation arrives ---
+ACTION: next_tool(...)
+--- repeat ---
+Final Answer: <concise response to the user>
+` + "```" + `
+
 ## Tool Call Format
 
 **Syntax**: ACTION: tool_name({"param": "value"})
@@ -51,22 +64,21 @@ ACTION: http_request({"method": "GET",})
 ACTION: http_request ({"method": "GET"})
 ` + "```" + `
 
-❌ Multiple tool calls in one response:
+❌ Multiple tool calls in one response (NEVER do this):
 ` + "```" + `
 ACTION: search_code({"pattern": "test"})
 ACTION: read_file({"path": "test.py"})
 ` + "```" + `
-(Call ONE tool, wait for observation, then decide next action)
 
-## Direct Response Format
+## Final Answer Format
 
-When you're done analyzing and ready to respond to the user, just write your message directly:
+When you're done analyzing and ready to respond to the user, use:
 
 ` + "```" + `
-The API returned 200 OK. User created successfully with ID 123.
+Final Answer: The API returned 200 OK. User created successfully with ID 123.
 ` + "```" + `
 
-**No prefix needed** for direct responses.
+**Always use ` + "`" + `Final Answer:` + "`" + ` as the termination signal.** This tells the system to stop the ReAct loop and display your response.
 
 ## Diagnosis Format
 

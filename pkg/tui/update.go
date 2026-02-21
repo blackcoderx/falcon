@@ -186,20 +186,20 @@ func (m Model) handleAgentEvent(msg agentEventMsg) Model {
 		m.status = "thinking"
 
 	case "streaming":
-		// Append chunk to streaming buffer and update display
+		// Append chunk and update streaming log entry.
+		// Filter out ReAct scaffolding lines (Thought/ACTION) before display.
 		m.streamingBuffer += msg.event.Content
 		m.status = "streaming"
-		// Update or add streaming log entry
+		visible := filterStreamingContent(m.streamingBuffer)
 		if len(m.logs) > 0 && m.logs[len(m.logs)-1].Type == "streaming" {
-			m.logs[len(m.logs)-1].Content = m.streamingBuffer
-		} else {
-			m.logs = append(m.logs, logEntry{Type: "streaming", Content: m.streamingBuffer})
+			m.logs[len(m.logs)-1].Content = visible
+		} else if visible != "" {
+			m.logs = append(m.logs, logEntry{Type: "streaming", Content: visible})
 		}
 
 	case "tool_call":
-		// Clear streaming when tool is called
+		// Clear streaming when tool fires; remove the streaming log entry (raw buffer)
 		m.streamingBuffer = ""
-		// Remove the streaming log entry (which contains the raw "ACTION: ..." text)
 		if len(m.logs) > 0 && m.logs[len(m.logs)-1].Type == "streaming" {
 			m.logs = m.logs[:len(m.logs)-1]
 		}
@@ -226,7 +226,7 @@ func (m Model) handleAgentEvent(msg agentEventMsg) Model {
 		m.currentTool = ""
 
 	case "answer":
-		// Replace streaming entry with final response if exists
+		// Replace streaming entry if present, otherwise append
 		if len(m.logs) > 0 && m.logs[len(m.logs)-1].Type == "streaming" {
 			m.logs[len(m.logs)-1] = logEntry{Type: "response", Content: msg.event.Content}
 		} else {

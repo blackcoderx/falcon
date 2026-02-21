@@ -142,21 +142,50 @@ func (m *Model) formatCompactToolCall(entry logEntry) string {
 	}
 	argsDisplay := ToolArgsCompactStyle.Render("(" + args + ")")
 
-	// Usage fraction
-	var usageDisplay string
-	if entry.ToolLimit > 0 {
-		usageDisplay = ToolUsageCompactStyle.Render(
-			fmt.Sprintf(" %d/%d", entry.ToolUsed, entry.ToolLimit),
-		)
-	}
-
 	// Duration (only shown after tool completes)
 	var durationDisplay string
 	if entry.Duration > 0 {
 		durationDisplay = ToolDurationStyle.Render(fmt.Sprintf(" %s", formatDuration(entry.Duration)))
 	}
 
-	return name + " " + argsDisplay + usageDisplay + durationDisplay
+	return name + " " + argsDisplay + durationDisplay
+}
+
+// filterStreamingContent strips completed ReAct scaffolding lines (Thought:, ACTION:)
+// from the raw LLM streaming buffer. Only complete lines (ending in \n) are filtered;
+// the in-progress last line always passes through so streaming feels live.
+func filterStreamingContent(raw string) string {
+	// Split into complete lines and the in-progress tail
+	lastNL := strings.LastIndex(raw, "\n")
+	var complete, tail string
+	if lastNL == -1 {
+		tail = raw
+	} else {
+		complete = raw[:lastNL+1]
+		tail = raw[lastNL+1:]
+	}
+
+	// Filter complete lines
+	var kept []string
+	for _, line := range strings.Split(complete, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "Thought:") ||
+			strings.HasPrefix(trimmed, "ACTION:") {
+			continue
+		}
+		kept = append(kept, line)
+	}
+
+	result := strings.Join(kept, "\n") + tail
+
+	// Check if the tail itself is a scaffolding line being typed (suppress it)
+	trimmedTail := strings.TrimSpace(tail)
+	if strings.HasPrefix(trimmedTail, "Thought:") ||
+		strings.HasPrefix(trimmedTail, "ACTION:") {
+		result = strings.Join(kept, "\n")
+	}
+
+	return strings.TrimSpace(result)
 }
 
 // formatDuration formats a duration in a human-readable way.
