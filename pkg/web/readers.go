@@ -9,9 +9,16 @@ import (
 
 	"github.com/blackcoderx/zap/pkg/core"
 	"github.com/blackcoderx/zap/pkg/storage"
+	"gopkg.in/yaml.v3"
 )
 
 func readConfig(zapDir string) (*core.Config, error) {
+	// Try YAML first (new format), fall back to JSON (legacy)
+	yamlPath := filepath.Join(zapDir, "config.yaml")
+	if data, err := os.ReadFile(yamlPath); err == nil {
+		var cfg core.Config
+		return &cfg, yaml.Unmarshal(data, &cfg)
+	}
 	data, err := os.ReadFile(filepath.Join(zapDir, "config.json"))
 	if err != nil {
 		return nil, err

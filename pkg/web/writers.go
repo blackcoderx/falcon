@@ -8,6 +8,7 @@ import (
 
 	"github.com/blackcoderx/zap/pkg/core"
 	"github.com/blackcoderx/zap/pkg/storage"
+	"gopkg.in/yaml.v3"
 )
 
 // atomicWrite writes data to path via a temp file + rename to avoid partial writes.
@@ -20,6 +21,15 @@ func atomicWrite(path string, data []byte) error {
 }
 
 func writeConfig(zapDir string, cfg *core.Config) error {
+	// Write YAML if config.yaml exists, otherwise fall back to JSON
+	yamlPath := filepath.Join(zapDir, "config.yaml")
+	if _, err := os.Stat(yamlPath); err == nil {
+		data, err := yaml.Marshal(cfg)
+		if err != nil {
+			return err
+		}
+		return atomicWrite(yamlPath, data)
+	}
 	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		return err

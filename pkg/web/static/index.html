@@ -1,77 +1,120 @@
 <!doctype html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Falcon — Workspace Dashboard</title>
-        <link rel="stylesheet" href="style.css" />
-    </head>
-    <body>
-        <div id="app">
-            <nav id="sidebar">
-                <div class="sidebar-header">
-                    <!--<span class="logo-icon">⚡</span>-->
-                    <span class="logo-text">Falcon</span>
-                </div>
-                <ul class="nav-list">
-                    <li>
-                        <a
-                            href="#"
-                            class="nav-item active"
-                            data-section="dashboard"
-                            >Dashboard</a
-                        >
-                    </li>
-                    <li>
-                        <a href="#" class="nav-item" data-section="config"
-                            >Config</a
-                        >
-                    </li>
-                    <li>
-                        <a href="#" class="nav-item" data-section="requests"
-                            >Requests</a
-                        >
-                    </li>
-                    <li>
-                        <a href="#" class="nav-item" data-section="environments"
-                            >Environments</a
-                        >
-                    </li>
-                    <li>
-                        <a href="#" class="nav-item" data-section="memory"
-                            >Memory</a
-                        >
-                    </li>
-                    <li>
-                        <a href="#" class="nav-item" data-section="variables"
-                            >Variables</a
-                        >
-                    </li>
-                    <li>
-                        <a href="#" class="nav-item" data-section="history"
-                            >History</a
-                        >
-                    </li>
-                    <li>
-                        <a href="#" class="nav-item" data-section="api-graph"
-                            >API Graph</a
-                        >
-                    </li>
-                    <li>
-                        <a href="#" class="nav-item" data-section="exports"
-                            >Exports</a
-                        >
-                    </li>
-                </ul>
-            </nav>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Falcon</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <nav id="sidebar">
+      <div class="sidebar-header">
+        <span class="logo-dot"></span>
+        <span class="logo-text">Falcon</span>
+        <button class="theme-toggle" id="theme-btn" title="Toggle theme">◐</button>
+      </div>
 
-            <main id="content">
-                <div class="loading">Loading…</div>
-            </main>
-        </div>
+      <ul class="nav-list">
+        <li>
+          <a href="#" class="nav-item active" data-section="dashboard">
+            <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="1" y="1" width="6" height="6" rx="1.5"/>
+              <rect x="9" y="1" width="6" height="6" rx="1.5"/>
+              <rect x="1" y="9" width="6" height="6" rx="1.5"/>
+              <rect x="9" y="9" width="6" height="6" rx="1.5"/>
+            </svg>
+            Dashboard
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-item" data-section="config">
+            <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="8" cy="8" r="2.5"/>
+              <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"/>
+            </svg>
+            Config
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-item" data-section="requests">
+            <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M2 4h12M2 8h8M2 12h5"/>
+              <circle cx="13" cy="11" r="2.5"/>
+              <path d="M13 8.5v1M13 13.5v1M10.5 11h1M15.5 11h0.5" stroke-linecap="round"/>
+            </svg>
+            Requests
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-item" data-section="environments">
+            <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="1.5" y="3.5" width="13" height="9" rx="1.5"/>
+              <path d="M5 7l2.5 2.5L10 7"/>
+            </svg>
+            Environments
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-item" data-section="memory">
+            <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <ellipse cx="8" cy="5" rx="6" ry="2.5"/>
+              <path d="M2 5v6c0 1.38 2.69 2.5 6 2.5s6-1.12 6-2.5V5"/>
+              <path d="M2 8c0 1.38 2.69 2.5 6 2.5s6-1.12 6-2.5"/>
+            </svg>
+            Memory
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-item" data-section="variables">
+            <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 4l10 8M13 4L3 12" stroke-linecap="round"/>
+            </svg>
+            Variables
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-item" data-section="history">
+            <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="8" cy="8" r="6.5"/>
+              <path d="M8 4.5V8l2.5 2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            History
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-item" data-section="api-graph">
+            <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="3" cy="8" r="2"/>
+              <circle cx="13" cy="3.5" r="2"/>
+              <circle cx="13" cy="12.5" r="2"/>
+              <path d="M5 8l6-4M5 8l6 4"/>
+            </svg>
+            API Graph
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-item" data-section="exports">
+            <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 10v3h10v-3M8 2v7M5.5 6.5L8 9l2.5-2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Exports
+          </a>
+        </li>
+      </ul>
 
-        <div id="toast-container"></div>
+      <div class="sidebar-footer">
+        <div class="sidebar-status" id="sidebar-status">Falcon v1</div>
+      </div>
+    </nav>
 
-        <script src="app.js"></script>
-    </body>
+    <main id="content">
+      <div class="loading">Loading</div>
+    </main>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script src="app.js"></script>
+</body>
 </html>
