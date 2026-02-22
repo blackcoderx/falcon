@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/blackcoderx/zap/pkg/llm"
 )
@@ -31,14 +32,25 @@ func (a *Agent) ProcessMessage(input string) (string, error) {
 		messages := []llm.Message{{Role: "system", Content: systemPrompt}}
 		messages = append(messages, a.history...)
 
-		// Get LLM response
-		response, err := a.llmClient.Chat(messages)
+		// Get LLM response with silent retry (up to 3 attempts, exponential backoff).
+		// Retries on both hard errors AND empty responses.
+		const maxRetries = 3
+		var response string
+		var err error
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			response, err = a.llmClient.Chat(messages)
+			if err == nil && response != "" {
+				break
+			}
+			if attempt < maxRetries {
+				time.Sleep(time.Duration(1<<uint(attempt-1)) * 2 * time.Second)
+			}
+		}
 		if err != nil {
 			return "", fmt.Errorf("agent chat error: %w", err)
 		}
-
 		if response == "" {
-			return "I received an empty response from the AI. This can happen if the model is overloaded or the request is blocked.", nil
+			return fmt.Sprintf("I received an empty response from the AI after %d attempts. The model may be overloaded or unavailable.", maxRetries), nil
 		}
 
 		// Parse response for thoughts and tool calls
@@ -117,17 +129,41 @@ func (a *Agent) ProcessMessageWithEvents(ctx context.Context, input string, call
 			callback(AgentEvent{Type: "streaming", Content: chunk})
 		}
 
-		response, streamErr = a.llmClient.ChatStream(messages, streamCallback)
+		// Retry LLM call up to 3 times with exponential backoff (2s, 4s).
+		// Retries on both hard errors AND empty responses (model crash/timeout).
+		const maxRetries = 3
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			response, streamErr = a.llmClient.ChatStream(messages, streamCallback)
+			if streamErr == nil && response != "" {
+				break
+			}
+			if attempt < maxRetries {
+				retryDelay := time.Duration(1<<uint(attempt-1)) * 2 * time.Second
+				var reason string
+				if streamErr != nil {
+					reason = fmt.Sprintf("LLM call failed: %v", streamErr)
+				} else {
+					reason = "received empty response from AI (model may have crashed or timed out)"
+				}
+				retryMsg := fmt.Sprintf("%s (attempt %d/%d). Retrying in %s...", reason, attempt, maxRetries, retryDelay)
+				callback(AgentEvent{Type: "retrying", Content: retryMsg})
+				select {
+				case <-ctx.Done():
+					return "", ctx.Err()
+				case <-time.After(retryDelay):
+				}
+				callback(AgentEvent{Type: "thinking", Content: fmt.Sprintf("reconnecting (attempt %d/%d)...", attempt+1, maxRetries)})
+			}
+		}
 		if streamErr != nil {
-			errorMsg := fmt.Sprintf("Connection Error: Could not talk to the AI provider.\nDetails: %v\n\nTip: Check if Ollama is running (try 'ollama serve') or check your API key.", streamErr)
+			errorMsg := fmt.Sprintf("Connection Error: Could not talk to the AI provider after %d attempts.\nDetails: %v\n\nTip: Check if Ollama is running (try 'ollama serve') or check your API key.", maxRetries, streamErr)
 			callback(AgentEvent{Type: "error", Content: errorMsg})
 			return "", fmt.Errorf("agent chat error: %w", streamErr)
 		}
-
 		if response == "" {
-			errorMsg := "Received an empty response from the AI. This usually happens if the model crashed or timed out."
+			errorMsg := fmt.Sprintf("Received an empty response from the AI after %d attempts. The model may be overloaded or unavailable.", maxRetries)
 			callback(AgentEvent{Type: "error", Content: errorMsg})
-			return "I received an empty response from the AI.", nil
+			return "I received an empty response from the AI after retrying.", nil
 		}
 
 		// Parse response for thoughts and tool calls

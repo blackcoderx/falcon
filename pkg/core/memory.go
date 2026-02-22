@@ -255,24 +255,27 @@ func (ms *MemoryStore) SaveSessionSummary(history []llm.Message) error {
 		TurnCount: ms.turnCount,
 	}
 
-	// Append to history.jsonl
-	historyPath := filepath.Join(ms.zapDir, "history.jsonl")
+	// Append to falcon.md as a Markdown section
+	historyPath := filepath.Join(ms.zapDir, "falcon.md")
 	f, err := os.OpenFile(historyPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return fmt.Errorf("failed to open history.jsonl: %w", err)
+		return fmt.Errorf("failed to open falcon.md: %w", err)
 	}
 	defer f.Close()
 
-	data, err := json.Marshal(entry)
-	if err != nil {
-		return fmt.Errorf("failed to marshal session entry: %w", err)
-	}
+	section := fmt.Sprintf(
+		"## Session %s\n\n- **Start**: %s\n- **End**: %s\n- **Turns**: %d\n- **Topics**: %s\n- **Tools**: %s\n\n### Summary\n\n%s\n\n---\n\n",
+		entry.SessionID,
+		entry.StartTime,
+		entry.EndTime,
+		entry.TurnCount,
+		strings.Join(entry.Topics, ", "),
+		strings.Join(entry.ToolsUsed, ", "),
+		entry.Summary,
+	)
 
-	if _, err := f.Write(data); err != nil {
+	if _, err := f.WriteString(section); err != nil {
 		return fmt.Errorf("failed to write session entry: %w", err)
-	}
-	if _, err := f.Write([]byte("\n")); err != nil {
-		return fmt.Errorf("failed to write newline: %w", err)
 	}
 
 	return nil
@@ -286,26 +289,72 @@ func (ms *MemoryStore) GetRecentSessions(n int) []SessionEntry {
 }
 
 // getRecentSessionsUnlocked reads sessions without acquiring the lock (caller must hold it).
+// Parses the Markdown sections written by SaveSessionSummary from falcon.md.
 func (ms *MemoryStore) getRecentSessionsUnlocked(n int) []SessionEntry {
-	historyPath := filepath.Join(ms.zapDir, "history.jsonl")
-	f, err := os.Open(historyPath)
+	historyPath := filepath.Join(ms.zapDir, "falcon.md")
+	data, err := os.ReadFile(historyPath)
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
 
 	var all []SessionEntry
-	scanner := bufio.NewScanner(f)
+	var current *SessionEntry
+	inSummary := false
+
+	scanner := bufio.NewScanner(strings.NewReader(string(data)))
 	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
+		line := scanner.Text()
+
+		if strings.HasPrefix(line, "## Session ") {
+			if current != nil {
+				all = append(all, *current)
+			}
+			id := strings.TrimPrefix(line, "## Session ")
+			current = &SessionEntry{SessionID: strings.TrimSpace(id)}
+			inSummary = false
 			continue
 		}
-		var entry SessionEntry
-		if err := json.Unmarshal([]byte(line), &entry); err != nil {
-			continue // Skip malformed lines
+
+		if current == nil {
+			continue
 		}
-		all = append(all, entry)
+
+		if strings.HasPrefix(line, "- **Start**: ") {
+			current.StartTime = strings.TrimPrefix(line, "- **Start**: ")
+		} else if strings.HasPrefix(line, "- **End**: ") {
+			current.EndTime = strings.TrimPrefix(line, "- **End**: ")
+		} else if strings.HasPrefix(line, "- **Topics**: ") {
+			topics := strings.TrimPrefix(line, "- **Topics**: ")
+			if topics != "" {
+				for _, t := range strings.Split(topics, ", ") {
+					if t = strings.TrimSpace(t); t != "" {
+						current.Topics = append(current.Topics, t)
+					}
+				}
+			}
+		} else if strings.HasPrefix(line, "- **Tools**: ") {
+			tools := strings.TrimPrefix(line, "- **Tools**: ")
+			if tools != "" {
+				for _, t := range strings.Split(tools, ", ") {
+					if t = strings.TrimSpace(t); t != "" {
+						current.ToolsUsed = append(current.ToolsUsed, t)
+					}
+				}
+			}
+		} else if line == "### Summary" {
+			inSummary = true
+		} else if line == "---" {
+			inSummary = false
+		} else if inSummary && strings.TrimSpace(line) != "" {
+			if current.Summary != "" {
+				current.Summary += " "
+			}
+			current.Summary += strings.TrimSpace(line)
+		}
+	}
+
+	if current != nil {
+		all = append(all, *current)
 	}
 
 	if len(all) <= n {

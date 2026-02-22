@@ -3,6 +3,7 @@ package persistence
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -80,8 +81,17 @@ func (t *SaveRequestTool) Execute(args string) (string, error) {
 		return "", err
 	}
 
+	// Verify file actually exists on disk after write
+	info, statErr := os.Stat(filePath)
+	if statErr != nil {
+		return "", fmt.Errorf("save reported success but file not found at %s — possible filesystem issue: %w", filePath, statErr)
+	}
+	if info.Size() == 0 {
+		return "", fmt.Errorf("save reported success but file at %s is empty — write may have failed silently", filePath)
+	}
+
 	// Update manifest counts
 	shared.UpdateManifestCounts(t.manager.GetBaseDir())
 
-	return fmt.Sprintf("Request saved to %s", filePath), nil
+	return fmt.Sprintf("Request saved and verified at %s (%d bytes)", filePath, info.Size()), nil
 }

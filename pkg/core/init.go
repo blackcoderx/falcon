@@ -1,7 +1,6 @@
 package core
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,49 +8,50 @@ import (
 	"github.com/blackcoderx/zap/pkg/core/tools/shared"
 	"github.com/blackcoderx/zap/pkg/core/tools/spec_ingester"
 	"github.com/charmbracelet/huh"
+	"gopkg.in/yaml.v3"
 )
 
 const ZapFolderName = ".zap"
 
 // ToolLimitsConfig holds per-tool call limits configuration
 type ToolLimitsConfig struct {
-	DefaultLimit int            `json:"default_limit"` // Fallback limit for tools without specific limit
-	TotalLimit   int            `json:"total_limit"`   // Safety cap on total tool calls per session
-	PerTool      map[string]int `json:"per_tool"`      // Per-tool limits (tool_name -> max_calls)
+	DefaultLimit int            `yaml:"default_limit"` // Fallback limit for tools without specific limit
+	TotalLimit   int            `yaml:"total_limit"`   // Safety cap on total tool calls per session
+	PerTool      map[string]int `yaml:"per_tool"`      // Per-tool limits (tool_name -> max_calls)
 }
 
 // OllamaConfig holds Ollama-specific configuration
 type OllamaConfig struct {
-	Mode   string `json:"mode"`    // "local" or "cloud"
-	URL    string `json:"url"`     // API URL
-	APIKey string `json:"api_key"` // API key (for cloud mode)
+	Mode   string `yaml:"mode"`    // "local" or "cloud"
+	URL    string `yaml:"url"`     // API URL
+	APIKey string `yaml:"api_key"` // API key (for cloud mode)
 }
 
 // GeminiConfig holds Gemini-specific configuration
 type GeminiConfig struct {
-	APIKey string `json:"api_key"` // Gemini API key
+	APIKey string `yaml:"api_key"` // Gemini API key
 }
 
 // WebUIConfig controls the embedded web dashboard
 type WebUIConfig struct {
-	Enabled bool `json:"enabled"` // default true
-	Port    int  `json:"port"`    // 0 = OS-assigned random port
+	Enabled bool `yaml:"enabled"` // default true
+	Port    int  `yaml:"port"`    // 0 = OS-assigned random port
 }
 
 // Config represents the user's ZAP configuration
 type Config struct {
-	Provider     string           `json:"provider"` // "ollama" or "gemini"
-	OllamaConfig *OllamaConfig    `json:"ollama,omitempty"`
-	GeminiConfig *GeminiConfig    `json:"gemini,omitempty"`
-	DefaultModel string           `json:"default_model"`
-	Theme        string           `json:"theme"`
-	Framework    string           `json:"framework"` // API framework (e.g., gin, fastapi, express)
-	ToolLimits   ToolLimitsConfig `json:"tool_limits"`
-	WebUI        WebUIConfig      `json:"web_ui"`
+	Provider     string           `yaml:"provider"` // "ollama" or "gemini"
+	OllamaConfig *OllamaConfig    `yaml:"ollama,omitempty"`
+	GeminiConfig *GeminiConfig    `yaml:"gemini,omitempty"`
+	DefaultModel string           `yaml:"default_model"`
+	Theme        string           `yaml:"theme"`
+	Framework    string           `yaml:"framework"` // API framework (e.g., gin, fastapi, express)
+	ToolLimits   ToolLimitsConfig `yaml:"tool_limits"`
+	WebUI        WebUIConfig      `yaml:"web_ui"`
 
 	// Legacy fields for backward compatibility (deprecated)
-	OllamaURL    string `json:"ollama_url,omitempty"`
-	OllamaAPIKey string `json:"ollama_api_key,omitempty"`
+	OllamaURL    string `yaml:"ollama_url,omitempty"`
+	OllamaAPIKey string `yaml:"ollama_api_key,omitempty"`
 }
 
 // SupportedFrameworks lists frameworks that ZAP recognizes
@@ -392,13 +392,13 @@ func InitializeZapFolder(framework string, skipIndex bool) error {
 			return fmt.Errorf("failed to create .zap folder: %w", err)
 		}
 
-		// Create config.json with wizard results
+		// Create config.yaml with wizard results
 		if err := createDefaultConfig(setup); err != nil {
 			return err
 		}
 
-		// Create empty history.jsonl
-		if err := createFile(filepath.Join(ZapFolderName, "history.jsonl")); err != nil {
+		// Create empty falcon.md
+		if err := createFile(filepath.Join(ZapFolderName, "falcon.md")); err != nil {
 			return err
 		}
 
@@ -418,7 +418,7 @@ func InitializeZapFolder(framework string, skipIndex bool) error {
 		}
 
 		// Create new folder structure
-		newFolders := []string{"baselines", "snapshots", "runs", "exports", "logs", "state"}
+		newFolders := []string{"baselines", "flows"}
 		for _, folder := range newFolders {
 			if err := os.Mkdir(filepath.Join(ZapFolderName, folder), 0755); err != nil {
 				return fmt.Errorf("failed to create %s folder: %w", folder, err)
@@ -487,19 +487,7 @@ func InitializeZapFolder(framework string, skipIndex bool) error {
 	if err := ensureDir(filepath.Join(ZapFolderName, "baselines")); err != nil {
 		return err
 	}
-	if err := ensureDir(filepath.Join(ZapFolderName, "snapshots")); err != nil {
-		return err
-	}
-	if err := ensureDir(filepath.Join(ZapFolderName, "runs")); err != nil {
-		return err
-	}
-	if err := ensureDir(filepath.Join(ZapFolderName, "exports")); err != nil {
-		return err
-	}
-	if err := ensureDir(filepath.Join(ZapFolderName, "logs")); err != nil {
-		return err
-	}
-	if err := ensureDir(filepath.Join(ZapFolderName, "state")); err != nil {
+	if err := ensureDir(filepath.Join(ZapFolderName, "flows")); err != nil {
 		return err
 	}
 
@@ -518,7 +506,7 @@ func InitializeZapFolder(framework string, skipIndex bool) error {
 
 // migrateLegacyConfig moves legacy top-level Ollama fields to the new OllamaConfig struct.
 func migrateLegacyConfig() error {
-	configPath := filepath.Join(ZapFolderName, "config.json")
+	configPath := filepath.Join(ZapFolderName, "config.yaml")
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -528,7 +516,7 @@ func migrateLegacyConfig() error {
 	}
 
 	var config Config
-	if err := json.Unmarshal(data, &config); err != nil {
+	if err := yaml.Unmarshal(data, &config); err != nil {
 		return err // Malformed config, skip migration
 	}
 
@@ -560,7 +548,7 @@ func migrateLegacyConfig() error {
 	}
 
 	if changed {
-		newData, err := json.MarshalIndent(config, "", "  ")
+		newData, err := yaml.Marshal(config)
 		if err != nil {
 			return err
 		}
@@ -572,7 +560,7 @@ func migrateLegacyConfig() error {
 
 // updateConfigFramework updates the framework in an existing config file
 func updateConfigFramework(framework string) error {
-	configPath := filepath.Join(ZapFolderName, "config.json")
+	configPath := filepath.Join(ZapFolderName, "config.yaml")
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
@@ -580,13 +568,13 @@ func updateConfigFramework(framework string) error {
 	}
 
 	var config Config
-	if err := json.Unmarshal(data, &config); err != nil {
+	if err := yaml.Unmarshal(data, &config); err != nil {
 		return fmt.Errorf("failed to parse config: %w", err)
 	}
 
 	config.Framework = framework
 
-	newData, err := json.MarshalIndent(config, "", "  ")
+	newData, err := yaml.Marshal(config)
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
@@ -600,7 +588,7 @@ func updateConfigFramework(framework string) error {
 
 // GetConfigFramework reads the framework from the config file
 func GetConfigFramework() string {
-	configPath := filepath.Join(ZapFolderName, "config.json")
+	configPath := filepath.Join(ZapFolderName, "config.yaml")
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
@@ -608,7 +596,7 @@ func GetConfigFramework() string {
 	}
 
 	var config Config
-	if err := json.Unmarshal(data, &config); err != nil {
+	if err := yaml.Unmarshal(data, &config); err != nil {
 		return ""
 	}
 
@@ -626,16 +614,42 @@ func ensureDir(path string) error {
 	return nil
 }
 
-// createDefaultEnvironment creates a default dev environment file
+// createDefaultEnvironment creates default dev, staging, and prod environment files
 func createDefaultEnvironment() error {
-	envContent := `# Development environment
-# Add your variables here, e.g.:
-# BASE_URL: http://localhost:3000
-# API_TOKEN: your-dev-token
-`
-	envPath := filepath.Join(ZapFolderName, "environments", "dev.yaml")
-	if err := os.WriteFile(envPath, []byte(envContent), 0644); err != nil {
-		return fmt.Errorf("failed to write dev environment: %w", err)
+	envDir := filepath.Join(ZapFolderName, "environments")
+
+	environments := []struct {
+		filename string
+		content  string
+	}{
+		{
+			"dev.yaml",
+			`# Development environment
+BASE_URL: http://localhost:3000
+API_KEY: your-dev-api-key
+`,
+		},
+		{
+			"staging.yaml",
+			`# Staging environment
+BASE_URL: https://staging.example.com
+API_KEY: your-staging-api-key
+`,
+		},
+		{
+			"prod.yaml",
+			`# Production environment
+BASE_URL: https://api.example.com
+API_KEY: your-prod-api-key
+`,
+		},
+	}
+
+	for _, env := range environments {
+		envPath := filepath.Join(envDir, env.filename)
+		if err := os.WriteFile(envPath, []byte(env.content), 0644); err != nil {
+			return fmt.Errorf("failed to write %s environment: %w", env.filename, err)
+		}
 	}
 	return nil
 }
@@ -705,20 +719,20 @@ func createDefaultConfig(setup *SetupResult) error {
 			URL:    setup.OllamaURL,
 			APIKey: setup.OllamaKey,
 		}
-		// Don't set GeminiConfig - it will be omitted from JSON
+		// Don't set GeminiConfig - it will be omitted from YAML
 	} else {
 		config.GeminiConfig = &GeminiConfig{
 			APIKey: setup.GeminiKey,
 		}
-		// Don't set OllamaConfig - it will be omitted from JSON
+		// Don't set OllamaConfig - it will be omitted from YAML
 	}
 
-	data, err := json.MarshalIndent(config, "", "  ")
+	data, err := yaml.Marshal(config)
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	configPath := filepath.Join(ZapFolderName, "config.json")
+	configPath := filepath.Join(ZapFolderName, "config.yaml")
 	if err := os.WriteFile(configPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
@@ -732,7 +746,7 @@ func createMemoryFile() error {
 		"version": 1,
 		"entries": []interface{}{},
 	}
-	data, err := json.MarshalIndent(memory, "", "  ")
+	data, err := yaml.Marshal(memory)
 	if err != nil {
 		return fmt.Errorf("failed to marshal memory: %w", err)
 	}

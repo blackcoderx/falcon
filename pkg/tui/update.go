@@ -235,6 +235,10 @@ func (m Model) handleAgentEvent(msg agentEventMsg) Model {
 		m.streamingBuffer = ""
 		m.status = "idle"
 
+	case "retrying":
+		m.logs = append(m.logs, logEntry{Type: "retrying", Content: msg.event.Content})
+		m.status = "thinking"
+
 	case "error":
 		m.logs = append(m.logs, logEntry{Type: "error", Content: msg.event.Content})
 		m.streamingBuffer = ""

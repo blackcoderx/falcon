@@ -53,6 +53,9 @@ var (
 	ErrorStyle = lipgloss.NewStyle().
 			Foreground(ErrorColor)
 
+	RetryStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#e0af68"))
+
 	// Interrupted style - faded/muted for agent interruption
 	InterruptedStyle = lipgloss.NewStyle().
 				Foreground(MutedColor).

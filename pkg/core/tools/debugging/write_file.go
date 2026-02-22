@@ -137,10 +137,19 @@ func (t *WriteFileTool) Execute(args string) (string, error) {
 		return "", fmt.Errorf("failed to write file: %w", err)
 	}
 
-	if isNewFile {
-		return fmt.Sprintf("Successfully created file: %s", params.Path), nil
+	// Verify file exists and is non-empty after write
+	info, statErr := os.Stat(absPath)
+	if statErr != nil {
+		return "", fmt.Errorf("write reported success but file not found at %s — possible filesystem issue: %w", absPath, statErr)
 	}
-	return fmt.Sprintf("Successfully modified file: %s", params.Path), nil
+	if info.Size() == 0 && len(params.Content) > 0 {
+		return "", fmt.Errorf("write reported success but file at %s is empty — write may have failed silently", absPath)
+	}
+
+	if isNewFile {
+		return fmt.Sprintf("Successfully created file: %s (%d bytes)", params.Path, info.Size()), nil
+	}
+	return fmt.Sprintf("Successfully modified file: %s (%d bytes)", params.Path, info.Size()), nil
 }
 
 // generateDiff creates a unified diff between original and new content.

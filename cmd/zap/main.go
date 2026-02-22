@@ -88,7 +88,7 @@ agent that understands your code and can interact with your APIs naturally.`,
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .zap/config.json)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .zap/config.yaml)")
 
 	// CLI Flags
 	rootCmd.Flags().StringVarP(&requestFile, "request", "r", "", "Execute a saved request file (YAML)")
@@ -113,7 +113,7 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		viper.AddConfigPath(".zap")
-		viper.SetConfigType("json")
+		viper.SetConfigType("yaml")
 		viper.SetConfigName("config")
 	}
 

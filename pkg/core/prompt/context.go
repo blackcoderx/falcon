@@ -17,16 +17,17 @@ func BuildContextSection(zapFolder, framework, manifestSummary, memoryPreview st
 		result += fmt.Sprintf("**State**: %s\n", manifestSummary)
 	}
 
-	result += "\n**Folder Structure** (tool → path):\n"
+	result += "\n**Your .zap folder** (this is your brain — read before acting, write after learning):\n"
 	result += "```\n"
 	result += ".zap/\n"
-	result += "├── snapshots/      # ingest_spec → api-graph.json\n"
-	result += "├── baselines/      # check_regression (read + write)\n"
-	result += "├── requests/       # save_request / load_request / list_requests\n"
-	result += "├── environments/   # set_environment / list_environments\n"
-	result += "├── exports/        # export_results\n"
-	result += "├── runs/           # run_tests / run_single_test\n"
-	result += "└── state/          # variable(scope=global) + memory\n"
+	result += "├── config.yaml        # LLM provider, model, framework, tool limits\n"
+	result += "├── memory.json        # memory(action=save/recall) — persistent learnings\n"
+	result += "├── falcon.md          # Session history log (Markdown)\n"
+	result += "├── variables.json     # variable(scope=global) — persisted key-value pairs\n"
+	result += "├── requests/          # save_request / load_request / list_requests (.yaml files)\n"
+	result += "├── environments/      # set_environment / list_environments (dev, staging, prod .yaml)\n"
+	result += "├── baselines/         # check_regression — reference snapshots (.yaml files)\n"
+	result += "└── flows/             # Multi-step API flows (.yaml files)\n"
 	result += "```\n\n"
 
 	// Framework-specific hints (if configured)

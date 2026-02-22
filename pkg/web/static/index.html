@@ -1,38 +1,77 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Falcon — Workspace Dashboard</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <div id="app">
-    <nav id="sidebar">
-      <div class="sidebar-header">
-        <span class="logo-icon">⚡</span>
-        <span class="logo-text">Falcon</span>
-      </div>
-      <ul class="nav-list">
-        <li><a href="#" class="nav-item active" data-section="dashboard">Dashboard</a></li>
-        <li><a href="#" class="nav-item" data-section="config">Config</a></li>
-        <li><a href="#" class="nav-item" data-section="requests">Requests</a></li>
-        <li><a href="#" class="nav-item" data-section="environments">Environments</a></li>
-        <li><a href="#" class="nav-item" data-section="memory">Memory</a></li>
-        <li><a href="#" class="nav-item" data-section="variables">Variables</a></li>
-        <li><a href="#" class="nav-item" data-section="history">History</a></li>
-        <li><a href="#" class="nav-item" data-section="api-graph">API Graph</a></li>
-        <li><a href="#" class="nav-item" data-section="exports">Exports</a></li>
-      </ul>
-    </nav>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Falcon — Workspace Dashboard</title>
+        <link rel="stylesheet" href="style.css" />
+    </head>
+    <body>
+        <div id="app">
+            <nav id="sidebar">
+                <div class="sidebar-header">
+                    <!--<span class="logo-icon">⚡</span>-->
+                    <span class="logo-text">Falcon</span>
+                </div>
+                <ul class="nav-list">
+                    <li>
+                        <a
+                            href="#"
+                            class="nav-item active"
+                            data-section="dashboard"
+                            >Dashboard</a
+                        >
+                    </li>
+                    <li>
+                        <a href="#" class="nav-item" data-section="config"
+                            >Config</a
+                        >
+                    </li>
+                    <li>
+                        <a href="#" class="nav-item" data-section="requests"
+                            >Requests</a
+                        >
+                    </li>
+                    <li>
+                        <a href="#" class="nav-item" data-section="environments"
+                            >Environments</a
+                        >
+                    </li>
+                    <li>
+                        <a href="#" class="nav-item" data-section="memory"
+                            >Memory</a
+                        >
+                    </li>
+                    <li>
+                        <a href="#" class="nav-item" data-section="variables"
+                            >Variables</a
+                        >
+                    </li>
+                    <li>
+                        <a href="#" class="nav-item" data-section="history"
+                            >History</a
+                        >
+                    </li>
+                    <li>
+                        <a href="#" class="nav-item" data-section="api-graph"
+                            >API Graph</a
+                        >
+                    </li>
+                    <li>
+                        <a href="#" class="nav-item" data-section="exports"
+                            >Exports</a
+                        >
+                    </li>
+                </ul>
+            </nav>
 
-    <main id="content">
-      <div class="loading">Loading…</div>
-    </main>
-  </div>
+            <main id="content">
+                <div class="loading">Loading…</div>
+            </main>
+        </div>
 
-  <div id="toast-container"></div>
+        <div id="toast-container"></div>
 
-  <script src="app.js"></script>
-</body>
+        <script src="app.js"></script>
+    </body>
 </html>

@@ -48,10 +48,7 @@ func (m *Model) updateViewportContent() {
 			if len(toolLines) == 0 {
 				return
 			}
-			blockWidth := m.width - ContentPadLeft - ContentPadRight - 4
-			if blockWidth < 40 {
-				blockWidth = 40
-			}
+			blockWidth := max(m.width-ContentPadLeft-ContentPadRight-4, 40)
 			block := ToolBlockStyle.Width(blockWidth).Render(strings.Join(toolLines, "\n"))
 			content.WriteString(block)
 			content.WriteString("\n")
@@ -92,10 +89,7 @@ func (m *Model) updateViewportContent() {
 // Both use the same value so their edges align perfectly.
 func (m *Model) boxWidth() int {
 	// Account for MarginLeft + border + padding on each side
-	w := m.width - ContentPadLeft - ContentPadRight - 6
-	if w < 40 {
-		w = 40
-	}
+	w := max(m.width-ContentPadLeft-ContentPadRight-6, 40)
 	return w
 }
 
@@ -137,6 +131,9 @@ func (m *Model) formatLogEntry(entry logEntry) string {
 
 	case "error":
 		return pad + ErrorStyle.Render("  Error: "+entry.Content)
+
+	case "retrying":
+		return pad + RetryStyle.Render("  ↻ "+entry.Content)
 
 	case "interrupted":
 		return pad + InterruptedStyle.Render("  interrupted")
@@ -190,7 +187,7 @@ func filterStreamingContent(raw string) string {
 
 	// Filter complete lines
 	var kept []string
-	for _, line := range strings.Split(complete, "\n") {
+	for line := range strings.SplitSeq(complete, "\n") {
 		trimmed := strings.TrimSpace(line)
 		if strings.HasPrefix(trimmed, "Thought:") ||
 			strings.HasPrefix(trimmed, "ACTION:") {
@@ -317,9 +314,9 @@ func (m Model) renderColoredDiff(diff string) string {
 
 	pad := strings.Repeat(" ", ContentPadLeft)
 	var sb strings.Builder
-	lines := strings.Split(diff, "\n")
+	lines := strings.SplitSeq(diff, "\n")
 
-	for _, line := range lines {
+	for line := range lines {
 		var styledLine string
 
 		switch {
@@ -353,10 +350,7 @@ func (m Model) renderConfirmationFooter() string {
 		ShortcutKeyStyle.Render("pgup/pgdown") + ShortcutDescStyle.Render(" scroll")
 
 	w := m.width
-	gap := w - lipglossWidth(left) - lipglossWidth(right) - 4
-	if gap < 2 {
-		gap = 2
-	}
+	gap := max(w-lipglossWidth(left)-lipglossWidth(right)-4, 2)
 
 	return FooterStyle.Width(m.width).Render(left + strings.Repeat(" ", gap) + right)
 }

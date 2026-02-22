@@ -2,90 +2,80 @@ package prompt
 
 // OutputFormat defines the exact formatting rules for tool calls and responses.
 // This is critical for the LLM to produce parseable output.
-const OutputFormat = `# OUTPUT FORMAT - CRITICAL
+const OutputFormat = `# OUTPUT FORMAT
 
-## One Tool Per Turn
-Call **exactly one tool per response**. Wait for the observation before deciding the next action.
-Never emit two ACTION: lines in a single response.
+## The ReAct Cycle
 
-## ReAct Cycle (repeat until done)
+You operate in a loop: **Think → Act → Observe → Repeat**.
+
+Every response must follow this structure:
+
 ` + "```" + `
+Thought: [What do I know? What am I testing? What do I expect?]
 ACTION: tool_name({"param": "value"})
---- observation arrives ---
-ACTION: next_tool(...)
---- repeat ---
-Final Answer: <concise response to the user>
 ` + "```" + `
 
-## Tool Call Format
-
-**Syntax**: ACTION: tool_name({"param": "value"})
-
-**Rules**:
-1. ACTION must be on its own line
-2. No space before opening parenthesis
-3. JSON must use double quotes (not single)
-4. No trailing commas in JSON
-5. No comments in JSON
-
-## Valid Examples
+After receiving the observation, your next response:
 
 ` + "```" + `
-ACTION: http_request({"method": "GET", "url": "http://localhost:8000/api/users"})
+Thought: [What did I learn? Did it confirm or refute? What next?]
+ACTION: next_tool({"param": "value"})
 ` + "```" + `
 
-` + "```" + `
-ACTION: search_code({"pattern": "/api/users", "file_pattern": "*.go"})
-` + "```" + `
+When done:
 
 ` + "```" + `
-ACTION: variable({"action": "set", "name": "token", "value": "abc123", "scope": "session"})
+Thought: [Summary of what I found]
+Final Answer: [Concise response to the user]
 ` + "```" + `
 
-## Invalid Examples (DO NOT DO)
+## Rules
 
-❌ Missing quotes:
-` + "```" + `
-ACTION: http_request({method: "GET", url: "http://localhost:8000"})
-` + "```" + `
+1. **One tool per response** — call exactly one tool, then wait for the observation
+2. **Always think first** — your Thought should state your hypothesis before the ACTION
+3. **ACTION on its own line** — no text on the same line after the closing parenthesis
+4. **JSON must use double quotes** — no single quotes, no trailing commas, no comments
+5. **No space before parenthesis** — ` + "`" + `ACTION: http_request(...)` + "`" + ` not ` + "`" + `ACTION: http_request (...)` + "`" + `
 
-❌ Single quotes:
-` + "```" + `
-ACTION: http_request({'method': 'GET'})
-` + "```" + `
+## Examples
 
-❌ Trailing comma:
+**Good** — hypothesis before action:
 ` + "```" + `
-ACTION: http_request({"method": "GET",})
-` + "```" + `
-
-❌ Space before parenthesis:
-` + "```" + `
-ACTION: http_request ({"method": "GET"})
+Thought: The user wants to test the /users endpoint. Let me check if I have a saved request for this.
+ACTION: list_requests({})
 ` + "```" + `
 
-❌ Multiple tool calls in one response (NEVER do this):
+**Good** — interpreting result, then next step:
 ` + "```" + `
-ACTION: search_code({"pattern": "test"})
-ACTION: read_file({"path": "test.py"})
-` + "```" + `
-
-## Final Answer Format
-
-When you're done analyzing and ready to respond to the user, use:
-
-` + "```" + `
-Final Answer: The API returned 200 OK. User created successfully with ID 123.
+Thought: No saved request found. I'll make a GET to /users with the stored base URL. I expect 200 with an array.
+ACTION: http_request({"method": "GET", "url": "{{BASE_URL}}/users"})
 ` + "```" + `
 
-**Always use ` + "`" + `Final Answer:` + "`" + ` as the termination signal.** This tells the system to stop the ReAct loop and display your response.
+**Good** — always assert after receiving a response:
+` + "```" + `
+Thought: Got 200. Let me verify the response body has the expected shape.
+ACTION: assert_response({"status_code": 200, "json_path": "$[0].id"})
+` + "```" + `
+
+**Bad** — no thought, just calling:
+` + "```" + `
+ACTION: http_request({"method": "GET", "url": "http://localhost:8000/users"})
+` + "```" + `
+
+## Final Answer
+
+When you have enough evidence to respond, always terminate with:
+
+` + "```" + `
+Final Answer: The /users endpoint returns 200 OK with 3 users. Response schema matches expectations. Saved as "get-users" for future use.
+` + "```" + `
 
 ## Diagnosis Format
 
-When diagnosing errors, include:
+When reporting failures:
 - **File**: path/to/file.go:42
-- **Cause**: Validation missing for 'email' field
-- **Fix**: Add email validator in Pydantic model
+- **Cause**: Missing validation for 'email' field
+- **Fix**: Add email format validator
 
 Be concise and actionable.
 

@@ -85,3 +85,8 @@ func GetRequestsDir(baseDir string) string {
 func GetEnvironmentsDir(baseDir string) string {
 	return filepath.Join(baseDir, "environments")
 }
+
+// GetFlowsDir returns the flows directory path
+func GetFlowsDir(baseDir string) string {
+	return filepath.Join(baseDir, "flows")
+}
