@@ -84,11 +84,6 @@ func (a *Agent) ProcessMessageWithEvents(ctx context.Context, input string, call
 	// Add user message to history
 	a.AppendHistory(llm.Message{Role: "user", Content: input})
 
-	// Track turn in memory
-	if a.memoryStore != nil {
-		a.memoryStore.TrackTurn()
-	}
-
 	// Reset tool call counters for this session
 	a.ResetToolCounts()
 
@@ -443,11 +438,6 @@ func (a *Agent) executeTool(toolName, toolArgs string, callback EventCallback) s
 
 	// Increment counters
 	toolCount, toolLimit := a.IncrementToolCount(toolName)
-
-	// Track tool usage in memory
-	if a.memoryStore != nil {
-		a.memoryStore.TrackTool(toolName)
-	}
 
 	// Set confirmation callback if applicable
 	if callback != nil {

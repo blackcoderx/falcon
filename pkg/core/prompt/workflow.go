@@ -80,7 +80,7 @@ variable(scope="global")       → writes .zap/variables.json
 variable(scope="session")      → in-memory only (cleared on exit)
 memory(action="save")          → writes .zap/memory.json
 memory(action="recall")        → reads  .zap/memory.json
-                                 session history → .zap/falcon.md (Markdown log)
+memory(action="update_knowledge") → writes .zap/falcon.md (API knowledge base)
 check_regression               → reads + writes .zap/baselines/ (.yaml files)
 export_results                 → writes to stdout or file
 ` + "```" + `

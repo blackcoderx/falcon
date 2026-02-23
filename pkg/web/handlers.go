@@ -399,12 +399,12 @@ func (h *handlers) deleteVariable(w http.ResponseWriter, r *http.Request) {
 // ── Read-only ──────────────────────────────────────────────────────────────
 
 func (h *handlers) listHistory(w http.ResponseWriter, r *http.Request) {
-	sessions, err := readHistory(h.zapDir)
+	history, err := readHistory(h.zapDir)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, sessions)
+	writeJSON(w, http.StatusOK, history)
 }
 
 func (h *handlers) listExports(w http.ResponseWriter, r *http.Request) {

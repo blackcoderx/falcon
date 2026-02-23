@@ -1,7 +1,6 @@
 package web
 
 import (
-	"bufio"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -67,32 +66,8 @@ func readMemory(zapDir string) ([]core.MemoryEntry, error) {
 	return mf.Entries, nil
 }
 
-func readHistory(zapDir string) ([]core.SessionEntry, error) {
-	f, err := os.Open(filepath.Join(zapDir, "history.jsonl"))
-	if err != nil {
-		if os.IsNotExist(err) {
-			return []core.SessionEntry{}, nil
-		}
-		return nil, err
-	}
-	defer f.Close()
-
-	var sessions []core.SessionEntry
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
-		var s core.SessionEntry
-		if json.Unmarshal([]byte(line), &s) == nil {
-			sessions = append(sessions, s)
-		}
-	}
-	if sessions == nil {
-		sessions = []core.SessionEntry{}
-	}
-	return sessions, scanner.Err()
+func readHistory(_ string) ([]map[string]interface{}, error) {
+	return []map[string]interface{}{}, nil
 }
 
 func readRequest(zapDir, name string) (*storage.Request, error) {

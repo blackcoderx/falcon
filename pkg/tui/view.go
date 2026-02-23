@@ -50,8 +50,7 @@ func (m *Model) updateViewportContent() {
 			}
 			blockWidth := max(m.width-ContentPadLeft-ContentPadRight-4, 40)
 			block := ToolBlockStyle.Width(blockWidth).Render(strings.Join(toolLines, "\n"))
-			content.WriteString(block)
-			content.WriteString("\n")
+			content.WriteString(strings.TrimRight(block, "\n"))
 			toolLines = nil
 		}
 
@@ -60,12 +59,15 @@ func (m *Model) updateViewportContent() {
 				toolLines = append(toolLines, strings.TrimRight(m.formatCompactToolCall(entry), "\n"))
 				continue
 			}
-			// Flush any buffered tool lines before rendering a non-tool entry
-			flushToolBlock()
+			// Never break a tool group for transient in-flight entries
+			if entry.Type == "streaming" || entry.Type == "thinking" || entry.Type == "observation" || entry.Type == "separator" {
+				continue
+			}
 			line := m.formatLogEntry(entry)
 			if line == "" {
 				continue
 			}
+			flushToolBlock()
 			content.WriteString(line)
 			content.WriteString("\n")
 		}
@@ -263,10 +265,7 @@ func (m Model) renderFooter() string {
 
 	// Calculate spacing between left and right
 	w := m.width
-	gap := w - lipglossWidth(left) - lipglossWidth(right) - 4 // Account for footer padding
-	if gap < 2 {
-		gap = 2
-	}
+	gap := max(w-lipglossWidth(left)-lipglossWidth(right)-4, 2) // Account for footer padding
 
 	return FooterStyle.Width(m.width).Render(left + strings.Repeat(" ", gap) + right)
 }

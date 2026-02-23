@@ -20,11 +20,13 @@ func NewMemoryTool(store *core.MemoryStore) *MemoryTool {
 
 // MemoryParams defines memory tool operations.
 type MemoryParams struct {
-	Action   string `json:"action"`             // "save", "recall", "forget", "list"
+	Action   string `json:"action"`             // "save", "recall", "forget", "list", "update_knowledge"
 	Key      string `json:"key,omitempty"`      // Key for save/forget
 	Value    string `json:"value,omitempty"`    // Value for save
 	Category string `json:"category,omitempty"` // Category for save/list: "preference", "endpoint", "error", "project", "general"
 	Query    string `json:"query,omitempty"`    // Search query for recall
+	Section  string `json:"section,omitempty"`  // Section name for update_knowledge
+	Content  string `json:"content,omitempty"`  // Markdown content for update_knowledge
 }
 
 // Name returns the tool name.
@@ -34,17 +36,19 @@ func (t *MemoryTool) Name() string {
 
 // Description returns the tool description.
 func (t *MemoryTool) Description() string {
-	return "Manage persistent agent memory across sessions. Save important facts, recall previous knowledge, or forget outdated info. Actions: save, recall, forget, list"
+	return "Manage persistent agent memory and API knowledge base. Actions: save (key/value facts), recall (search facts), forget (remove facts), list (all facts), update_knowledge (write API facts into a named section of falcon.md — use this whenever you discover an endpoint, auth method, data model, or error pattern)"
 }
 
 // Parameters returns the tool parameter description.
 func (t *MemoryTool) Parameters() string {
 	return `{
-  "action": "save|recall|forget|list",
+  "action": "save|recall|forget|list|update_knowledge",
   "key": "memory_key",
   "value": "memory_value",
   "category": "preference|endpoint|error|project|general",
-  "query": "search_query"
+  "query": "search_query",
+  "section": "Base URLs|Authentication|Known Endpoints|Data Models|Known Errors|Project Notes",
+  "content": "markdown content to write into the section"
 }`
 }
 
@@ -127,7 +131,16 @@ func (t *MemoryTool) Execute(args string) (string, error) {
 		}
 		return sb.String(), nil
 
+	case "update_knowledge":
+		if params.Section == "" || params.Content == "" {
+			return "", fmt.Errorf("'section' and 'content' are required for update_knowledge")
+		}
+		if err := t.store.UpdateKnowledge(params.Section, params.Content); err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("Updated '%s' section in falcon.md", params.Section), nil
+
 	default:
-		return "", fmt.Errorf("unknown action '%s' (use: save, recall, forget, list)", params.Action)
+		return "", fmt.Errorf("unknown action '%s' (use: save, recall, forget, list, update_knowledge)", params.Action)
 	}
 }

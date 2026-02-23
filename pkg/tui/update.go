@@ -306,5 +306,8 @@ func (m Model) handleAgentDone(msg agentDoneMsg) Model {
 		m.logs = append(m.logs, logEntry{Type: "error", Content: msg.err.Error()})
 	}
 	m.updateViewportContent()
+	if wasCancelled {
+		m.viewport.GotoBottom() // ensure "interrupted" message scrolls into view
+	}
 	return m
 }

@@ -397,8 +397,8 @@ func InitializeZapFolder(framework string, skipIndex bool) error {
 			return err
 		}
 
-		// Create empty falcon.md
-		if err := createFile(filepath.Join(ZapFolderName, "falcon.md")); err != nil {
+		// Create falcon.md knowledge base template
+		if err := createFalconKnowledgeBase(); err != nil {
 			return err
 		}
 
@@ -423,6 +423,11 @@ func InitializeZapFolder(framework string, skipIndex bool) error {
 			if err := os.Mkdir(filepath.Join(ZapFolderName, folder), 0755); err != nil {
 				return fmt.Errorf("failed to create %s folder: %w", folder, err)
 			}
+		}
+
+		// Create baselines README
+		if err := createBaselinesReadme(); err != nil {
+			return err
 		}
 
 		// Create default dev environment
@@ -766,5 +771,99 @@ func createFile(path string) error {
 		return fmt.Errorf("failed to create %s: %w", path, err)
 	}
 	defer file.Close()
+	return nil
+}
+
+// createFalconKnowledgeBase writes the initial structured template for falcon.md.
+func createFalconKnowledgeBase() error {
+	content := `# Falcon API Knowledge Base
+
+This file is automatically maintained by Falcon. It records durable facts about
+the APIs, codebases, and projects you work with. Edit it freely — Falcon reads
+it at the start of every session and updates it as it learns new information.
+
+## Base URLs
+
+<!-- Falcon will fill this in as it discovers your API -->
+
+## Authentication
+
+<!-- Auth method, token endpoints, and patterns Falcon discovers -->
+
+## Known Endpoints
+
+| Method | Path | Description | Notes |
+|--------|------|-------------|-------|
+
+## Data Models
+
+<!-- JSON shapes of request/response bodies Falcon has seen -->
+
+## Known Errors
+
+<!-- Error codes and their causes discovered during testing -->
+
+## Project Notes
+
+<!-- Framework, architecture notes, and other project-specific facts -->
+`
+	path := filepath.Join(ZapFolderName, "falcon.md")
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		return fmt.Errorf("failed to write falcon.md: %w", err)
+	}
+	return nil
+}
+
+// createBaselinesReadme writes an explanatory README.md into the baselines folder.
+func createBaselinesReadme() error {
+	content := `# Baselines
+
+This folder stores reference snapshots for API regression testing.
+
+## What Are Baselines?
+
+Baselines capture the expected state of an API endpoint — its status code,
+headers, and response body shape — at a known-good point in time. Falcon
+compares future responses against these snapshots to detect regressions.
+
+## How to Use
+
+Ask Falcon to create a baseline:
+  "Save a baseline for GET /users"
+
+Ask Falcon to check for regressions:
+  "Check GET /users against the baseline"
+
+Falcon uses the breaking_change_detector and regression_watchdog tools
+to compare live responses against baselines stored here.
+
+## Example Baseline File
+
+` + "```yaml" + `
+endpoint: GET /users
+captured_at: 2026-01-01T00:00:00Z
+status_code: 200
+headers:
+  content-type: application/json
+body_schema:
+  type: array
+  items:
+    type: object
+    required: [id, name, email]
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      email:
+        type: string
+` + "```" + `
+
+Baselines are created and updated automatically by Falcon.
+`
+	path := filepath.Join(ZapFolderName, "baselines", "README.md")
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		return fmt.Errorf("failed to write baselines README: %w", err)
+	}
 	return nil
 }

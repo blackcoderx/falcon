@@ -22,13 +22,14 @@ func BuildContextSection(zapFolder, framework, manifestSummary, memoryPreview st
 	result += ".zap/\n"
 	result += "├── config.yaml        # LLM provider, model, framework, tool limits\n"
 	result += "├── memory.json        # memory(action=save/recall) — persistent learnings\n"
-	result += "├── falcon.md          # Session history log (Markdown)\n"
+	result += "├── falcon.md          # API knowledge base — endpoints, auth, errors, models. Use memory(update_knowledge) to update.\n"
 	result += "├── variables.json     # variable(scope=global) — persisted key-value pairs\n"
 	result += "├── requests/          # save_request / load_request / list_requests (.yaml files)\n"
 	result += "├── environments/      # set_environment / list_environments (dev, staging, prod .yaml)\n"
 	result += "├── baselines/         # check_regression — reference snapshots (.yaml files)\n"
 	result += "└── flows/             # Multi-step API flows (.yaml files)\n"
 	result += "```\n\n"
+	result += "**Knowledge base rule**: When you discover a new base URL, endpoint, auth method, data model, or error pattern, immediately call memory({\"action\":\"update_knowledge\", \"section\":\"<section>\", \"content\":\"<markdown>\"}) to persist it to falcon.md. Valid sections: Base URLs, Authentication, Known Endpoints, Data Models, Known Errors, Project Notes. This is how Falcon remembers your API across sessions — don't skip it.\n\n"
 
 	// Framework-specific hints (if configured)
 	if framework != "" && framework != "other" {
