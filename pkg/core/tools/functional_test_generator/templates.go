@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/blackcoderx/zap/pkg/core/tools/shared"
+	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 )
 
 // ExportScenarios exports test scenarios to a JSON file.

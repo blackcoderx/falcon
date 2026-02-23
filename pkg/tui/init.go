@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/blackcoderx/zap/pkg/core"
-	"github.com/blackcoderx/zap/pkg/core/tools"
-	"github.com/blackcoderx/zap/pkg/core/tools/shared"
-	"github.com/blackcoderx/zap/pkg/llm"
+	"github.com/blackcoderx/falcon/pkg/core"
+	"github.com/blackcoderx/falcon/pkg/core/tools"
+	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
+	"github.com/blackcoderx/falcon/pkg/llm"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -68,7 +68,7 @@ func configureToolLimits(agent *core.Agent) {
 // registerTools adds all tools to the agent.
 // This includes codebase tools, persistence tools, and testing tools from all sprints.
 // registerTools adds all tools to the agent using the central registry.
-// This switches ZAP to use the new modular tool packages (shared, debugging, persistence, agent).
+// This switches Falcon to use the new modular tool packages (shared, debugging, persistence, agent).
 func registerTools(agent *core.Agent, zapDir, workDir string, confirmManager *shared.ConfirmationManager, memStore *core.MemoryStore) {
 	registry := tools.NewRegistry(agent, agent.LLMClient(), workDir, zapDir, memStore, confirmManager)
 	registry.RegisterAllTools()
@@ -169,11 +169,11 @@ const FalconASCII = `███████╗ █████╗ ██╗      
 ██║     ██║  ██║███████╗╚██████╗╚██████╔╝██║ ╚████║
 ╚═╝     ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝`
 
-// newTextInput creates a text input with the ZAP style.
+// newTextInput creates a text input with the Falcon style.
 // No prompt prefix - clean input area.
 // init.go
 
-// newTextInput creates a text input with the ZAP style.
+// newTextInput creates a text input with the Falcon style.
 func newTextInput() textinput.Model {
 	ti := textinput.New()
 	ti.Placeholder = "Ask me anything..."

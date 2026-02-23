@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/blackcoderx/zap/pkg/core/tools/shared"
+	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 )
 
 // ReadFileTool reads file contents

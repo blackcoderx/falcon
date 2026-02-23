@@ -196,7 +196,7 @@ rm -rf pkg/core/prompt/
 rm pkg/core/prompt_integration.go
 
 # Update agent.go imports
-# Remove: "github.com/blackcoderx/zap/pkg/core/prompt"
+# Remove: "github.com/blackcoderx/falcon/pkg/core/prompt"
 
 # Rebuild
 go build ./cmd/zap

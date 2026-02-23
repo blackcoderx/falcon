@@ -15,14 +15,14 @@ func init() {
 
 var updateCmd = &cobra.Command{
 	Use:   "update",
-	Short: "Update ZAP to the latest version",
+	Short: "Update Falcon to the latest version",
 	Run: func(cmd *cobra.Command, args []string) {
 		if version == "dev" {
-			fmt.Println("You are running a development version of ZAP. Update is not supported.")
+			fmt.Println("You are running a development version of Falcon. Update is not supported.")
 			return
 		}
 
-		latest, found, err := selfupdate.DetectLatest("blackcoderx/zap")
+		latest, found, err := selfupdate.DetectLatest("blackcoderx/falcon")
 		if err != nil {
 			fmt.Println("Error occurred while detecting version:", err)
 			return

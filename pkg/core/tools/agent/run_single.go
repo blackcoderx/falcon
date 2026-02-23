@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/blackcoderx/zap/pkg/core/tools/shared"
+	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 )
 
 // RunSingleTestTool executes a single test scenario

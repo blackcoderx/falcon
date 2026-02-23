@@ -101,7 +101,7 @@ pkg/tui/
 ## Usage
 
 ```go
-import "github.com/blackcoderx/zap/pkg/tui"
+import "github.com/blackcoderx/falcon/pkg/tui"
 
 func main() {
     model := tui.InitialModel()

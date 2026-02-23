@@ -1,4 +1,4 @@
-// Package shared provides merged authentication tools for the ZAP agent.
+// Package shared provides merged authentication tools for the Falcon agent.
 // This file combines Bearer token, Basic auth, OAuth2, and auth helper tools.
 package shared
 

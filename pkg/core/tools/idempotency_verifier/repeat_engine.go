@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blackcoderx/zap/pkg/core/tools/shared"
+	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 )
 
 // RepeatEngine repeats requests and compares responses to detect idempotency issues.

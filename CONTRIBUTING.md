@@ -15,12 +15,12 @@ Thank you for your interest in contributing to ZAP! This document provides guide
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/YOUR-USERNAME/zap.git
+   git clone https://github.com/YOUR-USERNAME/falcon.git
    cd zap
    ```
 3. Build the project:
    ```bash
-   go build -o zap.exe ./cmd/zap
+   go build -o falcon.exe ./cmd/zap
    ```
 4. Run tests:
    ```bash
@@ -61,7 +61,7 @@ See the README files in each package for detailed documentation:
 
 ### Reporting Bugs
 
-1. Check if the issue already exists in [GitHub Issues](https://github.com/blackcoderx/zap/issues)
+1. Check if the issue already exists in [GitHub Issues](https://github.com/blackcoderx/falcon/issues)
 2. Create a new issue with:
    - Clear title describing the bug
    - Steps to reproduce
@@ -237,7 +237,7 @@ func TestMyTool_Execute(t *testing.T) {
 
 ## Questions?
 
-- Open a [GitHub Discussion](https://github.com/blackcoderx/zap/discussions)
+- Open a [GitHub Discussion](https://github.com/blackcoderx/falcon/discussions)
 - Check existing issues and PRs
 
-Thank you for contributing to ZAP!
+Thank you for contributing to Falcon!

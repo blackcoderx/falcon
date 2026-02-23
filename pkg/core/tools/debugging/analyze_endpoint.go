@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blackcoderx/zap/pkg/llm"
+	"github.com/blackcoderx/falcon/pkg/llm"
 )
 
 // AnalyzeEndpointTool uses LLM to analyze API endpoint structure

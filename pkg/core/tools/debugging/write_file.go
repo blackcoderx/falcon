@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 
 	"github.com/aymanbagabas/go-udiff"
-	"github.com/blackcoderx/zap/pkg/core"
-	"github.com/blackcoderx/zap/pkg/core/tools/shared"
+	"github.com/blackcoderx/falcon/pkg/core"
+	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 )
 
 // WriteFileTool writes or modifies files with human-in-the-loop confirmation.

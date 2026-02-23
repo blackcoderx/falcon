@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/blackcoderx/zap/pkg/core"
-	"github.com/blackcoderx/zap/pkg/core/tools/persistence"
-	"github.com/blackcoderx/zap/pkg/core/tools/shared"
-	"github.com/blackcoderx/zap/pkg/tui"
-	"github.com/blackcoderx/zap/pkg/web"
+	"github.com/blackcoderx/falcon/pkg/core"
+	"github.com/blackcoderx/falcon/pkg/core/tools/persistence"
+	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
+	"github.com/blackcoderx/falcon/pkg/tui"
+	"github.com/blackcoderx/falcon/pkg/web"
 	"github.com/charmbracelet/glamour"
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
@@ -28,8 +28,8 @@ var (
 	noIndex     bool
 	rootCmd     = &cobra.Command{
 		Use:   "zap",
-		Short: "ZAP - AI-powered API testing in your terminal",
-		Long: `ZAP is the AI-powered developer assistant that lives where you work—your terminal.
+		Short: "Falcon - AI-powered API testing in your terminal",
+		Long: `Falcon is the AI-powered developer assistant that lives where you work—your terminal.
 It bridges the gap between coding, testing, and fixing by giving you an autonomous
 agent that understands your code and can interact with your APIs naturally.`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -74,7 +74,7 @@ agent that understands your code and can interact with your APIs naturally.`,
 
 			// Interactive Mode: Start TUI
 			if err := tui.Run(webPort); err != nil {
-				fmt.Fprintf(os.Stderr, "Error running ZAP: %v\n", err)
+				fmt.Fprintf(os.Stderr, "Error running Falcon: %v\n", err)
 				os.Exit(1)
 			}
 
@@ -101,7 +101,7 @@ func init() {
 		Use:   "version",
 		Short: "Print version information",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("ZAP %s\n", version)
+			fmt.Printf("Falcon %s\n", version)
 			fmt.Printf("  commit: %s\n", commit)
 			fmt.Printf("  built:  %s\n", date)
 		},

@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/blackcoderx/zap/pkg/core/tools/shared"
+	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 )
 
 // MemoryEntry represents a single fact saved by the agent.

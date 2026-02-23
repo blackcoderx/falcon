@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/blackcoderx/zap/pkg/core/tools/shared"
+	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 )
 
 // RunTestsTool executes multiple test scenarios

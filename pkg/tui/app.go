@@ -1,4 +1,4 @@
-// Package tui provides the terminal user interface for ZAP.
+// Package tui provides the terminal user interface for Falcon.
 // It uses Bubble Tea for the TUI framework with a minimal, Claude Code-inspired design.
 //
 // File organization:

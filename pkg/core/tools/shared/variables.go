@@ -213,7 +213,7 @@ func (t *VariableTool) Execute(args string) (string, error) {
 		}
 
 		t.store.Set(params.Name, params.Value)
-		return fmt.Sprintf("Set session variable: {{%s}} = '%s'\n(Available until ZAP exits)", params.Name, MaskSecret(params.Value)), nil
+		return fmt.Sprintf("Set session variable: {{%s}} = '%s'\n(Available until Falcon exits)", params.Name, MaskSecret(params.Value)), nil
 
 	case "get":
 		if params.Name == "" {

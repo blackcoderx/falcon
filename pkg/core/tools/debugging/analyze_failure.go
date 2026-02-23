@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blackcoderx/zap/pkg/core/tools/shared"
-	"github.com/blackcoderx/zap/pkg/llm"
+	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
+	"github.com/blackcoderx/falcon/pkg/llm"
 )
 
 // AnalyzeFailureTool uses LLM to explain test failures

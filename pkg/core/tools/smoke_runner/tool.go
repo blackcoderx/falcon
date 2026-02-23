@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/blackcoderx/zap/pkg/core/tools/shared"
-	"github.com/blackcoderx/zap/pkg/core/tools/spec_ingester"
+	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
+	"github.com/blackcoderx/falcon/pkg/core/tools/spec_ingester"
 )
 
 // SmokeRunnerTool performs fast health checks and core functionality verification.

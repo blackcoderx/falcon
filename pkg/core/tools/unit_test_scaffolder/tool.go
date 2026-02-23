@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/blackcoderx/zap/pkg/llm"
+	"github.com/blackcoderx/falcon/pkg/llm"
 )
 
 // UnitTestCasefolderTool scaffolds unit tests and mocks for an existing codebase.

@@ -1,5 +1,5 @@
 // Package core provides the central agent logic, tool management, and ReAct loop
-// implementation for the ZAP API debugging assistant.
+// implementation for the Falcon API debugging assistant.
 package core
 
 // Tool represents an agent capability that can be executed.

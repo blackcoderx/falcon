@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/blackcoderx/zap/pkg/core"
-	"github.com/blackcoderx/zap/pkg/storage"
+	"github.com/blackcoderx/falcon/pkg/core"
+	"github.com/blackcoderx/falcon/pkg/storage"
 	"gopkg.in/yaml.v3"
 )
 

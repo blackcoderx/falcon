@@ -1,8 +1,8 @@
-# Falcon (ZAP) - Rebranding soon...
+# Falcon
 
 > AI-powered API testing that understands your codebase
 
-**Falcon** (formerly ZAP) is a terminal-based AI assistant that doesn't just test your APIs—it debugs them. When an endpoint returns an error, Falcon searches your actual code to find the cause and suggests fixes. Works with local LLMs (Ollama) or cloud providers (Gemini).
+**Falcon** is a terminal-based AI assistant that doesn't just test your APIs—it debugs them. When an endpoint returns an error, Falcon searches your actual code to find the cause and suggests fixes. Works with local LLMs (Ollama) or cloud providers (Gemini).
 
 ![A picture of the TUI of Falcon](falcon-UI.png)
 
@@ -25,7 +25,7 @@
 
 ### Manual Installation
 
-Download the latest pre-built binary for your operating system from [Releases](https://github.com/blackcoderx/zap/releases).
+Download the latest pre-built binary for your operating system from [Releases](https://github.com/blackcoderx/falcon/releases).
 
 **Windows:**
 1. Download `zap_Windows_x86_64.zip`.
@@ -40,7 +40,7 @@ Download the latest pre-built binary for your operating system from [Releases](h
 ### From Source
 
 ```bash
-go install github.com/blackcoderx/zap/cmd/zap@latest
+go install github.com/blackcoderx/falcon/cmd/zap@latest
 ```
 
 ## Updating
@@ -65,8 +65,8 @@ This checks for the latest release on GitHub and updates your binary in place (r
 ### Build and Run
 
 ```bash
-git clone https://github.com/blackcoderx/zap.git
-cd zap
+git clone https://github.com/blackcoderx/falcon.git
+cd falcon
 go build -o zap.exe ./cmd/zap
 ./zap
 ```

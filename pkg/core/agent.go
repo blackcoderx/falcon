@@ -1,15 +1,15 @@
 // Package core provides the central agent logic, tool management, and ReAct loop
-// implementation for the ZAP API debugging assistant.
+// implementation for the Falcon API debugging assistant.
 package core
 
 import (
 	"fmt"
 	"sync"
 
-	"github.com/blackcoderx/zap/pkg/llm"
+	"github.com/blackcoderx/falcon/pkg/llm"
 )
 
-// Agent represents the ZAP AI agent that processes user messages,
+// Agent represents the Falcon AI agent that processes user messages,
 // executes tools, and provides API debugging assistance.
 type Agent struct {
 	llmClient    llm.LLMClient
@@ -44,7 +44,7 @@ const (
 	DefaultMaxHistory    = 100 // Default max messages to keep in history
 )
 
-// NewAgent creates a new ZAP agent with the given LLM client.
+// NewAgent creates a new Falcon agent with the given LLM client.
 // The agent is initialized with default tool limits:
 //   - Default per-tool limit: 50 calls
 //   - Total limit: 200 calls per session

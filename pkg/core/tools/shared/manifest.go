@@ -24,7 +24,7 @@ const ManifestFilename = "manifest.json"
 func CreateManifest(zapDir string) error {
 	manifest := &Manifest{
 		Version:     1,
-		Description: "ZAP knowledge base - saved requests, environments, and test artifacts",
+		Description: "Falcon knowledge base - saved requests, environments, and test artifacts",
 		Counts:      make(map[string]int),
 		LastUpdated: time.Now().Format(time.RFC3339),
 	}

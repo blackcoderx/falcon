@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/blackcoderx/zap/pkg/core"
-	"github.com/blackcoderx/zap/pkg/core/tools/shared"
+	"github.com/blackcoderx/falcon/pkg/core"
+	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -33,7 +33,7 @@ type ToolUsageDisplay struct {
 	Percent int
 }
 
-// Model is the Bubble Tea model for the ZAP TUI.
+// Model is the Bubble Tea model for the Falcon TUI.
 // It manages the state of the terminal interface including:
 // - viewport for scrollable message history
 // - textinput for user input

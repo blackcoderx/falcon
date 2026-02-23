@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/blackcoderx/zap/pkg/storage"
+	"github.com/blackcoderx/falcon/pkg/storage"
 )
 
 // LoadRequestTool loads requests from YAML files

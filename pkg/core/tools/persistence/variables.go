@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blackcoderx/zap/pkg/core/tools/shared"
+	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 )
 
 // VariableTool provides variable get/set/list operations
@@ -75,7 +75,7 @@ func (t *VariableTool) Execute(args string) (string, error) {
 		}
 
 		t.store.Set(params.Name, params.Value)
-		return fmt.Sprintf("Set session variable: {{%s}} = '%s'\n(Available until ZAP exits)", params.Name, shared.MaskSecret(params.Value)), nil
+		return fmt.Sprintf("Set session variable: {{%s}} = '%s'\n(Available until Falcon exits)", params.Name, shared.MaskSecret(params.Value)), nil
 
 	case "get":
 		if params.Name == "" {

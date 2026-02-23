@@ -1,30 +1,30 @@
 package tools
 
 import (
-	"github.com/blackcoderx/zap/pkg/core"
-	zapagent "github.com/blackcoderx/zap/pkg/core/tools/agent"
-	"github.com/blackcoderx/zap/pkg/core/tools/api_drift_analyzer"
-	"github.com/blackcoderx/zap/pkg/core/tools/breaking_change_detector"
-	"github.com/blackcoderx/zap/pkg/core/tools/data_driven_engine"
-	"github.com/blackcoderx/zap/pkg/core/tools/debugging"
-	"github.com/blackcoderx/zap/pkg/core/tools/dependency_mapper"
-	"github.com/blackcoderx/zap/pkg/core/tools/documentation_validator"
-	"github.com/blackcoderx/zap/pkg/core/tools/functional_test_generator"
-	"github.com/blackcoderx/zap/pkg/core/tools/idempotency_verifier"
-	"github.com/blackcoderx/zap/pkg/core/tools/integration_orchestrator"
-	"github.com/blackcoderx/zap/pkg/core/tools/performance_engine"
-	"github.com/blackcoderx/zap/pkg/core/tools/persistence"
-	"github.com/blackcoderx/zap/pkg/core/tools/regression_watchdog"
-	"github.com/blackcoderx/zap/pkg/core/tools/schema_conformance"
-	"github.com/blackcoderx/zap/pkg/core/tools/security_scanner"
-	"github.com/blackcoderx/zap/pkg/core/tools/shared"
-	"github.com/blackcoderx/zap/pkg/core/tools/smoke_runner"
-	"github.com/blackcoderx/zap/pkg/core/tools/spec_ingester"
-	"github.com/blackcoderx/zap/pkg/core/tools/unit_test_scaffolder"
-	"github.com/blackcoderx/zap/pkg/llm"
+	"github.com/blackcoderx/falcon/pkg/core"
+	zapagent "github.com/blackcoderx/falcon/pkg/core/tools/agent"
+	"github.com/blackcoderx/falcon/pkg/core/tools/api_drift_analyzer"
+	"github.com/blackcoderx/falcon/pkg/core/tools/breaking_change_detector"
+	"github.com/blackcoderx/falcon/pkg/core/tools/data_driven_engine"
+	"github.com/blackcoderx/falcon/pkg/core/tools/debugging"
+	"github.com/blackcoderx/falcon/pkg/core/tools/dependency_mapper"
+	"github.com/blackcoderx/falcon/pkg/core/tools/documentation_validator"
+	"github.com/blackcoderx/falcon/pkg/core/tools/functional_test_generator"
+	"github.com/blackcoderx/falcon/pkg/core/tools/idempotency_verifier"
+	"github.com/blackcoderx/falcon/pkg/core/tools/integration_orchestrator"
+	"github.com/blackcoderx/falcon/pkg/core/tools/performance_engine"
+	"github.com/blackcoderx/falcon/pkg/core/tools/persistence"
+	"github.com/blackcoderx/falcon/pkg/core/tools/regression_watchdog"
+	"github.com/blackcoderx/falcon/pkg/core/tools/schema_conformance"
+	"github.com/blackcoderx/falcon/pkg/core/tools/security_scanner"
+	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
+	"github.com/blackcoderx/falcon/pkg/core/tools/smoke_runner"
+	"github.com/blackcoderx/falcon/pkg/core/tools/spec_ingester"
+	"github.com/blackcoderx/falcon/pkg/core/tools/unit_test_scaffolder"
+	"github.com/blackcoderx/falcon/pkg/llm"
 )
 
-// Registry handles the initialization and registration of all ZAP tools.
+// Registry handles the initialization and registration of all Falcon tools.
 // It uses a component-based approach to avoid a single monolithic registration function.
 type Registry struct {
 	Agent          *core.Agent

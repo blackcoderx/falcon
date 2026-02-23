@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blackcoderx/zap/pkg/core/tools/shared"
+	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 )
 
 // StrategyEngine is responsible for generating test scenarios based on different strategies.

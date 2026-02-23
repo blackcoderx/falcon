@@ -4,9 +4,9 @@ This file provides guidance to AI coding assistants (Claude, Gemini, etc.) when 
 
 ## Project Overview
 
-**Falcon** (formerly ZAP) is an AI-powered API debugging assistant that runs in the terminal. It combines API testing with deep codebase awareness — when an API returns an error, Falcon searches your actual source code to find the cause and suggests fixes. Supports local LLMs (Ollama) and cloud providers (Google Gemini).
+**Falcon** is an AI-powered API debugging assistant that runs in the terminal. It combines API testing with deep codebase awareness — when an API returns an error, Falcon searches your actual source code to find the cause and suggests fixes. Supports local LLMs (Ollama) and cloud providers (Google Gemini).
 
-The binary is named `zap` (module path: `github.com/blackcoderx/zap`). The TUI displays **Falcon** branding (ASCII art splash screen).
+The binary is named `zap` (module path: `github.com/blackcoderx/falcon`). The TUI displays **Falcon** branding (ASCII art splash screen).
 
 ---
 

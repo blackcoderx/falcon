@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/blackcoderx/zap/pkg/core/tools/shared"
+	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 )
 
 // GraphBuilder is responsible for transforming intermediate ParsedSpec into
-// the final APIKnowledgeGraph used by ZAP
+// the final APIKnowledgeGraph used by Falcon
 type GraphBuilder struct {
 	ZapDir string
 }

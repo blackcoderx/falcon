@@ -3,7 +3,7 @@ package persistence
 import (
 	"path/filepath"
 
-	"github.com/blackcoderx/zap/pkg/storage"
+	"github.com/blackcoderx/falcon/pkg/storage"
 )
 
 // PersistenceManager maintains state for persistence tools (environment, etc.)

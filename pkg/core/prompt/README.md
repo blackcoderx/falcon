@@ -51,7 +51,7 @@ Instead of showing ALL framework hints, only the user's configured framework is 
 ### Basic Usage
 
 ```go
-import "github.com/blackcoderx/zap/pkg/core/prompt"
+import "github.com/blackcoderx/falcon/pkg/core/prompt"
 
 builder := prompt.NewBuilder().
     WithZapFolder(".zap").

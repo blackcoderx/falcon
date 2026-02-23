@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/blackcoderx/zap/pkg/core"
+	"github.com/blackcoderx/falcon/pkg/core"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"

@@ -3,7 +3,7 @@ package persistence
 import (
 	"strings"
 
-	"github.com/blackcoderx/zap/pkg/storage"
+	"github.com/blackcoderx/falcon/pkg/storage"
 )
 
 // ListEnvironmentsTool lists available environments

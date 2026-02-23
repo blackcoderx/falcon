@@ -85,7 +85,7 @@ type ProjectContext struct {
 	Language  string `json:"language"`
 }
 
-// APIKnowledgeGraph is the core intelligence of ZAP, storing everything it knows about the API
+// APIKnowledgeGraph is the core intelligence of Falcon, storing everything it knows about the API
 type APIKnowledgeGraph struct {
 	Endpoints map[string]EndpointAnalysis `json:"endpoints"`
 	Models    map[string]ModelDefinition  `json:"models"`

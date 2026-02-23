@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/blackcoderx/zap/pkg/llm"
+	"github.com/blackcoderx/falcon/pkg/llm"
 )
 
 // ProcessMessage handles a user message using ReAct logic.

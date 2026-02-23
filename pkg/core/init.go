@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/blackcoderx/zap/pkg/core/tools/shared"
-	"github.com/blackcoderx/zap/pkg/core/tools/spec_ingester"
+	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
+	"github.com/blackcoderx/falcon/pkg/core/tools/spec_ingester"
 	"github.com/charmbracelet/huh"
 	"gopkg.in/yaml.v3"
 )
@@ -38,7 +38,7 @@ type WebUIConfig struct {
 	Port    int  `yaml:"port"`    // 0 = OS-assigned random port
 }
 
-// Config represents the user's ZAP configuration
+// Config represents the user's Falcon configuration
 type Config struct {
 	Provider     string           `yaml:"provider"` // "ollama" or "gemini"
 	OllamaConfig *OllamaConfig    `yaml:"ollama,omitempty"`
@@ -54,7 +54,7 @@ type Config struct {
 	OllamaAPIKey string `yaml:"ollama_api_key,omitempty"`
 }
 
-// SupportedFrameworks lists frameworks that ZAP recognizes
+// SupportedFrameworks lists frameworks that Falcon recognizes
 var SupportedFrameworks = []string{
 	"gin",     // Go - Gin
 	"echo",    // Go - Echo
@@ -151,7 +151,7 @@ func runSetupWizard(frameworkFlag string) (*SetupResult, error) {
 	)
 
 	fmt.Println()
-	fmt.Println("  Welcome to ZAP - AI-powered API debugging assistant")
+	fmt.Println("  Welcome to Falcon - AI-powered API debugging assistant")
 	fmt.Println("  Let's configure your setup.")
 	fmt.Println()
 
@@ -162,7 +162,7 @@ func runSetupWizard(frameworkFlag string) (*SetupResult, error) {
 			huh.NewGroup(
 				huh.NewSelect[string]().
 					Title("Select your API framework").
-					Description("ZAP uses this to provide framework-specific debugging hints.").
+					Description("Falcon uses this to provide framework-specific debugging hints.").
 					Options(buildFrameworkOptions()...).
 					Value(&selectedFramework).
 					Height(10),

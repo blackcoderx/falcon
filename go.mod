@@ -1,4 +1,4 @@
-module github.com/blackcoderx/zap
+module github.com/blackcoderx/falcon
 
 go 1.25.3
 

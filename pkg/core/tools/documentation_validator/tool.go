@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/blackcoderx/zap/pkg/core/tools/spec_ingester"
+	"github.com/blackcoderx/falcon/pkg/core/tools/spec_ingester"
 )
 
 // DocumentationValidatorTool verifies documentation against actual API implementation.

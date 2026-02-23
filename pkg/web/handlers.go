@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/blackcoderx/zap/pkg/core"
-	"github.com/blackcoderx/zap/pkg/storage"
+	"github.com/blackcoderx/falcon/pkg/core"
+	"github.com/blackcoderx/falcon/pkg/storage"
 )
 
 type handlers struct {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blackcoderx/zap/pkg/core"
+	"github.com/blackcoderx/falcon/pkg/core"
 )
 
 // MemoryTool provides persistent memory operations for the agent.

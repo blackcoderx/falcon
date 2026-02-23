@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blackcoderx/zap/pkg/llm"
+	"github.com/blackcoderx/falcon/pkg/llm"
 )
 
 // ProposeFixTool generates and applies code fixes

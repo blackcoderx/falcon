@@ -3,7 +3,7 @@ package core
 import (
 	"testing"
 
-	"github.com/blackcoderx/zap/pkg/llm"
+	"github.com/blackcoderx/falcon/pkg/llm"
 )
 
 // mockTool implements the Tool interface for testing
