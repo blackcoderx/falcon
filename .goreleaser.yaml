@@ -5,6 +5,7 @@ project_name: zap
 before:
   hooks:
     - go mod tidy
+    - go build ./...
 
 builds:
   - id: zap
@@ -58,6 +59,7 @@ release:
     name: zap
   draft: false
   prerelease: auto
+  skip_upload: false
   name_template: "ZAP v{{.Version}}"
   header: |
     ## ZAP v{{.Version}}
