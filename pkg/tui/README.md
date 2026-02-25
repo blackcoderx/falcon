@@ -1,405 +1,163 @@
 # pkg/tui
 
-This package implements Falcon's terminal user interface using the [Charm](https://charm.sh/) ecosystem, specifically Bubble Tea for the application framework.
+This package implements Falcon's terminal user interface using the [Charm](https://charm.sh/) ecosystem — Bubble Tea for the application framework, Lip Gloss for styling, and Glamour for markdown rendering.
 
 ## Package Overview
 
 ```
 pkg/tui/
-├── app.go         # Entry point: Run() creates program and starts event loop
-├── model.go       # Model struct containing all UI state
-├── init.go        # Initialization: creates model, registers tools, configures LLM
-├── update.go      # Event handling: keyboard, agent events, window resize
-├── view.go        # Rendering: viewport, input area, footer, log formatting
-├── keys.go        # Keyboard handling: shortcuts and bindings
-├── styles.go      # Visual styling: colors, prefixes, spacing
-├── highlight.go   # JSON syntax highlighting utility
-└── setup/         # Setup wizard components
+├── app.go        # Entry point: Run() creates the Bubble Tea program
+├── model.go      # Model struct — all UI state
+├── init.go       # InitialModel(): LLM client, agent, tools, confirmation manager
+├── update.go     # Bubble Tea Update() — handles all tea.Msg types
+├── view.go       # Bubble Tea View() — renders the full TUI layout
+├── keys.go       # Keyboard bindings and input history navigation
+├── styles.go     # Lip Gloss color palette and style definitions
+└── highlight.go  # JSON syntax highlighting utility
 ```
 
 ## Architecture
 
-ZAP's TUI follows the Elm Architecture (Model-View-Update):
+Falcon's TUI follows the Elm Architecture (Model-View-Update):
 
 ```
-┌─────────────────────────────────────────────┐
-│                    Run()                     │
-│         Creates Bubble Tea program           │
-└────────────────────┬────────────────────────┘
-                     │
-         ┌───────────┼───────────┐
-         │           │           │
-         ▼           ▼           ▼
-    ┌─────────┐ ┌─────────┐ ┌─────────┐
-    │  Init   │ │ Update  │ │  View   │
-    │         │ │         │ │         │
-    │ model.go│ │update.go│ │ view.go │
-    │ init.go │ │ keys.go │ │styles.go│
-    └─────────┘ └─────────┘ └─────────┘
+┌──────────────────────────────────┐
+│             Run()                │
+│   Creates Bubble Tea program     │
+└──────────┬───────────────────────┘
+           │
+    ┌──────┼──────┐
+    ▼      ▼      ▼
+  Init  Update  View
 ```
 
-## Core Components
+- **Init** (`init.go`, `model.go`) — builds the initial model
+- **Update** (`update.go`, `keys.go`) — handles events and produces new model state
+- **View** (`view.go`, `styles.go`) — renders the model to a string each frame
 
-### Model (model.go)
+## Model
 
-The Model struct holds all UI state:
+The `Model` struct holds all UI state:
 
 ```go
 type Model struct {
-    // UI Components
-    viewport  viewport.Model    // Scrollable message area
+    // UI components
+    viewport  viewport.Model    // Scrollable output area
     textinput textinput.Model   // User input field
-    spinner   spinner.Model     // Loading animation
+    spinner   spinner.Model     // Loading animation (harmonica spring)
 
     // State
-    logs         []logEntry       // Message history
-    status       string           // "idle", "thinking", "streaming", "tool:name"
-    inputHistory []string         // Command history for navigation
-    historyIndex int              // Current position in history
+    logs         []logEntry     // Message history displayed in viewport
+    status       string         // "idle", "thinking", "streaming", "tool:name"
+    inputHistory []string       // Previous commands for Shift+↑/↓ navigation
+    historyIndex int            // Current position in input history
 
     // Agent
-    agent           *core.Agent   // LLM agent instance
-    agentRunning    bool          // Is agent currently processing
-    stopRequested   bool          // User requested stop (Esc)
+    agent        *core.Agent   // The LLM agent instance
+    agentRunning bool          // True while agent is processing
+    stopRequested bool         // Set to true when user presses Esc
 
-    // Confirmation Mode
-    confirmationMode bool               // File write approval mode
-    pendingConfirm   *core.FileConfirmation  // Pending file change
-    confirmViewport  viewport.Model     // Diff display viewport
+    // File write confirmation
+    confirmationMode bool                  // True when awaiting Y/N approval
+    pendingConfirm   *core.FileConfirmation // Details of the pending file change
+    confirmViewport  viewport.Model        // Viewport for scrolling the diff
 
     // Display
-    width   int                  // Terminal width
-    height  int                  // Terminal height
-    ready   bool                 // Viewport initialized
+    width  int  // Terminal width
+    height int  // Terminal height
+    ready  bool // True once viewport is initialized
+
+    // Web UI
+    webPort int  // Port the web dashboard is listening on (0 if disabled)
 }
 ```
 
 ### Log Entry Types
 
-```go
-type logEntry struct {
-    Type    string  // Entry type (see below)
-    Content string  // Text content
-}
-```
-
 | Type | Description | Display |
 |------|-------------|---------|
 | `user` | User input | Blue `>` prefix |
-| `thinking` | Agent reasoning | Hidden (not shown) |
-| `streaming` | Partial response | Appended to last entry |
-| `tool` | Tool execution | Dimmed with `○` prefix |
+| `thinking` | Agent reasoning | Hidden |
+| `streaming` | Partial LLM response | Appended live to last entry |
+| `tool` | Tool invocation | Dimmed with `○` prefix |
 | `observation` | Tool result | Dimmed result text |
-| `response` | Final answer | Markdown rendered |
+| `response` | Final answer | Glamour-rendered markdown |
 | `error` | Error message | Red `✗` prefix |
-| `splash` | Startup brand art | Indented Falcon ASCII art |
+| `splash` | Startup Falcon ASCII art | Indented brand art |
 | `separator` | Visual break | Hidden |
 
-### Initialization (init.go)
+## Initialization
 
-The `Init` function sets up:
+`InitialModel()` in `init.go`:
 
-1. Load configuration from `.zap/config.json`
-2. Run setup wizard if needed
-3. Create LLM client (Ollama or Gemini)
-4. Create agent with tools
-5. Configure tool limits
-6. Initialize UI components
+1. Loads `config.yaml` from `.zap/`
+2. Runs the setup wizard (Huh forms) if no config exists
+3. Creates the LLM client (Ollama or Gemini)
+4. Creates the `Agent` and registers all 40+ tools via the central `Registry`
+5. Applies tool limits from config
+6. Initializes UI components (viewport, textinput, spinner)
+7. Displays the Falcon ASCII splash screen with version, working directory, and web UI URL
 
-```go
-func initialModel() Model {
-    // Load config
-    config := core.LoadOrCreateConfig()
+## Event Handling
 
-    // Create LLM client
-    var llmClient llm.LLMClient
-    switch config.Provider {
-    case "ollama":
-        llmClient = llm.NewOllamaClient(...)
-    case "gemini":
-        llmClient = llm.NewGeminiClient(...)
-    }
+### Keyboard — Normal Mode
 
-    // Create agent
-    agent := core.NewAgent(llmClient)
-    agent.SetFramework(config.Framework)
-
-    // Register tools
-    responseManager := tools.NewResponseManager()
-    confirmManager := tools.NewConfirmationManager()
-
-    agent.RegisterTool(tools.NewHTTPTool(responseManager))
-    agent.RegisterTool(tools.NewReadFileTool())
-    agent.RegisterTool(tools.NewWriteFileTool(confirmManager))
-    // ... more tools
-
-    // Configure limits
-    for name, limit := range config.ToolLimits.PerTool {
-        agent.SetToolLimit(name, limit)
-    }
-
-    return Model{
-        agent:     agent,
-        viewport:  viewport.New(80, 20),
-        textinput: textinput.New(),
-        spinner:   newSpinner(), // Returns spinner.Points
-        // ...
-    }
-}
-```
-
-## Event Handling (update.go)
-
-### Message Types
-
-```go
-// Agent completed
-type agentDoneMsg struct {
-    response string
-    err      error
-}
-
-// Agent event (streaming, tool call, etc.)
-type agentEventMsg core.AgentEvent
-
-// Window resized
-type tea.WindowSizeMsg struct {
-    Width  int
-    Height int
-}
-```
-
-### Update Function
-
-```go
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-    switch msg := msg.(type) {
-
-    case tea.KeyMsg:
-        return handleKeyPress(m, msg)
-
-    case tea.WindowSizeMsg:
-        m.width = msg.Width
-        m.height = msg.Height
-        m.viewport.Width = msg.Width
-        m.viewport.Height = msg.Height - 4  // Reserve for input/footer
-        return m, nil
-
-    case agentEventMsg:
-        return handleAgentEvent(m, core.AgentEvent(msg))
-
-    case agentDoneMsg:
-        m.agentRunning = false
-        m.status = "idle"
-        if msg.err != nil {
-            m.logs = append(m.logs, logEntry{Type: "error", Content: msg.err.Error()})
-        }
-        return m, nil
-
-    case spinner.TickMsg:
-        if m.agentRunning {
-            m.spinner, _ = m.spinner.Update(msg)
-        }
-        return m, nil
-    }
-
-    return m, nil
-}
-```
-
-### Agent Event Handling
-
-```go
-func handleAgentEvent(m Model, event core.AgentEvent) (Model, tea.Cmd) {
-    switch event.Type {
-    case "streaming":
-        // Append to current response
-        if len(m.logs) > 0 && m.logs[len(m.logs)-1].Type == "streaming" {
-            m.logs[len(m.logs)-1].Content += event.Content
-        } else {
-            m.logs = append(m.logs, logEntry{Type: "streaming", Content: event.Content})
-        }
-
-    case "tool_call":
-        m.status = "tool:" + event.Content
-        m.logs = append(m.logs, logEntry{
-            Type:    "tool",
-            Content: fmt.Sprintf("%s(%s)", event.Content, event.ToolArgs),
-        })
-
-    case "observation":
-        m.logs = append(m.logs, logEntry{Type: "observation", Content: event.Content})
-
-    case "answer":
-        m.logs = append(m.logs, logEntry{Type: "response", Content: event.Content})
-
-    case "confirmation_required":
-        m.confirmationMode = true
-        m.pendingConfirm = event.FileConfirmation
-        // Setup diff viewport
-    }
-
-    updateViewportContent(&m)
-    return m, nil
-}
-```
-
-## Keyboard Handling (keys.go)
-
-### Normal Mode
-
-| Key | Handler |
-|-----|---------|
-| `Enter` | `handleEnter()` - Send message |
-| `Shift+↑` | `handleHistoryUp()` - Previous command |
-| `Shift+↓` | `handleHistoryDown()` - Next command |
-| `PgUp` | Scroll viewport up |
-| `PgDown` | Scroll viewport down |
-| `Ctrl+L` | `handleClearScreen()` - Clear logs |
-| `Ctrl+U` | `handleClearInput()` - Clear input line |
-| `Ctrl+Y` | `handleCopyResponse()` - Copy to clipboard |
-| `Esc` | Stop agent or quit |
+| Key | Action |
+|-----|--------|
+| `Enter` | Send message to agent |
+| `Shift+↑` | Navigate to previous command |
+| `Shift+↓` | Navigate to next command |
+| `PgUp` | Scroll output up |
+| `PgDown` | Scroll output down |
+| `Ctrl+L` | Clear screen |
+| `Ctrl+U` | Clear input line |
+| `Ctrl+Y` | Copy last response to clipboard |
+| `Esc` | Stop running agent / Quit if idle |
 | `Ctrl+C` | Quit |
 
-### Confirmation Mode
+### Keyboard — Confirmation Mode
 
-| Key | Handler |
-|-----|---------|
-| `Y` | Approve file change |
-| `N` | Reject file change |
-| `PgUp/PgDown` | Scroll diff |
+When Falcon proposes a file change, the TUI enters confirmation mode:
+
+| Key | Action |
+|-----|--------|
+| `Y` | Approve — write the file |
+| `N` | Reject — discard the change |
+| `PgUp/PgDown` | Scroll the unified diff |
 | `Esc` | Reject and continue |
 
-### Implementation
+### Agent Events
 
-```go
-func handleKeyPress(m Model, msg tea.KeyMsg) (Model, tea.Cmd) {
-    if m.confirmationMode {
-        return handleConfirmationKey(m, msg)
-    }
+The agent emits `AgentEvent` values via callback. The TUI handles them in `update.go`:
 
-    switch {
-    case key.Matches(msg, keys.Enter):
-        return handleEnter(m)
+| Event Type | TUI Action |
+|------------|------------|
+| `streaming` | Append chunk to current log entry (real-time display) |
+| `tool_call` | Add tool log entry, update status line |
+| `observation` | Add dimmed observation entry |
+| `tool_usage` | Update per-tool call counters |
+| `answer` | Render final answer as Glamour markdown |
+| `error` | Add red error entry |
+| `confirmation_required` | Enter confirmation mode, show diff viewport |
 
-    case key.Matches(msg, keys.HistoryUp):
-        return handleHistoryUp(m)
+## Rendering
 
-    case key.Matches(msg, keys.HistoryDown):
-        return handleHistoryDown(m)
+### Layout
 
-    case key.Matches(msg, keys.ClearScreen):
-        return handleClearScreen(m)
-
-    case key.Matches(msg, keys.CopyResponse):
-        return handleCopyResponse(m)
-
-    case key.Matches(msg, keys.Quit):
-        if m.agentRunning {
-            m.stopRequested = true
-            return m, nil
-        }
-        return m, tea.Quit
-    }
-
-    // Pass to text input
-    m.textinput, _ = m.textinput.Update(msg)
-    return m, nil
-}
+```
+┌──────────────────────────────────┐
+│          Viewport                │  ← Scrollable output (logs)
+│                                  │
+├──────────────────────────────────┤
+│  > input field                   │  ← Text input with spinner
+├──────────────────────────────────┤
+│  status          help text       │  ← Footer
+└──────────────────────────────────┘
 ```
 
-## Rendering (view.go)
+### Styling
 
-### Main View
-
-```go
-func (m Model) View() string {
-    if !m.ready {
-        return "Initializing..."
-    }
-
-    if m.confirmationMode {
-        return renderConfirmationView(m)
-    }
-
-    return lipgloss.JoinVertical(
-        lipgloss.Left,
-        renderViewport(m),
-        renderInputArea(m),
-        renderFooter(m),
-    )
-}
-```
-
-### Viewport Content
-
-```go
-func updateViewportContent(m *Model) {
-    var lines []string
-
-    for _, entry := range m.logs {
-        switch entry.Type {
-        case "user":
-            lines = append(lines, styles.UserPrefix+entry.Content)
-
-        case "tool":
-            lines = append(lines, styles.ToolPrefix+styles.Dim(entry.Content))
-
-        case "response":
-            rendered, _ := glamour.Render(entry.Content, "dark")
-            lines = append(lines, rendered)
-
-        case "error":
-            lines = append(lines, styles.ErrorPrefix+styles.Error(entry.Content))
-
-        // ... other types
-        }
-    }
-
-    m.viewport.SetContent(strings.Join(lines, "\n"))
-    m.viewport.GotoBottom()
-}
-```
-
-### Input Area
-
-```go
-func renderInputArea(m Model) string {
-    prompt := "> "
-    if m.agentRunning {
-        prompt = m.spinner.View() + " "
-    }
-
-    return lipgloss.NewStyle().
-        BorderStyle(lipgloss.NormalBorder()).
-        BorderTop(true).
-        Render(prompt + m.textinput.View())
-}
-```
-
-### Footer / Status Line
-
-```go
-func renderFooter(m Model) string {
-    status := m.status
-    if m.agentRunning {
-        status = styles.Accent(status)
-    }
-
-    help := "enter:send  shift+↑↓:history  ctrl+y:copy  esc:quit"
-
-    return lipgloss.JoinHorizontal(
-        lipgloss.Top,
-        status,
-        strings.Repeat(" ", m.width-len(status)-len(help)),
-        styles.Dim(help),
-    )
-}
-```
-
-## Styling (styles.go)
-
-### Color Palette
+Defined in `styles.go` using Lip Gloss:
 
 ```go
 var (
@@ -412,128 +170,54 @@ var (
 )
 ```
 
-### Prefixes
+Log entry prefixes:
 
 ```go
-var (
-    UserPrefix   = Accent.Render("> ")
-    ToolPrefix   = Tool.Render("○ ")
-    ErrorPrefix  = Error.Render("✗ ")
-    ResultPrefix = Dim.Render("→ ")
-)
+UserPrefix  = Accent.Render("> ")
+ToolPrefix  = Tool.Render("○ ")
+ErrorPrefix = Error.Render("✗ ")
+ResultPrefix = Dim.Render("→ ")
 ```
 
 ## Agent Integration
 
-### Running the Agent
+The agent runs in a goroutine and sends events back to the Bubble Tea program via `program.Send()`:
 
 ```go
 func runAgentAsync(m Model) tea.Cmd {
     return func() tea.Msg {
-        input := m.textinput.Value()
-
-        response, err := m.agent.ProcessMessageWithEvents(input, func(event core.AgentEvent) {
-            // Send events to TUI
+        err := m.agent.ProcessMessageWithEvents(ctx, input, func(event core.AgentEvent) {
             globalProgram.Send(agentEventMsg(event))
         })
-
-        return agentDoneMsg{response: response, err: err}
+        return agentDoneMsg{err: err}
     }
 }
 ```
 
-### Global Program Reference
-
-For sending events from the agent callback:
-
-```go
-var globalProgram *tea.Program
-
-func Run() error {
-    m := initialModel()
-    globalProgram = tea.NewProgram(m, tea.WithAltScreen())
-    _, err := globalProgram.Run()
-    return err
-}
-```
-
-## Setup Wizard (setup/)
-
-The setup wizard uses [Huh](https://github.com/charmbracelet/huh) for forms:
-
-```go
-func RunSetupWizard() *core.Config {
-    var provider string
-    var ollamaURL string
-    var apiKey string
-    var framework string
-
-    form := huh.NewForm(
-        huh.NewGroup(
-            huh.NewSelect[string]().
-                Title("Select LLM Provider").
-                Options(
-                    huh.NewOption("Ollama (local)", "ollama-local"),
-                    huh.NewOption("Ollama (cloud)", "ollama-cloud"),
-                    huh.NewOption("Gemini", "gemini"),
-                ).
-                Value(&provider),
-        ),
-        // More groups for URL, API key, framework...
-    )
-
-    form.Run()
-
-    return &core.Config{
-        Provider:  provider,
-        Framework: framework,
-        // ...
-    }
-}
-```
+A thread-safe `globalProgram` reference allows the agent callback goroutine to safely send messages into the Bubble Tea event loop.
 
 ## Testing
-
-For testing TUI components:
-
-```go
-func TestModel_Update(t *testing.T) {
-    m := initialModel()
-
-    // Simulate window resize
-    m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
-    if m.width != 100 {
-        t.Error("width not updated")
-    }
-
-    // Simulate key press
-    m, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlL})
-    if len(m.logs) != 0 {
-        t.Error("logs not cleared")
-    }
-}
-```
-
-Run tests:
 
 ```bash
 go test ./pkg/tui/...
 ```
 
-## Performance Considerations
-
-1. **Viewport updates** - Only update when logs change
-2. **Markdown rendering** - Cache rendered content
-3. **Streaming** - Batch updates during rapid streaming
-4. **Large outputs** - Truncate very long responses
+Example:
 
 ```go
-const maxLogEntries = 1000
-
-func addLog(m *Model, entry logEntry) {
-    m.logs = append(m.logs, entry)
-    if len(m.logs) > maxLogEntries {
-        m.logs = m.logs[len(m.logs)-maxLogEntries:]
+func TestModel_Update_WindowResize(t *testing.T) {
+    m := InitialModel(0)
+    updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+    result := updated.(Model)
+    if result.width != 120 {
+        t.Error("width not updated")
     }
 }
 ```
+
+## Performance Notes
+
+- Viewport content is only re-rendered when `logs` changes
+- Streaming chunks are appended directly to the last log entry (no full re-render per chunk)
+- Log entries are capped at 1000 to prevent memory growth in long sessions
+- Markdown rendering (Glamour) is done once per `response` entry, not on every frame

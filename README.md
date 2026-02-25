@@ -2,7 +2,7 @@
 
 > AI-powered API testing that understands your codebase
 
-**Falcon** is a terminal-based AI assistant that doesn't just test your APIs—it debugs them. When an endpoint returns an error, Falcon searches your actual code to find the cause and suggests fixes. Works with local LLMs (Ollama) or cloud providers (Gemini).
+**Falcon** is a terminal-based AI assistant that doesn't just test your APIs — it debugs them. When an endpoint returns an error, Falcon searches your actual source code to find the cause and suggests fixes. Works with local LLMs (Ollama) or cloud providers (Gemini).
 
 ![A picture of the TUI of Falcon](falcon-UI.png)
 
@@ -28,13 +28,13 @@
 Download the latest pre-built binary for your operating system from [Releases](https://github.com/blackcoderx/falcon/releases).
 
 **Windows:**
-1. Download `zap_Windows_x86_64.zip`.
+1. Download `falcon_Windows_x86_64.zip`.
 2. Extract the archive.
 3. Add the extracted folder to your system `PATH`.
 
 **macOS/Linux:**
 1. Download the `tar.gz` archive for your architecture.
-2. Extract the archive: `tar -xzf zap_...tar.gz`
+2. Extract the archive: `tar -xzf falcon_...tar.gz`
 3. Move the binary to a location in your `PATH` (e.g., `/usr/local/bin`).
 
 ### From Source
@@ -60,7 +60,7 @@ This checks for the latest release on GitHub and updates your binary in place (r
 ### Prerequisites
 
 - Go 1.25.3 or higher
-- [Ollama](https://ollama.ai/) for local AI (or Gemini API key for cloud)
+- [Ollama](https://ollama.ai/) for local AI (or a Gemini API key for cloud)
 
 ### Build and Run
 
@@ -77,7 +77,7 @@ go build -o zap.exe ./cmd/zap
 2. Select your LLM provider (Ollama local, Ollama cloud, or Gemini)
 3. Choose your API framework (gin, fastapi, express, etc.)
 4. The web dashboard starts on a random localhost port — URL printed to terminal
-5. The interactive TUI launches with a Falcon ASCII splash screen showing version, working directory, and web UI URL
+5. The interactive TUI launches with the Falcon ASCII splash screen showing version, working directory, and web UI URL
 
 ### Try It
 
@@ -95,12 +95,12 @@ go build -o zap.exe ./cmd/zap
 
 ### Codebase-Aware Debugging
 
-Falcon doesn't just show you errors—it explains them:
+Falcon doesn't just show you errors — it explains them:
 
 - **Stack trace parsing** — Extracts file:line from Python, Go, and JavaScript tracebacks
-- **Autonomous Testing** — One-click `auto_test` workflow: Analyze → Generate → Execute → Diagnose
-- **Intelligent Fixes** — Full unified diffs with `propose_fix` (not just suggestions)
-- **Regression Testing** — Auto-generate test files so bugs stay fixed
+- **Autonomous testing** — One-click `auto_test` workflow: Analyze → Generate → Execute → Diagnose
+- **Intelligent fixes** — Full unified diffs with `propose_fix` (not just suggestions)
+- **Regression testing** — Auto-generate test files so bugs stay fixed
 - **Framework patterns** — Detects endpoint handlers across 15+ frameworks using framework-specific idioms
 
 ### 40+ Advanced Tools
@@ -126,7 +126,7 @@ When Falcon wants to modify a file:
 
 1. Shows a colored unified diff of the proposed changes
 2. Waits for your approval (Y/N) — with scrollable diff view
-3. Only writes the file if you confirm, with a configurable timeout
+3. Only writes the file if you confirm
 
 No surprises, no unauthorized changes.
 
@@ -168,15 +168,12 @@ The dashboard is a read/write interface over your `.zap` workspace — no separa
 
 ### Web UI Configuration
 
-Control the web dashboard via `config.json`:
+Control the web dashboard via `config.yaml`:
 
-```json
-{
-  "web_ui": {
-    "enabled": true,
-    "port": 0
-  }
-}
+```yaml
+web_ui:
+  enabled: true
+  port: 0
 ```
 
 | Field | Default | Description |
@@ -191,7 +188,7 @@ The web server only binds to `127.0.0.1` (localhost) — it is never exposed to 
 ## Architecture
 
 ```
-zap/
+falcon/
 ├── cmd/zap/                  # Application entry point (Cobra CLI)
 │   ├── main.go               # Root command, CLI flags, runCLI() for CLI mode
 │   └── update.go             # Self-update command via go-github-selfupdate
@@ -201,7 +198,7 @@ zap/
 │   │   ├── react.go          # ReAct loop: ProcessMessage / ProcessMessageWithEvents
 │   │   ├── init.go           # .zap folder setup, setup wizard, config migration
 │   │   ├── memory.go         # MemoryStore: persistent agent memory (memory.json)
-│   │   ├── analysis.go       # LLM-powered analysis helpers
+│   │   ├── analysis.go       # Stack trace parsing, error context extraction
 │   │   ├── prompt/           # System prompt builder (20-section LLM instructions)
 │   │   ├── types.go          # Core interfaces: Tool, AgentEvent, ConfirmableTool
 │   │   └── tools/            # 40+ tools organized in 19 packages
@@ -210,21 +207,21 @@ zap/
 │   │       ├── debugging/    # Tier 2: Read/Write file, Search, Fix, Analyze
 │   │       ├── persistence/  # Tier 2: Variables, Requests, Environments
 │   │       ├── agent/        # Tier 2: Memory, Export, RunTests, AutoTest
-│   │       ├── spec_ingester/         # Tier 3: OpenAPI/Swagger → Knowledge Graph
-│   │       ├── functional_test_generator/ # Generate+run functional test suites
-│   │       ├── security_scanner/      # OWASP-style security scanning
-│   │       ├── performance_engine/    # Multi-mode load testing (burst, ramp, soak)
-│   │       ├── smoke_runner/          # Quick smoke test suite
-│   │       ├── idempotency_verifier/  # Verify PUT/POST idempotency
-│   │       ├── data_driven_engine/    # Data-driven test execution
-│   │       ├── schema_conformance/    # Schema conformance checks
+│   │       ├── spec_ingester/            # Tier 3: OpenAPI/Swagger → Knowledge Graph
+│   │       ├── functional_test_generator/ # Generate + run functional test suites
+│   │       ├── security_scanner/         # OWASP-style security scanning
+│   │       ├── performance_engine/       # Multi-mode load testing (burst, ramp, soak)
+│   │       ├── smoke_runner/             # Quick smoke test suite
+│   │       ├── idempotency_verifier/     # Verify PUT/POST idempotency
+│   │       ├── data_driven_engine/       # Data-driven test execution
+│   │       ├── schema_conformance/       # Schema conformance checks
 │   │       ├── breaking_change_detector/ # Breaking change detection
-│   │       ├── dependency_mapper/     # API dependency graph mapping
-│   │       ├── documentation_validator/ # API doc accuracy validation
-│   │       ├── api_drift_analyzer/    # Detect runtime drift from spec
+│   │       ├── dependency_mapper/        # API dependency graph mapping
+│   │       ├── documentation_validator/  # API doc accuracy validation
+│   │       ├── api_drift_analyzer/       # Detect runtime drift from spec
 │   │       ├── integration_orchestrator/ # Multi-service integration flows
-│   │       ├── regression_watchdog/   # Automated regression detection
-│   │       └── unit_test_scaffolder/  # LLM-powered unit test generation
+│   │       ├── regression_watchdog/      # Automated regression detection
+│   │       └── unit_test_scaffolder/     # LLM-powered unit test generation
 │   ├── llm/                  # LLM provider clients
 │   │   ├── client.go         # LLMClient interface
 │   │   ├── ollama.go         # Ollama client (local & cloud, streaming)
@@ -233,9 +230,9 @@ zap/
 │   │   ├── yaml.go           # YAML read/write for requests & environments
 │   │   ├── env.go            # .env file loading, variable substitution
 │   │   └── schema.go         # JSON Schema helpers
-│   ├── web/                  # Embedded web dashboard (pkg/web)
+│   ├── web/                  # Embedded web dashboard
 │   │   ├── server.go         # Start(): port binding, embed, CORS, graceful shutdown
-│   │   ├── routes.go         # All 20 REST API routes on net/http ServeMux
+│   │   ├── routes.go         # All REST API routes on net/http ServeMux
 │   │   ├── handlers.go       # HTTP handlers + path traversal protection
 │   │   ├── readers.go        # Disk read helpers (wraps storage.*)
 │   │   ├── writers.go        # Atomic disk writes (temp + rename)
@@ -259,7 +256,7 @@ zap/
 ### Core Components
 
 | Component | Location | Purpose |
-|-----------|----------|---------| 
+|-----------|----------|---------|
 | **Agent** | `pkg/core/agent.go` | Tool registry, per-tool & total call limits, history management |
 | **ReAct Loop** | `pkg/core/react.go` | Reason-Act-Observe cycle; streaming via `ProcessMessageWithEvents` |
 | **System Prompt** | `pkg/core/prompt/` | 20-section LLM instructions with tool schemas |
@@ -326,7 +323,7 @@ On first run, Falcon walks you through a guided Huh-powered wizard:
 
 # Step 3: Provider-specific config (URL, model, API key)
 
-# Step 4: Confirm and create .zap/config.json
+# Step 4: Confirm and create .zap/config.yaml
 ```
 
 ### CLI Flags
@@ -344,51 +341,46 @@ zap update                           # Self-update to latest release
 
 ### .zap Folder Structure
 
-The `.zap` directory is the brain, memory, and output center for the agent.
+The `.zap` directory is created on first run and acts as Falcon's workspace — config, memory, requests, and baselines all live here.
 
 ```
 .zap/
-├── config.json         # LLM provider, model, framework, tool limits
+├── config.yaml         # LLM provider, model, framework, tool limits
 ├── memory.json         # Persistent agent memory (versioned)
-├── history.jsonl       # Conversation history
-├── manifest.json       # Workspace manifest
+├── manifest.json       # Workspace manifest (request/environment counts)
+├── falcon.md           # Falcon knowledge base template
 ├── requests/           # Saved API requests (YAML with {{VAR}} placeholders)
-├── environments/       # Environment variable files (dev.yaml, prod.yaml, ...)
+├── environments/       # Environment variable files (dev.yaml, prod.yaml, staging.yaml)
 ├── baselines/          # Reference response snapshots for regression testing
-├── snapshots/          # Current API knowledge graph (api-graph.json from spec_ingester)
-├── runs/               # Immutable execution records from test runs
-├── exports/            # Human-readable reports (Markdown/JSON)
-├── logs/               # Internal tool logs
-└── state/              # Agent state files
+└── flows/              # Saved multi-step API flows
 ```
 
-### config.json Schema
+### config.yaml Schema
 
-```json
-{
-  "provider": "ollama",
-  "ollama": {
-    "mode": "local",
-    "url": "http://localhost:11434",
-    "api_key": ""
-  },
-  "default_model": "llama3",
-  "framework": "gin",
-  "theme": "dark",
-  "tool_limits": {
-    "default_limit": 50,
-    "total_limit": 200,
-    "per_tool": {
-      "http_request": 25,
-      "performance_test": 5,
-      "auto_test": 5
-    }
-  },
-  "web_ui": {
-    "enabled": true,
-    "port": 0
-  }
-}
+```yaml
+provider: ollama
+ollama:
+  mode: local           # "local" or "cloud"
+  url: http://localhost:11434
+  api_key: ""
+gemini:
+  api_key: ""
+default_model: llama3
+framework: gin
+theme: dark
+tool_limits:
+  default_limit: 50
+  total_limit: 200
+  per_tool:
+    http_request: 25
+    performance_test: 5
+    auto_test: 5
+    read_file: 50
+    search_code: 30
+    variable: 100
+web_ui:
+  enabled: true
+  port: 0
 ```
 
 **Supported providers:** `ollama` (local or cloud) · `gemini`
@@ -415,7 +407,7 @@ headers:
 ```yaml
 # .zap/environments/dev.yaml
 BASE_URL: http://localhost:3000
-API_TOKEN: dev-token-123
+API_KEY: your-dev-api-key
 ```
 
 ### Tool Limits
@@ -426,7 +418,7 @@ Prevent runaway execution with per-tool and global limits:
 |---------|---------|-------------|
 | `default_limit` | 50 | Fallback for tools without a specific limit |
 | `total_limit` | 200 | Safety cap on total calls per session |
-| `per_tool` | varies | Per-tool overrides (see `init.go:DefaultToolLimits`) |
+| `per_tool` | varies | Per-tool overrides (see `pkg/core/init.go:DefaultToolLimits`) |
 
 ---
 
@@ -628,11 +620,10 @@ Contributions are welcome! See the package-level documentation for understanding
 - [pkg/storage/README.md](pkg/storage/README.md) — Persistence layer
 - [pkg/tui/README.md](pkg/tui/README.md) — Terminal UI
 - [CONTRIBUTING.md](CONTRIBUTING.md) — Contribution guidelines
-- [CLAUDE.md](CLAUDE.md) — Development guidelines and conventions
 
 ### Adding a New Tool
 
-1. Create a new `.go` file in an appropriate package under `pkg/core/tools/`
+1. Create a new `.go` file in the appropriate package under `pkg/core/tools/`
 2. Implement the `core.Tool` interface:
 
 ```go
@@ -647,10 +638,6 @@ type Tool interface {
 3. Register it in the relevant `register*` method in `pkg/core/tools/registry.go`
 
 For tools requiring human approval (e.g., file writes), implement `core.ConfirmableTool` to get a `SetEventCallback` hook.
-
-### Development Guidelines
-
-See [CLAUDE.md](CLAUDE.md) for detailed development guidelines, including coding conventions, testing requirements, and the sprint-based development process.
 
 ---
 
@@ -669,7 +656,7 @@ See [CLAUDE.md](CLAUDE.md) for detailed development guidelines, including coding
 | Code Search | ripgrep (with native Go fallback) |
 | Diff Generation | `aymanbagabas/go-udiff` |
 | JSON Schema | `xeipuuv/gojsonschema` |
-| Data Format | YAML (requests/environments) · JSON (config/memory/graph) |
+| Data Format | YAML (config/requests/environments) · JSON (memory/manifest) |
 
 ---
 

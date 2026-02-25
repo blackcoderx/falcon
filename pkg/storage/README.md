@@ -1,14 +1,14 @@
 # pkg/storage
 
-This package handles request persistence and environment management. It provides YAML-based storage for API requests and variable substitution for environments.
+This package handles request and environment persistence for Falcon. It provides YAML-based file I/O and a `{{VAR}}` variable substitution engine used across all saved requests and environments.
 
 ## Package Overview
 
 ```
 pkg/storage/
-├── schema.go    # Data structures: Request, Environment, Collection
-├── yaml.go      # YAML file read/write operations
-└── env.go       # Variable substitution engine ({{VAR}} placeholders)
+├── schema.go  # Data structures: Request, Environment, Collection
+├── yaml.go    # YAML file read/write operations
+└── env.go     # Variable substitution engine ({{VAR}} placeholders)
 ```
 
 ## Data Structures
@@ -28,10 +28,9 @@ type Request struct {
 }
 ```
 
-**Example YAML:**
+**Example YAML** (`.zap/requests/get-users.yaml`):
 
 ```yaml
-# .zap/requests/get-users.yaml
 name: Get Users
 method: GET
 url: "{{BASE_URL}}/api/users"
@@ -52,20 +51,17 @@ type Environment struct {
 }
 ```
 
-**Example YAML:**
+**Example YAML** (`.zap/environments/dev.yaml`):
 
 ```yaml
-# .zap/environments/dev.yaml
-name: dev
-variables:
-  BASE_URL: http://localhost:3000
-  API_TOKEN: dev-token-123
-  DEBUG: "true"
+# Development environment
+BASE_URL: http://localhost:3000
+API_KEY: your-dev-api-key
 ```
 
 ### Collection
 
-A group of related requests (for future use):
+A named group of related requests (reserved for future use):
 
 ```go
 type Collection struct {
@@ -75,76 +71,41 @@ type Collection struct {
 }
 ```
 
-## YAML Operations (yaml.go)
+## YAML Operations (`yaml.go`)
 
-### Saving Requests
+### Requests
 
 ```go
-request := &storage.Request{
-    Name:   "Get Users",
-    Method: "GET",
-    URL:    "{{BASE_URL}}/api/users",
-    Headers: map[string]string{
-        "Authorization": "Bearer {{API_TOKEN}}",
-    },
-}
-
+// Save a request
 err := storage.SaveRequest(".zap/requests/get-users.yaml", request)
-```
 
-### Loading Requests
-
-```go
+// Load a request
 request, err := storage.LoadRequest(".zap/requests/get-users.yaml")
-if err != nil {
-    log.Fatal(err)
-}
-fmt.Printf("Loaded: %s %s\n", request.Method, request.URL)
+
+// List all saved requests (returns names without extension)
+names, err := storage.ListRequests(".zap/requests/")
+// Returns: []string{"get-users", "create-user", "health-check"}
 ```
 
-### Listing Requests
+### Environments
 
 ```go
-requests, err := storage.ListRequests(".zap/requests/")
-// Returns: []string{"get-users", "create-user", "delete-user"}
-```
-
-### Saving Environments
-
-```go
-env := &storage.Environment{
-    Name: "prod",
-    Variables: map[string]string{
-        "BASE_URL":  "https://api.example.com",
-        "API_TOKEN": "prod-token-xyz",
-    },
-}
-
+// Save an environment
 err := storage.SaveEnvironment(".zap/environments/prod.yaml", env)
-```
 
-### Loading Environments
-
-```go
+// Load an environment
 env, err := storage.LoadEnvironment(".zap/environments/prod.yaml")
-if err != nil {
-    log.Fatal(err)
-}
-fmt.Printf("Loaded environment: %s\n", env.Name)
+
+// List all environments
+names, err := storage.ListEnvironments(".zap/environments/")
+// Returns: []string{"dev", "staging", "prod"}
 ```
 
-### Listing Environments
-
-```go
-envs, err := storage.ListEnvironments(".zap/environments/")
-// Returns: []string{"dev", "prod", "staging"}
-```
-
-## Variable Substitution (env.go)
+## Variable Substitution (`env.go`)
 
 ### Basic Substitution
 
-Replace `{{VAR}}` placeholders with environment values:
+Replace `{{VAR}}` placeholders with values from an environment:
 
 ```go
 variables := map[string]string{
@@ -152,37 +113,29 @@ variables := map[string]string{
     "API_TOKEN": "abc123",
 }
 
-url := "{{BASE_URL}}/api/users"
-result := storage.SubstituteVariables(url, variables)
+result := storage.SubstituteVariables("{{BASE_URL}}/api/users", variables)
 // Result: "http://localhost:3000/api/users"
 ```
 
-### Substituting Requests
+### Full Request Substitution
 
-Apply substitution to all fields of a request:
+Apply substitution to all fields of a request at once:
 
 ```go
-request := &storage.Request{
-    URL: "{{BASE_URL}}/api/users",
-    Headers: map[string]string{
-        "Authorization": "Bearer {{API_TOKEN}}",
-    },
-}
-
 substituted := storage.SubstituteRequest(request, variables)
-// URL: "http://localhost:3000/api/users"
-// Headers["Authorization"]: "Bearer abc123"
+// substituted.URL     → "http://localhost:3000/api/users"
+// substituted.Headers → {"Authorization": "Bearer abc123"}
 ```
 
 ### Nested Variables
 
-Variables can reference other variables (resolved recursively):
+Variables can reference other variables and are resolved recursively:
 
 ```yaml
 # Environment
-API_URL: "{{BASE_URL}}/api"
-USERS_URL: "{{API_URL}}/users"
 BASE_URL: "http://localhost:3000"
+API_URL:  "{{BASE_URL}}/api"
+USERS_URL: "{{API_URL}}/users"
 ```
 
 ```go
@@ -192,101 +145,72 @@ result := storage.SubstituteVariables("{{USERS_URL}}", variables)
 
 ### Undefined Variables
 
-Undefined variables remain as placeholders:
+Undefined placeholders are left unchanged:
 
 ```go
-result := storage.SubstituteVariables("{{UNDEFINED}}/api", variables)
-// Result: "{{UNDEFINED}}/api"
+result := storage.SubstituteVariables("{{UNDEFINED}}/path", variables)
+// Result: "{{UNDEFINED}}/path"
 ```
 
-## File Structure
+## File Layout
 
-ZAP creates this structure in the `.zap/` folder:
+Falcon's storage lives entirely inside `.zap/`:
 
 ```
 .zap/
-├── config.json              # Main configuration
-├── history.jsonl            # Conversation history
-├── memory.json              # Agent memory
+├── config.yaml              # Main configuration (YAML)
+├── memory.json              # Agent memory (JSON)
+├── manifest.json            # Workspace counts (JSON)
 ├── requests/                # Saved API requests
 │   ├── get-users.yaml
 │   ├── create-user.yaml
 │   └── health-check.yaml
-└── environments/            # Environment configs
-    ├── dev.yaml
-    ├── staging.yaml
-    └── prod.yaml
+├── environments/            # Environment variable files
+│   ├── dev.yaml
+│   ├── staging.yaml
+│   └── prod.yaml
+├── baselines/               # Regression test snapshots
+└── flows/                   # Multi-step API flows
 ```
 
 ## Usage Patterns
 
-### Save and Load Flow
+### Save → Switch Env → Load → Execute
 
 ```go
-// Save a request
-request := &storage.Request{
-    Name:   "Get Users",
-    Method: "GET",
-    URL:    "{{BASE_URL}}/api/users",
-}
-storage.SaveRequest(".zap/requests/get-users.yaml", request)
+// 1. Save a request template
+storage.SaveRequest(".zap/requests/login.yaml", &storage.Request{
+    Name:   "Login",
+    Method: "POST",
+    URL:    "{{BASE_URL}}/auth/login",
+    Headers: map[string]string{"Content-Type": "application/json"},
+    Body:   `{"username":"{{TEST_USER}}","password":"{{TEST_PASS}}"}`,
+})
 
-// Load environment
+// 2. Load environment
 env, _ := storage.LoadEnvironment(".zap/environments/dev.yaml")
 
-// Load and substitute request
-loaded, _ := storage.LoadRequest(".zap/requests/get-users.yaml")
-substituted := storage.SubstituteRequest(loaded, env.Variables)
+// 3. Load and substitute request
+req, _ := storage.LoadRequest(".zap/requests/login.yaml")
+ready := storage.SubstituteRequest(req, env.Variables)
 
-// Now substituted.URL is "http://localhost:3000/api/users"
+// 4. ready.URL, ready.Headers, ready.Body are all substituted
 ```
 
-### Environment Switching
+### Multi-Environment Request Templates
 
-```go
-var currentEnv *storage.Environment
-
-func switchEnvironment(envName string) error {
-    path := filepath.Join(".zap/environments", envName+".yaml")
-    env, err := storage.LoadEnvironment(path)
-    if err != nil {
-        return err
-    }
-    currentEnv = env
-    return nil
-}
-```
-
-### Request with Variables
-
-Create a request template that works across environments:
-
-```yaml
-# .zap/requests/auth-login.yaml
-name: Login
-method: POST
-url: "{{BASE_URL}}/auth/login"
-headers:
-  Content-Type: application/json
-body: |
-  {
-    "username": "{{TEST_USER}}",
-    "password": "{{TEST_PASSWORD}}"
-  }
-```
-
-Then define different credentials per environment:
+Define the request once, use different credentials per environment:
 
 ```yaml
 # .zap/environments/dev.yaml
 BASE_URL: http://localhost:3000
-TEST_USER: testuser
-TEST_PASSWORD: testpass123
+TEST_USER: devuser
+TEST_PASS: devpass
 
 # .zap/environments/staging.yaml
 BASE_URL: https://staging.example.com
 TEST_USER: stageuser
-TEST_PASSWORD: stagepass456
+TEST_PASS: stagepass
 ```
 
 ## Error Handling
@@ -294,58 +218,11 @@ TEST_PASSWORD: stagepass456
 All functions return descriptive errors:
 
 ```go
-func LoadRequest(path string) (*Request, error) {
-    data, err := os.ReadFile(path)
-    if err != nil {
-        if os.IsNotExist(err) {
-            return nil, fmt.Errorf("request file not found: %s", path)
-        }
-        return nil, fmt.Errorf("failed to read request file: %w", err)
-    }
+req, err := storage.LoadRequest(".zap/requests/missing.yaml")
+// err: "request file not found: .zap/requests/missing.yaml"
 
-    var request Request
-    if err := yaml.Unmarshal(data, &request); err != nil {
-        return nil, fmt.Errorf("invalid YAML in %s: %w", path, err)
-    }
-
-    return &request, nil
-}
-```
-
-## Integration with Tools
-
-The persistence tools in `pkg/core/tools/persistence.go` use this package:
-
-```go
-type SaveRequestTool struct {
-    zapDir string
-}
-
-func (t *SaveRequestTool) Execute(args string) (string, error) {
-    var params struct {
-        Name    string            `json:"name"`
-        Method  string            `json:"method"`
-        URL     string            `json:"url"`
-        Headers map[string]string `json:"headers"`
-        Body    string            `json:"body"`
-    }
-    json.Unmarshal([]byte(args), &params)
-
-    request := &storage.Request{
-        Name:    params.Name,
-        Method:  params.Method,
-        URL:     params.URL,
-        Headers: params.Headers,
-        Body:    params.Body,
-    }
-
-    path := filepath.Join(t.zapDir, "requests", params.Name+".yaml")
-    if err := storage.SaveRequest(path, request); err != nil {
-        return "", err
-    }
-
-    return fmt.Sprintf("Saved request to %s", path), nil
-}
+env, err := storage.LoadEnvironment(".zap/environments/bad.yaml")
+// err: "invalid YAML in .zap/environments/bad.yaml: ..."
 ```
 
 ## Testing
@@ -354,7 +231,7 @@ func (t *SaveRequestTool) Execute(args string) (string, error) {
 go test ./pkg/storage/...
 ```
 
-Test substitution:
+Example:
 
 ```go
 func TestSubstituteVariables(t *testing.T) {
@@ -363,21 +240,17 @@ func TestSubstituteVariables(t *testing.T) {
         "PORT":     "8080",
     }
 
-    tests := []struct {
-        input    string
-        expected string
-    }{
+    tests := []struct{ input, want string }{
         {"{{BASE_URL}}", "http://localhost"},
         {"{{BASE_URL}}:{{PORT}}", "http://localhost:8080"},
         {"{{UNDEFINED}}", "{{UNDEFINED}}"},
-        {"no vars here", "no vars here"},
+        {"no vars", "no vars"},
     }
 
     for _, tt := range tests {
-        result := storage.SubstituteVariables(tt.input, vars)
-        if result != tt.expected {
-            t.Errorf("SubstituteVariables(%q) = %q, want %q",
-                tt.input, result, tt.expected)
+        got := storage.SubstituteVariables(tt.input, vars)
+        if got != tt.want {
+            t.Errorf("got %q, want %q", got, tt.want)
         }
     }
 }

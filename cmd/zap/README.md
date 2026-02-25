@@ -1,21 +1,22 @@
 # cmd/zap
 
-This is the entry point for the ZAP application. It uses [Cobra](https://github.com/spf13/cobra) for CLI framework and [Viper](https://github.com/spf13/viper) for configuration management.
+This is the entry point for Falcon. It uses [Cobra](https://github.com/spf13/cobra) for CLI parsing and [Viper](https://github.com/spf13/viper) for configuration management.
 
 ## Package Overview
 
 ```
 cmd/zap/
-└── main.go    # CLI setup, flag parsing, initialization, routes to TUI or CLI mode
+├── main.go     # CLI setup, flag parsing, initialization, routes to TUI or CLI mode
+└── update.go   # Self-update subcommand via go-github-selfupdate
 ```
 
 ## CLI Modes
 
-ZAP supports two execution modes:
+Falcon supports two execution modes:
 
 ### Interactive Mode (Default)
 
-Launches the full TUI for interactive API testing:
+Launches the full TUI for interactive API testing and debugging:
 
 ```bash
 ./zap
@@ -24,7 +25,7 @@ Launches the full TUI for interactive API testing:
 
 ### CLI Mode
 
-Executes a saved request and exits (for automation):
+Executes a saved request and exits — for automation and CI/CD:
 
 ```bash
 ./zap --request get-users --env prod
@@ -35,163 +36,68 @@ Executes a saved request and exits (for automation):
 
 | Flag | Short | Description |
 |------|-------|-------------|
-| `--framework` | `-f` | Set/update API framework (gin, fastapi, express, etc.) |
-| `--request` | `-r` | Execute a saved request by name |
-| `--env` | `-e` | Environment to use (dev, prod, staging) |
-| `--config` | | Path to custom config file |
+| `--framework` | `-f` | Set/update the API framework (gin, fastapi, express, etc.) |
+| `--request` | `-r` | Execute a saved request by name (triggers CLI mode) |
+| `--env` | `-e` | Environment to use for variable substitution (dev, prod, staging) |
+| `--no-index` | | Skip automatic API spec indexing on first run |
+| `--config` | | Path to a custom config file |
 | `--help` | `-h` | Show help |
 
-## Main Function Structure
+## Subcommands
 
-```go
-func main() {
-    rootCmd := &cobra.Command{
-        Use:   "zap",
-        Short: "AI-powered API debugging assistant",
-        Long:  `ZAP is a terminal-based AI assistant that tests and debugs APIs.`,
-        Run:   run,
-    }
-
-    // Add flags
-    rootCmd.Flags().StringP("framework", "f", "", "API framework")
-    rootCmd.Flags().StringP("request", "r", "", "Execute saved request")
-    rootCmd.Flags().StringP("env", "e", "", "Environment to use")
-    rootCmd.Flags().String("config", "", "Config file path")
-
-    // Execute
-    if err := rootCmd.Execute(); err != nil {
-        os.Exit(1)
-    }
-}
+```bash
+zap version   # Print version, commit hash, and build date
+zap update    # Self-update binary to the latest GitHub release
 ```
 
 ## Initialization Flow
 
-```go
-func run(cmd *cobra.Command, args []string) {
-    // 1. Load environment variables from .env
-    godotenv.Load()
+On every run, Falcon:
 
-    // 2. Get flag values
-    framework, _ := cmd.Flags().GetString("framework")
-    requestName, _ := cmd.Flags().GetString("request")
-    envName, _ := cmd.Flags().GetString("env")
+1. Loads environment variables from `.env` (if present)
+2. Initializes the `.zap` folder (runs setup wizard on first run)
+3. Migrates legacy config fields if needed
+4. Re-reads `config.yaml` after initialization
+5. Updates framework in config if `--framework` flag is set
+6. Routes to CLI mode (if `--request` is set) or launches the TUI
 
-    // 3. Load or create config
-    config := loadConfig()
+## CLI Mode
 
-    // 4. Update framework if provided
-    if framework != "" {
-        config.Framework = framework
-        saveConfig(config)
-        fmt.Printf("Updated framework to: %s\n", framework)
-    }
+When `--request` is provided, Falcon runs a saved request non-interactively:
 
-    // 5. Route to appropriate mode
-    if requestName != "" {
-        // CLI mode: execute request and exit
-        runCLI(config, requestName, envName)
-    } else {
-        // Interactive mode: launch TUI
-        tui.Run()
-    }
-}
+```bash
+./zap --request get-users --env prod
 ```
 
-## CLI Mode Implementation
-
-```go
-func runCLI(config *core.Config, requestName, envName string) {
-    // Load environment
-    var variables map[string]string
-    if envName != "" {
-        env, err := storage.LoadEnvironment(
-            filepath.Join(".zap/environments", envName+".yaml"),
-        )
-        if err != nil {
-            fmt.Fprintf(os.Stderr, "Error loading environment: %v\n", err)
-            os.Exit(1)
-        }
-        variables = env.Variables
-    }
-
-    // Load request
-    request, err := storage.LoadRequest(
-        filepath.Join(".zap/requests", requestName+".yaml"),
-    )
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error loading request: %v\n", err)
-        os.Exit(1)
-    }
-
-    // Substitute variables
-    request = storage.SubstituteRequest(request, variables)
-
-    // Execute request
-    resp, err := executeHTTPRequest(request)
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error executing request: %v\n", err)
-        os.Exit(1)
-    }
-
-    // Output response
-    renderResponse(resp)
-}
-```
+This:
+1. Loads the environment from `.zap/environments/prod.yaml`
+2. Loads the request from `.zap/requests/get-users.yaml`
+3. Substitutes all `{{VAR}}` placeholders with environment values
+4. Executes the HTTP request
+5. Renders the response to stdout using Glamour markdown
+6. Exits with code `0` (success) or `1` (error)
 
 ## Configuration Loading
 
-```go
-func loadConfig() *core.Config {
-    // Default path
-    configPath := filepath.Join(".zap", "config.json")
+Falcon reads `config.yaml` from `.zap/config.yaml` by default. A custom path can be provided via `--config`. The config file is YAML:
 
-    // Check for custom path
-    if customPath := viper.GetString("config"); customPath != "" {
-        configPath = customPath
-    }
-
-    // Check if config exists
-    if _, err := os.Stat(configPath); os.IsNotExist(err) {
-        return nil // Will trigger setup wizard in TUI
-    }
-
-    // Load config
-    data, err := os.ReadFile(configPath)
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error reading config: %v\n", err)
-        os.Exit(1)
-    }
-
-    var config core.Config
-    if err := json.Unmarshal(data, &config); err != nil {
-        fmt.Fprintf(os.Stderr, "Error parsing config: %v\n", err)
-        os.Exit(1)
-    }
-
-    return &config
-}
+```yaml
+provider: ollama
+ollama:
+  mode: local
+  url: http://localhost:11434
+  api_key: ""
+default_model: llama3
+framework: gin
 ```
 
 ## Environment Variables
 
-ZAP loads environment variables from `.env`:
+Falcon loads `.env` from the project root at startup:
 
 ```env
-# .env
 OLLAMA_API_KEY=your-ollama-cloud-key
 GEMINI_API_KEY=your-gemini-key
-```
-
-Loaded at startup:
-
-```go
-import "github.com/joho/godotenv"
-
-func init() {
-    // Load .env file (ignores errors if file doesn't exist)
-    _ = godotenv.Load()
-}
 ```
 
 ## Exit Codes
@@ -199,27 +105,27 @@ func init() {
 | Code | Meaning |
 |------|---------|
 | 0 | Success |
-| 1 | General error (config, request loading, execution) |
+| 1 | Error (config load failure, request not found, HTTP error) |
 
 ## Usage Examples
 
-### First Time Setup
+### First-Time Setup
 
 ```bash
-# Interactive setup wizard
+# Interactive setup wizard (runs automatically on first launch)
 ./zap
 
-# Or specify framework directly
+# Skip wizard by specifying framework directly
 ./zap --framework fastapi
 ```
 
 ### Daily Usage
 
 ```bash
-# Interactive mode
+# Interactive TUI
 ./zap
 
-# Execute saved request
+# Execute a saved request
 ./zap -r get-users -e dev
 ./zap --request create-user --env prod
 ```
@@ -228,27 +134,19 @@ func init() {
 
 ```bash
 #!/bin/bash
-# Run API tests in CI
-
 ./zap --request health-check --env staging
 if [ $? -ne 0 ]; then
     echo "Health check failed"
     exit 1
 fi
-
 ./zap --request get-users --env staging
 ./zap --request create-user --env staging
 ```
 
-### Framework Updates
+### Update Framework
 
 ```bash
-# Change framework for a project
 ./zap --framework express
-
-# Verify in config
-cat .zap/config.json | jq .framework
-# "express"
 ```
 
 ## Development
@@ -267,37 +165,16 @@ go run ./cmd/zap --framework gin
 go run ./cmd/zap -r my-request -e dev
 ```
 
-### Testing
-
-```bash
-# Test CLI parsing
-go test ./cmd/zap/...
-```
-
-## Adding New Flags
-
-To add a new CLI flag:
+### Adding New Flags
 
 1. Add flag definition in `main.go`:
+   ```go
+   rootCmd.Flags().Bool("verbose", false, "Enable verbose output")
+   ```
 
-```go
-rootCmd.Flags().Bool("verbose", false, "Enable verbose output")
-```
+2. Retrieve in the `run()` function:
+   ```go
+   verbose, _ := cmd.Flags().GetBool("verbose")
+   ```
 
-2. Retrieve in `run()`:
-
-```go
-verbose, _ := cmd.Flags().GetBool("verbose")
-if verbose {
-    // Enable verbose mode
-}
-```
-
-3. Update help text if needed:
-
-```go
-rootCmd.Long = `ZAP is a terminal-based AI assistant...
-
-Flags:
-  --verbose    Enable verbose output for debugging`
-```
+3. Update help text if needed.
