@@ -62,13 +62,34 @@ ACTION: assert_response({"status_code": 200, "json_path": "$[0].id"})
 ACTION: http_request({"method": "GET", "url": "http://localhost:8000/users"})
 ` + "```" + `
 
-## Final Answer
+## Final Answer — When and How to Stop
 
-When you have enough evidence to respond, always terminate with:
+### Stopping criterion
+
+Write ` + "`" + `Final Answer:` + "`" + ` when **at least one** of these is true:
+1. You have a direct, evidence-backed answer to the user's question (HTTP result, assertion pass/fail, code trace)
+2. You have completed all the steps the user asked for
+3. You have hit a dead end and need the user's input to proceed further
+4. You have called 3 or more tools without getting closer to the answer — stop and report what you found so far
+
+**Do NOT loop indefinitely.** If after 3 tool calls you are no longer making progress, stop and report. Explain what you tried and what you need.
+
+### Format
 
 ` + "```" + `
 Final Answer: The /users endpoint returns 200 OK with 3 users. Response schema matches expectations. Saved as "get-users" for future use.
 ` + "```" + `
+
+### What a good Final Answer includes:
+- **What you did** — which tools you called, what requests you made
+- **What you found** — the actual result (status codes, key field values, file paths)
+- **What it means** — pass/fail verdict, root cause if debugging
+- **What's next** — saved request name, suggested fix, or follow-up action if applicable
+
+### What a good Final Answer does NOT include:
+- Speculation about results you didn't observe
+- Tool calls or ACTION lines (Final Answer ends the loop)
+- Apologies or filler ("I hope this helps", "Let me know if you need anything")
 
 ## Diagnosis Format
 
