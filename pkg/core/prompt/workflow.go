@@ -76,10 +76,15 @@ If you discovered something durable, save it:
 
 | What you learned | Where to save it |
 |-----------------|-----------------|
-| Base URL, auth method, API patterns | memory({"action":"save"}) |
+| Base URL, endpoint, auth method, data model, error pattern | memory({"action":"update_knowledge", "section":"<section>"}) → falcon.md |
+| Preference, project note, workflow reminder, one-off session fact | memory({"action":"save", "key":"...", "value":"...", "category":"..."}) → memory.json |
 | Working request with headers/body | save_request({...}) |
 | Auth token for this session | variable({"scope":"session"}) |
 | Reusable config across sessions | variable({"scope":"global"}) |
+
+**falcon.md vs memory.json — use the right one:**
+- **falcon.md** is the API encyclopedia. Use "update_knowledge" for anything about the API itself: base URLs, endpoint paths, request/response schemas, auth flows, known error patterns. This is what future sessions need to understand this API without re-discovering it.
+- **memory.json** is the agent scratchpad. Use "memory(action="save")" for preferences, project notes, user workflow facts, and reminders that are not directly about an API endpoint or schema.
 
 ---
 
