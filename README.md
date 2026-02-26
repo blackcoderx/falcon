@@ -1,4 +1,4 @@
-# Falcon
+# Falcon ( formerly Zap)
 
 > AI-powered API testing that understands your codebase
 
@@ -40,7 +40,7 @@ Download the latest pre-built binary for your operating system from [Releases](h
 ### From Source
 
 ```bash
-go install github.com/blackcoderx/falcon/cmd/zap@latest
+go install github.com/blackcoderx/falcon/cmd/falcon@latest
 ```
 
 ## Updating
@@ -48,7 +48,7 @@ go install github.com/blackcoderx/falcon/cmd/zap@latest
 Falcon includes a self-update command to easily upgrade to the latest version:
 
 ```bash
-zap update
+falcon update
 ```
 
 This checks for the latest release on GitHub and updates your binary in place (requires write permissions to the binary location).
@@ -67,8 +67,9 @@ This checks for the latest release on GitHub and updates your binary in place (r
 ```bash
 git clone https://github.com/blackcoderx/falcon.git
 cd falcon
-go build -o zap.exe ./cmd/zap
-./zap
+go build -o falcon.exe ./cmd/falcon
+./falcon
+
 ```
 
 ### First Run
@@ -189,7 +190,7 @@ The web server only binds to `127.0.0.1` (localhost) — it is never exposed to 
 
 ```
 falcon/
-├── cmd/zap/                  # Application entry point (Cobra CLI)
+├── cmd/falcon/               # Application entry point (Cobra CLI)
 │   ├── main.go               # Root command, CLI flags, runCLI() for CLI mode
 │   └── update.go             # Self-update command via go-github-selfupdate
 ├── pkg/
@@ -308,7 +309,7 @@ See [pkg/core/README.md](pkg/core/README.md) for detailed architecture documenta
 On first run, Falcon walks you through a guided Huh-powered wizard:
 
 ```bash
-./zap
+./falcon
 
 # Step 1: Select your API framework
 #   gin (Go), echo (Go), chi (Go), fiber (Go)
@@ -329,14 +330,14 @@ On first run, Falcon walks you through a guided Huh-powered wizard:
 ### CLI Flags
 
 ```bash
-zap                                  # Launch interactive TUI
-zap --framework gin                  # Skip framework selection in wizard
-zap --request get-users --env prod   # CLI mode: run saved request
-zap -r get-users -e dev              # Short form
-zap --no-index                       # Skip automatic API spec indexing
-zap --help                           # Show all flags
-zap version                          # Print version, commit, build date
-zap update                           # Self-update to latest release
+falcon                                  # Launch interactive TUI
+falcon --framework gin                  # Skip framework selection in wizard
+falcon --request get-users --env prod   # CLI mode: run saved request
+falcon -r get-users -e dev              # Short form
+falcon --no-index                       # Skip automatic API spec indexing
+falcon --help                           # Show all flags
+falcon version                          # Print version, commit, build date
+falcon update                           # Self-update to latest release
 ```
 
 ### .zap Folder Structure
@@ -427,7 +428,7 @@ Prevent runaway execution with per-tool and global limits:
 ### Interactive Mode
 
 ```bash
-./zap
+./falcon
 ```
 
 #### Natural Language Commands
@@ -496,10 +497,10 @@ When Falcon wants to modify a file, it enters confirmation mode:
 
 ```bash
 # Execute saved request with environment variable substitution
-./zap --request get-users --env prod
+./falcon --request get-users --env prod
 
 # Combine with framework setup
-./zap --framework gin --request health-check --env staging
+./falcon --framework gin --request health-check --env staging
 ```
 
 ---

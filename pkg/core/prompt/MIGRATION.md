@@ -199,7 +199,7 @@ rm pkg/core/prompt_integration.go
 # Remove: "github.com/blackcoderx/falcon/pkg/core/prompt"
 
 # Rebuild
-go build ./cmd/zap
+go build ./cmd/falcon
 ```
 
 ## Future Enhancements

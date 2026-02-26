@@ -9,7 +9,7 @@ before:
 
 builds:
   - id: zap
-    main: ./cmd/zap
+    main: ./cmd/falcon
     binary: falcon
     env:
       - CGO_ENABLED=0

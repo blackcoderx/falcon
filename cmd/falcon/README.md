@@ -1,11 +1,11 @@
-# cmd/zap
+# cmd/falcon
 
 This is the entry point for Falcon. It uses [Cobra](https://github.com/spf13/cobra) for CLI parsing and [Viper](https://github.com/spf13/viper) for configuration management.
 
 ## Package Overview
 
 ```
-cmd/zap/
+cmd/falcon/
 ├── main.go     # CLI setup, flag parsing, initialization, routes to TUI or CLI mode
 └── update.go   # Self-update subcommand via go-github-selfupdate
 ```
@@ -19,8 +19,8 @@ Falcon supports two execution modes:
 Launches the full TUI for interactive API testing and debugging:
 
 ```bash
-./zap
-./zap --framework gin
+./falcon
+./falcon --framework gin
 ```
 
 ### CLI Mode
@@ -28,8 +28,8 @@ Launches the full TUI for interactive API testing and debugging:
 Executes a saved request and exits — for automation and CI/CD:
 
 ```bash
-./zap --request get-users --env prod
-./zap -r get-users -e dev
+./falcon --request get-users --env prod
+./falcon -r get-users -e dev
 ```
 
 ## Command Line Flags
@@ -46,8 +46,8 @@ Executes a saved request and exits — for automation and CI/CD:
 ## Subcommands
 
 ```bash
-zap version   # Print version, commit hash, and build date
-zap update    # Self-update binary to the latest GitHub release
+falcon version   # Print version, commit hash, and build date
+falcon update    # Self-update binary to the latest GitHub release
 ```
 
 ## Initialization Flow
@@ -66,7 +66,7 @@ On every run, Falcon:
 When `--request` is provided, Falcon runs a saved request non-interactively:
 
 ```bash
-./zap --request get-users --env prod
+./falcon --request get-users --env prod
 ```
 
 This:
@@ -113,40 +113,40 @@ GEMINI_API_KEY=your-gemini-key
 
 ```bash
 # Interactive setup wizard (runs automatically on first launch)
-./zap
+./falcon
 
 # Skip wizard by specifying framework directly
-./zap --framework fastapi
+./falcon --framework fastapi
 ```
 
 ### Daily Usage
 
 ```bash
 # Interactive TUI
-./zap
+./falcon
 
 # Execute a saved request
-./zap -r get-users -e dev
-./zap --request create-user --env prod
+./falcon -r get-users -e dev
+./falcon --request create-user --env prod
 ```
 
 ### CI/CD Integration
 
 ```bash
 #!/bin/bash
-./zap --request health-check --env staging
+./falcon --request health-check --env staging
 if [ $? -ne 0 ]; then
     echo "Health check failed"
     exit 1
 fi
-./zap --request get-users --env staging
-./zap --request create-user --env staging
+./falcon --request get-users --env staging
+./falcon --request create-user --env staging
 ```
 
 ### Update Framework
 
 ```bash
-./zap --framework express
+./falcon --framework express
 ```
 
 ## Development
@@ -154,15 +154,15 @@ fi
 ### Building
 
 ```bash
-go build -o zap.exe ./cmd/zap
+go build -o falcon.exe ./cmd/falcon
 ```
 
 ### Running Locally
 
 ```bash
-go run ./cmd/zap
-go run ./cmd/zap --framework gin
-go run ./cmd/zap -r my-request -e dev
+go run ./cmd/falcon
+go run ./cmd/falcon --framework gin
+go run ./cmd/falcon -r my-request -e dev
 ```
 
 ### Adding New Flags

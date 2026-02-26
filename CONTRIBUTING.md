@@ -20,7 +20,7 @@ Thank you for your interest in contributing to Falcon! This document provides gu
    ```
 3. Build the project:
    ```bash
-   go build -o zap.exe ./cmd/zap
+   go build -o falcon.exe ./cmd/falcon
    ```
 4. Run tests:
    ```bash
@@ -31,7 +31,7 @@ Thank you for your interest in contributing to Falcon! This document provides gu
 
 ```
 falcon/
-├── cmd/zap/           # Application entry point
+├── cmd/falcon/        # Application entry point
 ├── pkg/
 │   ├── core/          # Agent logic and ReAct loop
 │   │   └── tools/     # 4-tier tool system

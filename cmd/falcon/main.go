@@ -27,7 +27,7 @@ var (
 	framework   string
 	noIndex     bool
 	rootCmd     = &cobra.Command{
-		Use:   "zap",
+		Use:   "falcon",
 		Short: "Falcon - AI-powered API testing in your terminal",
 		Long: `Falcon is the AI-powered developer assistant that lives where you work—your terminal.
 It bridges the gap between coding, testing, and fixing by giving you an autonomous
