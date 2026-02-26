@@ -13,11 +13,11 @@ import (
 
 // ExportResultsTool handles exporting data to various formats
 type ExportResultsTool struct {
-	zapDir string
+	falconDir string
 }
 
-func NewExportResultsTool(zapDir string) *ExportResultsTool {
-	return &ExportResultsTool{zapDir: zapDir}
+func NewExportResultsTool(falconDir string) *ExportResultsTool {
+	return &ExportResultsTool{falconDir: falconDir}
 }
 
 type ExportResultsParams struct {
@@ -38,7 +38,7 @@ func (t *ExportResultsTool) Parameters() string {
 	return `{
   "results": [ /* TestResult array */ ],
   "format": "json|markdown",
-  "output_path": ".zap/reports/report.json"
+  "output_path": ".falcon/reports/report.json"
 }`
 }
 
@@ -50,7 +50,7 @@ func (t *ExportResultsTool) Execute(args string) (string, error) {
 
 	path := params.OutputPath
 	if path == "" {
-		reportsDir := filepath.Join(t.zapDir, "reports")
+		reportsDir := filepath.Join(t.falconDir, "reports")
 		_ = os.MkdirAll(reportsDir, 0755)
 		filename := fmt.Sprintf("report-%d.%s", time.Now().Unix(), params.Format)
 		path = filepath.Join(reportsDir, filename)

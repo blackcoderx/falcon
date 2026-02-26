@@ -5,8 +5,8 @@ import (
 	"net/http"
 )
 
-func registerRoutes(mux *http.ServeMux, zapDir string, staticFS fs.FS) {
-	h := &handlers{zapDir: zapDir}
+func registerRoutes(mux *http.ServeMux, falconDir string, staticFS fs.FS) {
+	h := &handlers{falconDir: falconDir}
 
 	// Static frontend
 	mux.Handle("/", http.FileServer(http.FS(staticFS)))

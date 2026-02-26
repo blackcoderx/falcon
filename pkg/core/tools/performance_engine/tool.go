@@ -11,14 +11,14 @@ import (
 
 // PerformanceEngineTool provides multi-mode load testing and metrics tracking.
 type PerformanceEngineTool struct {
-	zapDir   string
-	httpTool *shared.HTTPTool
+	falconDir string
+	httpTool  *shared.HTTPTool
 }
 
 // NewPerformanceEngineTool creates a new performance engine tool.
-func NewPerformanceEngineTool(zapDir string, httpTool *shared.HTTPTool) *PerformanceEngineTool {
+func NewPerformanceEngineTool(falconDir string, httpTool *shared.HTTPTool) *PerformanceEngineTool {
 	return &PerformanceEngineTool{
-		zapDir:   zapDir,
+		falconDir: falconDir,
 		httpTool: httpTool,
 	}
 }
@@ -119,7 +119,7 @@ func (t *PerformanceEngineTool) getEndpoints(specified []string) (map[string]sha
 		return endpoints, nil
 	}
 
-	builder := spec_ingester.NewGraphBuilder(t.zapDir)
+	builder := spec_ingester.NewGraphBuilder(t.falconDir)
 	graph, err := builder.LoadGraph()
 	if err != nil {
 		return nil, err

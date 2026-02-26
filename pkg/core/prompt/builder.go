@@ -14,7 +14,7 @@ type Tool interface {
 
 // Builder constructs the complete system prompt from modular components.
 type Builder struct {
-	zapFolder       string
+	falconFolder    string
 	framework       string
 	manifestSummary string
 	memoryPreview   string
@@ -31,7 +31,7 @@ func NewBuilder() *Builder {
 
 // WithZapFolder sets the workspace path.
 func (b *Builder) WithZapFolder(path string) *Builder {
-	b.zapFolder = path
+	b.falconFolder = path
 	return b
 }
 
@@ -41,7 +41,7 @@ func (b *Builder) WithFramework(framework string) *Builder {
 	return b
 }
 
-// WithManifestSummary sets the current .zap folder state.
+// WithManifestSummary sets the current .falcon folder state.
 func (b *Builder) WithManifestSummary(summary string) *Builder {
 	b.manifestSummary = summary
 	return b
@@ -83,7 +83,7 @@ func (b *Builder) Build() string {
 	sb.WriteString("\n")
 
 	// 4. Context - Current session state
-	sb.WriteString(BuildContextSection(b.zapFolder, b.framework, b.manifestSummary, b.memoryPreview))
+	sb.WriteString(BuildContextSection(b.falconFolder, b.framework, b.manifestSummary, b.memoryPreview))
 	sb.WriteString("\n")
 
 	// 5. Tools - WHAT capabilities are available

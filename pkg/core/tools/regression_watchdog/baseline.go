@@ -12,7 +12,7 @@ import (
 
 // BaselineStore manages the persistence of API snapshots.
 type BaselineStore struct {
-	ZapDir string
+	FalconDir string
 }
 
 // APIBaseline represents a stored snapshot of API behavior.
@@ -23,13 +23,13 @@ type APIBaseline struct {
 }
 
 // NewBaselineStore creates a new baseline manager.
-func NewBaselineStore(zapDir string) *BaselineStore {
-	return &BaselineStore{ZapDir: zapDir}
+func NewBaselineStore(falconDir string) *BaselineStore {
+	return &BaselineStore{FalconDir: falconDir}
 }
 
 // Save persists a baseline to disk.
 func (s *BaselineStore) Save(b APIBaseline) error {
-	dir := filepath.Join(s.ZapDir, "baselines")
+	dir := filepath.Join(s.FalconDir, "baselines")
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func (s *BaselineStore) Save(b APIBaseline) error {
 
 // Load retrieves a baseline from disk.
 func (s *BaselineStore) Load(name string) (*APIBaseline, error) {
-	path := filepath.Join(s.ZapDir, "baselines", name+".json")
+	path := filepath.Join(s.FalconDir, "baselines", name+".json")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {

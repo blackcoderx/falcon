@@ -16,18 +16,18 @@ type TestSuiteTool struct {
 	extractTool     *ExtractTool
 	responseManager *ResponseManager
 	varStore        *VariableStore
-	zapDir          string
+	falconDir       string
 }
 
 // NewTestSuiteTool creates a new test suite tool
-func NewTestSuiteTool(httpTool *HTTPTool, assertTool *AssertTool, extractTool *ExtractTool, responseManager *ResponseManager, varStore *VariableStore, zapDir string) *TestSuiteTool {
+func NewTestSuiteTool(httpTool *HTTPTool, assertTool *AssertTool, extractTool *ExtractTool, responseManager *ResponseManager, varStore *VariableStore, falconDir string) *TestSuiteTool {
 	return &TestSuiteTool{
 		httpTool:        httpTool,
 		assertTool:      assertTool,
 		extractTool:     extractTool,
 		responseManager: responseManager,
 		varStore:        varStore,
-		zapDir:          zapDir,
+		falconDir:       falconDir,
 	}
 }
 
@@ -44,7 +44,7 @@ type TestSuiteParams struct {
 	Name        string           `json:"name"`
 	Tests       []TestDefinition `json:"tests"`
 	OnFailure   string           `json:"on_failure,omitempty"`   // "stop" or "continue"
-	SaveResults bool             `json:"save_results,omitempty"` // Save to .zap/test-results/
+	SaveResults bool             `json:"save_results,omitempty"` // Save to .falcon/test-results/
 }
 
 // SuiteTestResult represents the result of a single test in a manual suite
@@ -296,7 +296,7 @@ func (t *TestSuiteTool) formatResults(result SuiteResult) string {
 
 // saveResults saves test results to disk
 func (t *TestSuiteTool) saveResults(result SuiteResult) error {
-	resultsDir := filepath.Join(t.zapDir, "test-results")
+	resultsDir := filepath.Join(t.falconDir, "test-results")
 	if err := os.MkdirAll(resultsDir, 0755); err != nil {
 		return err
 	}

@@ -55,7 +55,7 @@ falcon update    # Self-update binary to the latest GitHub release
 On every run, Falcon:
 
 1. Loads environment variables from `.env` (if present)
-2. Initializes the `.zap` folder (runs setup wizard on first run)
+2. Initializes the `.falcon` folder (runs setup wizard on first run)
 3. Migrates legacy config fields if needed
 4. Re-reads `config.yaml` after initialization
 5. Updates framework in config if `--framework` flag is set
@@ -70,8 +70,8 @@ When `--request` is provided, Falcon runs a saved request non-interactively:
 ```
 
 This:
-1. Loads the environment from `.zap/environments/prod.yaml`
-2. Loads the request from `.zap/requests/get-users.yaml`
+1. Loads the environment from `.falcon/environments/prod.yaml`
+2. Loads the request from `.falcon/requests/get-users.yaml`
 3. Substitutes all `{{VAR}}` placeholders with environment values
 4. Executes the HTTP request
 5. Renders the response to stdout using Glamour markdown
@@ -79,7 +79,7 @@ This:
 
 ## Configuration Loading
 
-Falcon reads `config.yaml` from `.zap/config.yaml` by default. A custom path can be provided via `--config`. The config file is YAML:
+Falcon reads `config.yaml` from `.falcon/config.yaml` by default. A custom path can be provided via `--config`. The config file is YAML:
 
 ```yaml
 provider: ollama

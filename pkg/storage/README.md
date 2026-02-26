@@ -28,7 +28,7 @@ type Request struct {
 }
 ```
 
-**Example YAML** (`.zap/requests/get-users.yaml`):
+**Example YAML** (`.falcon/requests/get-users.yaml`):
 
 ```yaml
 name: Get Users
@@ -51,7 +51,7 @@ type Environment struct {
 }
 ```
 
-**Example YAML** (`.zap/environments/dev.yaml`):
+**Example YAML** (`.falcon/environments/dev.yaml`):
 
 ```yaml
 # Development environment
@@ -77,13 +77,13 @@ type Collection struct {
 
 ```go
 // Save a request
-err := storage.SaveRequest(".zap/requests/get-users.yaml", request)
+err := storage.SaveRequest(".falcon/requests/get-users.yaml", request)
 
 // Load a request
-request, err := storage.LoadRequest(".zap/requests/get-users.yaml")
+request, err := storage.LoadRequest(".falcon/requests/get-users.yaml")
 
 // List all saved requests (returns names without extension)
-names, err := storage.ListRequests(".zap/requests/")
+names, err := storage.ListRequests(".falcon/requests/")
 // Returns: []string{"get-users", "create-user", "health-check"}
 ```
 
@@ -91,13 +91,13 @@ names, err := storage.ListRequests(".zap/requests/")
 
 ```go
 // Save an environment
-err := storage.SaveEnvironment(".zap/environments/prod.yaml", env)
+err := storage.SaveEnvironment(".falcon/environments/prod.yaml", env)
 
 // Load an environment
-env, err := storage.LoadEnvironment(".zap/environments/prod.yaml")
+env, err := storage.LoadEnvironment(".falcon/environments/prod.yaml")
 
 // List all environments
-names, err := storage.ListEnvironments(".zap/environments/")
+names, err := storage.ListEnvironments(".falcon/environments/")
 // Returns: []string{"dev", "staging", "prod"}
 ```
 
@@ -154,10 +154,10 @@ result := storage.SubstituteVariables("{{UNDEFINED}}/path", variables)
 
 ## File Layout
 
-Falcon's storage lives entirely inside `.zap/`:
+Falcon's storage lives entirely inside `.falcon/`:
 
 ```
-.zap/
+.falcon/
 ├── config.yaml              # Main configuration (YAML)
 ├── memory.json              # Agent memory (JSON)
 ├── manifest.json            # Workspace counts (JSON)
@@ -179,7 +179,7 @@ Falcon's storage lives entirely inside `.zap/`:
 
 ```go
 // 1. Save a request template
-storage.SaveRequest(".zap/requests/login.yaml", &storage.Request{
+storage.SaveRequest(".falcon/requests/login.yaml", &storage.Request{
     Name:   "Login",
     Method: "POST",
     URL:    "{{BASE_URL}}/auth/login",
@@ -188,10 +188,10 @@ storage.SaveRequest(".zap/requests/login.yaml", &storage.Request{
 })
 
 // 2. Load environment
-env, _ := storage.LoadEnvironment(".zap/environments/dev.yaml")
+env, _ := storage.LoadEnvironment(".falcon/environments/dev.yaml")
 
 // 3. Load and substitute request
-req, _ := storage.LoadRequest(".zap/requests/login.yaml")
+req, _ := storage.LoadRequest(".falcon/requests/login.yaml")
 ready := storage.SubstituteRequest(req, env.Variables)
 
 // 4. ready.URL, ready.Headers, ready.Body are all substituted
@@ -202,12 +202,12 @@ ready := storage.SubstituteRequest(req, env.Variables)
 Define the request once, use different credentials per environment:
 
 ```yaml
-# .zap/environments/dev.yaml
+# .falcon/environments/dev.yaml
 BASE_URL: http://localhost:3000
 TEST_USER: devuser
 TEST_PASS: devpass
 
-# .zap/environments/staging.yaml
+# .falcon/environments/staging.yaml
 BASE_URL: https://staging.example.com
 TEST_USER: stageuser
 TEST_PASS: stagepass
@@ -218,11 +218,11 @@ TEST_PASS: stagepass
 All functions return descriptive errors:
 
 ```go
-req, err := storage.LoadRequest(".zap/requests/missing.yaml")
-// err: "request file not found: .zap/requests/missing.yaml"
+req, err := storage.LoadRequest(".falcon/requests/missing.yaml")
+// err: "request file not found: .falcon/requests/missing.yaml"
 
-env, err := storage.LoadEnvironment(".zap/environments/bad.yaml")
-// err: "invalid YAML in .zap/environments/bad.yaml: ..."
+env, err := storage.LoadEnvironment(".falcon/environments/bad.yaml")
+// err: "invalid YAML in .falcon/environments/bad.yaml: ..."
 ```
 
 ## Testing

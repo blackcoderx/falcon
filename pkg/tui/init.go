@@ -69,8 +69,8 @@ func configureToolLimits(agent *core.Agent) {
 // This includes codebase tools, persistence tools, and testing tools from all sprints.
 // registerTools adds all tools to the agent using the central registry.
 // This switches Falcon to use the new modular tool packages (shared, debugging, persistence, agent).
-func registerTools(agent *core.Agent, zapDir, workDir string, confirmManager *shared.ConfirmationManager, memStore *core.MemoryStore) {
-	registry := tools.NewRegistry(agent, agent.LLMClient(), workDir, zapDir, memStore, confirmManager)
+func registerTools(agent *core.Agent, falconDir, workDir string, confirmManager *shared.ConfirmationManager, memStore *core.MemoryStore) {
+	registry := tools.NewRegistry(agent, agent.LLMClient(), workDir, falconDir, memStore, confirmManager)
 	registry.RegisterAllTools()
 }
 
@@ -237,8 +237,8 @@ func InitialModel(webPort int) Model {
 	// Get current working directory for codebase tools
 	workDir, _ := os.Getwd()
 
-	// Get .zap directory path
-	zapDir := core.ZapFolderName
+	// Get .falcon directory path
+	falconDir := core.FalconFolderName
 
 	// Get model name for display
 	modelName := viper.GetString("default_model")
@@ -269,10 +269,10 @@ func InitialModel(webPort int) Model {
 	})
 
 	// Create memory store for persistent agent memory
-	memStore := core.NewMemoryStore(zapDir)
+	memStore := core.NewMemoryStore(falconDir)
 	agent.SetMemoryStore(memStore)
 
-	registerTools(agent, zapDir, workDir, confirmManager, memStore)
+	registerTools(agent, falconDir, workDir, confirmManager, memStore)
 
 	m := Model{
 		textinput:        newTextInput(),

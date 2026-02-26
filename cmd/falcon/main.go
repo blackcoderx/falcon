@@ -38,8 +38,8 @@ agent that understands your code and can interact with your APIs naturally.`,
 				fmt.Fprintf(os.Stderr, "Warning: Failed to load .env file: %v\n", err)
 			}
 
-			// Initialize .zap folder (runs setup wizard on first run)
-			if err := core.InitializeZapFolder(framework, noIndex); err != nil {
+			// Initialize .falcon folder (runs setup wizard on first run)
+			if err := core.InitializeFalconFolder(framework, noIndex); err != nil {
 				fmt.Fprintf(os.Stderr, "Error initializing config folder: %v\n", err)
 				os.Exit(1)
 			}
@@ -62,7 +62,7 @@ agent that understands your code and can interact with your APIs naturally.`,
 			var webPort int
 			if !viper.IsSet("web_ui.enabled") || viper.GetBool("web_ui.enabled") {
 				port := viper.GetInt("web_ui.port")
-				actualPort, shutdown, err := web.Start(core.ZapFolderName, port)
+				actualPort, shutdown, err := web.Start(core.FalconFolderName, port)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Warning: Web UI failed to start: %v\n", err)
 				} else {
@@ -88,7 +88,7 @@ agent that understands your code and can interact with your APIs naturally.`,
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .zap/config.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .falcon/config.yaml)")
 
 	// CLI Flags
 	rootCmd.Flags().StringVarP(&requestFile, "request", "r", "", "Execute a saved request file (YAML)")
@@ -112,7 +112,7 @@ func initConfig() {
 	if cfgFile != "" {
 		viper.SetConfigFile(cfgFile)
 	} else {
-		viper.AddConfigPath(".zap")
+		viper.AddConfigPath(".falcon")
 		viper.SetConfigType("yaml")
 		viper.SetConfigName("config")
 	}
@@ -122,14 +122,14 @@ func initConfig() {
 }
 
 func runCLI(requestName, env string) error {
-	zapDir := core.ZapFolderName
+	falconDir := core.FalconFolderName
 
 	// Initialize shared components
 	responseManager := shared.NewResponseManager()
-	varStore := shared.NewVariableStore(zapDir)
+	varStore := shared.NewVariableStore(falconDir)
 
 	// Initialize tools
-	persistManager := persistence.NewPersistenceManager(zapDir)
+	persistManager := persistence.NewPersistenceManager(falconDir)
 
 	// Set environment if specified (TODO: implement simplified SetEnvironment helper if needed,
 	// or use persistence tool directly. For CLI simplicity, let's load env var store directly)

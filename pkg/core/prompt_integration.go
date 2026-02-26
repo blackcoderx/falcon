@@ -8,8 +8,8 @@ import (
 // buildSystemPrompt constructs the complete system prompt for the LLM using the modular prompt system.
 // This replaces the old monolithic prompt.go approach with a clean, context-efficient builder pattern.
 func (a *Agent) buildSystemPrompt() string {
-	// Get current .zap folder state
-	manifestSummary := shared.GetManifestSummary(ZapFolderName)
+	// Get current .falcon folder state
+	manifestSummary := shared.GetManifestSummary(FalconFolderName)
 
 	// Get memory preview if available
 	memoryPreview := ""
@@ -27,7 +27,7 @@ func (a *Agent) buildSystemPrompt() string {
 
 	// Build prompt using modular system
 	builder := prompt.NewBuilder().
-		WithZapFolder(ZapFolderName).
+		WithZapFolder(FalconFolderName).
 		WithFramework(a.framework).
 		WithManifestSummary(manifestSummary).
 		WithMemoryPreview(memoryPreview).
@@ -39,7 +39,7 @@ func (a *Agent) buildSystemPrompt() string {
 // GetPromptTokenEstimate returns an estimate of how many tokens the system prompt uses.
 // Useful for monitoring context window consumption.
 func (a *Agent) GetPromptTokenEstimate() int {
-	manifestSummary := shared.GetManifestSummary(ZapFolderName)
+	manifestSummary := shared.GetManifestSummary(FalconFolderName)
 	memoryPreview := ""
 	if a.memoryStore != nil {
 		memoryPreview = a.memoryStore.GetCompactSummary()
@@ -54,7 +54,7 @@ func (a *Agent) GetPromptTokenEstimate() int {
 	a.toolsMu.RUnlock()
 
 	builder := prompt.NewBuilder().
-		WithZapFolder(ZapFolderName).
+		WithZapFolder(FalconFolderName).
 		WithFramework(a.framework).
 		WithManifestSummary(manifestSummary).
 		WithMemoryPreview(memoryPreview).

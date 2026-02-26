@@ -10,14 +10,14 @@ import (
 
 // APIDriftAnalyzerTool detects drift between intended spec and live implementation.
 type APIDriftAnalyzerTool struct {
-	zapDir   string
-	httpTool *shared.HTTPTool
+	falconDir string
+	httpTool  *shared.HTTPTool
 }
 
 // NewAPIDriftAnalyzerTool creates a new API drift analyzer tool.
-func NewAPIDriftAnalyzerTool(zapDir string, httpTool *shared.HTTPTool) *APIDriftAnalyzerTool {
+func NewAPIDriftAnalyzerTool(falconDir string, httpTool *shared.HTTPTool) *APIDriftAnalyzerTool {
 	return &APIDriftAnalyzerTool{
-		zapDir:   zapDir,
+		falconDir: falconDir,
 		httpTool: httpTool,
 	}
 }
@@ -67,7 +67,7 @@ func (t *APIDriftAnalyzerTool) Execute(args string) (string, error) {
 	}
 
 	// 1. Load Knowledge Graph (Spec)
-	builder := spec_ingester.NewGraphBuilder(t.zapDir)
+	builder := spec_ingester.NewGraphBuilder(t.falconDir)
 	graph, err := builder.LoadGraph()
 	if err != nil {
 		return "", fmt.Errorf("failed to load API Knowledge Graph: %w", err)

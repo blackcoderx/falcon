@@ -11,14 +11,14 @@ import (
 
 // IdempotencyVerifierTool checks if API endpoints are correctly idempotent.
 type IdempotencyVerifierTool struct {
-	zapDir   string
-	httpTool *shared.HTTPTool
+	falconDir string
+	httpTool  *shared.HTTPTool
 }
 
 // NewIdempotencyVerifierTool creates a new idempotency verifier tool.
-func NewIdempotencyVerifierTool(zapDir string, httpTool *shared.HTTPTool) *IdempotencyVerifierTool {
+func NewIdempotencyVerifierTool(falconDir string, httpTool *shared.HTTPTool) *IdempotencyVerifierTool {
 	return &IdempotencyVerifierTool{
-		zapDir:   zapDir,
+		falconDir: falconDir,
 		httpTool: httpTool,
 	}
 }
@@ -104,7 +104,7 @@ func (t *IdempotencyVerifierTool) getEndpoints(specified []string, includeGET bo
 		return endpoints, nil
 	}
 
-	builder := spec_ingester.NewGraphBuilder(t.zapDir)
+	builder := spec_ingester.NewGraphBuilder(t.falconDir)
 	graph, err := builder.LoadGraph()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load API Knowledge Graph: %w", err)

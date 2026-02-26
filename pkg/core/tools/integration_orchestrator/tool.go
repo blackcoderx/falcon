@@ -9,15 +9,15 @@ import (
 
 // IntegrationOrchestratorTool handles multi-step API workflows and integration tests.
 type IntegrationOrchestratorTool struct {
-	zapDir   string
-	httpTool *shared.HTTPTool
+	falconDir string
+	httpTool  *shared.HTTPTool
 }
 
 // NewIntegrationOrchestratorTool creates a new integration orchestrator tool.
-func NewIntegrationOrchestratorTool(zapDir string, httpTool *shared.HTTPTool) *IntegrationOrchestratorTool {
+func NewIntegrationOrchestratorTool(falconDir string, httpTool *shared.HTTPTool) *IntegrationOrchestratorTool {
 	return &IntegrationOrchestratorTool{
-		zapDir:   zapDir,
-		httpTool: httpTool,
+		falconDir: falconDir,
+		httpTool:  httpTool,
 	}
 }
 
@@ -101,7 +101,7 @@ func (t *IntegrationOrchestratorTool) formatSummary(r OrchestrateResult) string 
 	for _, step := range r.StepResults {
 		icon := "✓"
 		switch step.Status {
-case "fail":
+		case "fail":
 			icon = "❌"
 		case "skipped":
 			icon = "⏭️"

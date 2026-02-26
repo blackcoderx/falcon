@@ -13,14 +13,14 @@ import (
 // CompareResponsesTool compares API responses for regression testing
 type CompareResponsesTool struct {
 	responseManager *ResponseManager
-	zapDir          string
+	falconDir       string
 }
 
 // NewCompareResponsesTool creates a new response comparison tool
-func NewCompareResponsesTool(responseManager *ResponseManager, zapDir string) *CompareResponsesTool {
+func NewCompareResponsesTool(responseManager *ResponseManager, falconDir string) *CompareResponsesTool {
 	return &CompareResponsesTool{
 		responseManager: responseManager,
-		zapDir:          zapDir,
+		falconDir:       falconDir,
 	}
 }
 
@@ -127,7 +127,7 @@ func (t *CompareResponsesTool) loadResponse(source string) (string, error) {
 	}
 
 	// Load from baseline file
-	baselinesDir := filepath.Join(t.zapDir, "baselines")
+	baselinesDir := filepath.Join(t.falconDir, "baselines")
 	baselinePath := filepath.Join(baselinesDir, source+".json")
 
 	data, err := os.ReadFile(baselinePath)
@@ -155,7 +155,7 @@ func (t *CompareResponsesTool) saveBaseline(name string) (string, error) {
 	}
 
 	// Create baselines directory
-	baselinesDir := filepath.Join(t.zapDir, "baselines")
+	baselinesDir := filepath.Join(t.falconDir, "baselines")
 	if err := os.MkdirAll(baselinesDir, 0755); err != nil {
 		return "", err
 	}

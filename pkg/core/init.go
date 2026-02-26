@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const ZapFolderName = ".zap"
+const FalconFolderName = ".falcon"
 
 // ToolLimitsConfig holds per-tool call limits configuration
 type ToolLimitsConfig struct {
@@ -375,21 +375,21 @@ func maskAPIKey(key string) string {
 	return key[:4] + "..." + key[len(key)-4:]
 }
 
-// InitializeZapFolder creates the .zap directory and initializes default files if they don't exist.
+// InitializeFalconFolder creates the .falcon directory and initializes default files if they don't exist.
 // If framework is empty and this is a first-time setup, prompts the user to select one.
 // skipIndex determines if we should auto-run the spec ingester.
-func InitializeZapFolder(framework string, skipIndex bool) error {
-	// Check if .zap exists
-	if _, err := os.Stat(ZapFolderName); os.IsNotExist(err) {
+func InitializeFalconFolder(framework string, skipIndex bool) error {
+	// Check if .falcon exists
+	if _, err := os.Stat(FalconFolderName); os.IsNotExist(err) {
 		// Run interactive setup wizard on first run
 		setup, err := runSetupWizard(framework)
 		if err != nil {
 			return fmt.Errorf("setup failed: %w", err)
 		}
 
-		// Create .zap directory
-		if err := os.Mkdir(ZapFolderName, 0755); err != nil {
-			return fmt.Errorf("failed to create .zap folder: %w", err)
+		// Create .falcon directory
+		if err := os.Mkdir(FalconFolderName, 0755); err != nil {
+			return fmt.Errorf("failed to create .falcon folder: %w", err)
 		}
 
 		// Create config.yaml with wizard results
@@ -408,19 +408,19 @@ func InitializeZapFolder(framework string, skipIndex bool) error {
 		}
 
 		// Create requests directory for saved requests
-		if err := os.Mkdir(filepath.Join(ZapFolderName, "requests"), 0755); err != nil {
+		if err := os.Mkdir(filepath.Join(FalconFolderName, "requests"), 0755); err != nil {
 			return fmt.Errorf("failed to create requests folder: %w", err)
 		}
 
 		// Create environments directory for environment files
-		if err := os.Mkdir(filepath.Join(ZapFolderName, "environments"), 0755); err != nil {
+		if err := os.Mkdir(filepath.Join(FalconFolderName, "environments"), 0755); err != nil {
 			return fmt.Errorf("failed to create environments folder: %w", err)
 		}
 
 		// Create new folder structure
-		newFolders := []string{"baselines", "flows"}
+		newFolders := []string{"baselines", "flows", "exports"}
 		for _, folder := range newFolders {
-			if err := os.Mkdir(filepath.Join(ZapFolderName, folder), 0755); err != nil {
+			if err := os.Mkdir(filepath.Join(FalconFolderName, folder), 0755); err != nil {
 				return fmt.Errorf("failed to create %s folder: %w", folder, err)
 			}
 		}
@@ -436,11 +436,11 @@ func InitializeZapFolder(framework string, skipIndex bool) error {
 		}
 
 		// Create manifest.json
-		if err := shared.CreateManifest(ZapFolderName); err != nil {
+		if err := shared.CreateManifest(FalconFolderName); err != nil {
 			return err
 		}
 
-		fmt.Printf("\nInitialized .zap folder with framework: %s\n", setup.Framework)
+		fmt.Printf("\nInitialized .falcon folder with framework: %s\n", setup.Framework)
 
 		// Auto-Index if not skipped
 		if !skipIndex {
@@ -461,7 +461,7 @@ func InitializeZapFolder(framework string, skipIndex bool) error {
 				// Note: LLM client is nil here as initial indexing (parsing) might not need it yet
 				// If parsing needs LLM, we'd need to init it. But our current implementation describes
 				// LLM for fusion. Let's stick to parsing for now.
-				tool := spec_ingester.NewIngestSpecTool(nil, ZapFolderName)
+				tool := spec_ingester.NewIngestSpecTool(nil, FalconFolderName)
 
 				params := fmt.Sprintf(`{"action":"index", "source":"%s"}`, foundSpec)
 				if out, err := tool.Execute(params); err != nil {
@@ -483,22 +483,25 @@ func InitializeZapFolder(framework string, skipIndex bool) error {
 	}
 
 	// Ensure subdirectories exist (for upgrades from older versions)
-	if err := ensureDir(filepath.Join(ZapFolderName, "requests")); err != nil {
+	if err := ensureDir(filepath.Join(FalconFolderName, "requests")); err != nil {
 		return err
 	}
-	if err := ensureDir(filepath.Join(ZapFolderName, "environments")); err != nil {
+	if err := ensureDir(filepath.Join(FalconFolderName, "environments")); err != nil {
 		return err
 	}
-	if err := ensureDir(filepath.Join(ZapFolderName, "baselines")); err != nil {
+	if err := ensureDir(filepath.Join(FalconFolderName, "baselines")); err != nil {
 		return err
 	}
-	if err := ensureDir(filepath.Join(ZapFolderName, "flows")); err != nil {
+	if err := ensureDir(filepath.Join(FalconFolderName, "flows")); err != nil {
+		return err
+	}
+	if err := ensureDir(filepath.Join(FalconFolderName, "exports")); err != nil {
 		return err
 	}
 
 	// Ensure manifest exists (for upgrades)
-	if _, err := os.Stat(filepath.Join(ZapFolderName, shared.ManifestFilename)); os.IsNotExist(err) {
-		shared.CreateManifest(ZapFolderName)
+	if _, err := os.Stat(filepath.Join(FalconFolderName, shared.ManifestFilename)); os.IsNotExist(err) {
+		shared.CreateManifest(FalconFolderName)
 	}
 
 	// Migrate legacy config fields if present
@@ -511,7 +514,7 @@ func InitializeZapFolder(framework string, skipIndex bool) error {
 
 // migrateLegacyConfig moves legacy top-level Ollama fields to the new OllamaConfig struct.
 func migrateLegacyConfig() error {
-	configPath := filepath.Join(ZapFolderName, "config.yaml")
+	configPath := filepath.Join(FalconFolderName, "config.yaml")
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -565,7 +568,7 @@ func migrateLegacyConfig() error {
 
 // updateConfigFramework updates the framework in an existing config file
 func updateConfigFramework(framework string) error {
-	configPath := filepath.Join(ZapFolderName, "config.yaml")
+	configPath := filepath.Join(FalconFolderName, "config.yaml")
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
@@ -593,7 +596,7 @@ func updateConfigFramework(framework string) error {
 
 // GetConfigFramework reads the framework from the config file
 func GetConfigFramework() string {
-	configPath := filepath.Join(ZapFolderName, "config.yaml")
+	configPath := filepath.Join(FalconFolderName, "config.yaml")
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
@@ -621,7 +624,7 @@ func ensureDir(path string) error {
 
 // createDefaultEnvironment creates default dev, staging, and prod environment files
 func createDefaultEnvironment() error {
-	envDir := filepath.Join(ZapFolderName, "environments")
+	envDir := filepath.Join(FalconFolderName, "environments")
 
 	environments := []struct {
 		filename string
@@ -737,7 +740,7 @@ func createDefaultConfig(setup *SetupResult) error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	configPath := filepath.Join(ZapFolderName, "config.yaml")
+	configPath := filepath.Join(FalconFolderName, "config.yaml")
 	if err := os.WriteFile(configPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
@@ -756,7 +759,7 @@ func createMemoryFile() error {
 		return fmt.Errorf("failed to marshal memory: %w", err)
 	}
 
-	memoryPath := filepath.Join(ZapFolderName, "memory.json")
+	memoryPath := filepath.Join(FalconFolderName, "memory.json")
 	if err := os.WriteFile(memoryPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write memory file: %w", err)
 	}
@@ -807,7 +810,7 @@ it at the start of every session and updates it as it learns new information.
 
 <!-- Framework, architecture notes, and other project-specific facts -->
 `
-	path := filepath.Join(ZapFolderName, "falcon.md")
+	path := filepath.Join(FalconFolderName, "falcon.md")
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 		return fmt.Errorf("failed to write falcon.md: %w", err)
 	}
@@ -861,7 +864,7 @@ body_schema:
 
 Baselines are created and updated automatically by Falcon.
 `
-	path := filepath.Join(ZapFolderName, "baselines", "README.md")
+	path := filepath.Join(FalconFolderName, "baselines", "README.md")
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 		return fmt.Errorf("failed to write baselines README: %w", err)
 	}

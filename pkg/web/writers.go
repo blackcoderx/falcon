@@ -20,9 +20,9 @@ func atomicWrite(path string, data []byte) error {
 	return os.Rename(tmp, path)
 }
 
-func writeConfig(zapDir string, cfg *core.Config) error {
+func writeConfig(falconDir string, cfg *core.Config) error {
 	// Write YAML if config.yaml exists, otherwise fall back to JSON
-	yamlPath := filepath.Join(zapDir, "config.yaml")
+	yamlPath := filepath.Join(falconDir, "config.yaml")
 	if _, err := os.Stat(yamlPath); err == nil {
 		data, err := yaml.Marshal(cfg)
 		if err != nil {
@@ -34,10 +34,10 @@ func writeConfig(zapDir string, cfg *core.Config) error {
 	if err != nil {
 		return err
 	}
-	return atomicWrite(filepath.Join(zapDir, "config.json"), data)
+	return atomicWrite(filepath.Join(falconDir, "config.json"), data)
 }
 
-func writeMemory(zapDir string, entries []core.MemoryEntry) error {
+func writeMemory(falconDir string, entries []core.MemoryEntry) error {
 	mf := struct {
 		Version int               `json:"version"`
 		Entries []core.MemoryEntry `json:"entries"`
@@ -46,15 +46,15 @@ func writeMemory(zapDir string, entries []core.MemoryEntry) error {
 	if err != nil {
 		return err
 	}
-	return atomicWrite(filepath.Join(zapDir, "memory.json"), data)
+	return atomicWrite(filepath.Join(falconDir, "memory.json"), data)
 }
 
-func writeRequest(zapDir, name string, req *storage.Request) error {
-	return storage.SaveRequest(*req, filepath.Join(zapDir, "requests", name+".yaml"))
+func writeRequest(falconDir, name string, req *storage.Request) error {
+	return storage.SaveRequest(*req, filepath.Join(falconDir, "requests", name+".yaml"))
 }
 
-func deleteRequestFile(zapDir, name string) error {
-	path := filepath.Join(zapDir, "requests", name+".yaml")
+func deleteRequestFile(falconDir, name string) error {
+	path := filepath.Join(falconDir, "requests", name+".yaml")
 	err := os.Remove(path)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -62,12 +62,12 @@ func deleteRequestFile(zapDir, name string) error {
 	return nil
 }
 
-func writeEnvironment(zapDir, name string, vars map[string]string) error {
-	return storage.SaveEnvironment(vars, filepath.Join(zapDir, "environments", name+".yaml"))
+func writeEnvironment(falconDir, name string, vars map[string]string) error {
+	return storage.SaveEnvironment(vars, filepath.Join(falconDir, "environments", name+".yaml"))
 }
 
-func deleteEnvironmentFile(zapDir, name string) error {
-	path := filepath.Join(zapDir, "environments", name+".yaml")
+func deleteEnvironmentFile(falconDir, name string) error {
+	path := filepath.Join(falconDir, "environments", name+".yaml")
 	err := os.Remove(path)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -75,10 +75,10 @@ func deleteEnvironmentFile(zapDir, name string) error {
 	return nil
 }
 
-func writeVariables(zapDir string, vars map[string]string) error {
+func writeVariables(falconDir string, vars map[string]string) error {
 	data, err := json.MarshalIndent(vars, "", "  ")
 	if err != nil {
 		return err
 	}
-	return atomicWrite(filepath.Join(zapDir, "variables.json"), data)
+	return atomicWrite(filepath.Join(falconDir, "variables.json"), data)
 }

@@ -11,9 +11,9 @@ import (
 )
 
 // ExportScenarios exports test scenarios to a JSON file.
-func ExportScenarios(zapDir string, scenarios []shared.TestScenario) (string, error) {
+func ExportScenarios(falconDir string, scenarios []shared.TestScenario) (string, error) {
 	// Create exports directory if it doesn't exist
-	exportsDir := filepath.Join(zapDir, "exports")
+	exportsDir := filepath.Join(falconDir, "exports")
 	if err := os.MkdirAll(exportsDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create exports directory: %w", err)
 	}

@@ -74,7 +74,7 @@ go build -o falcon.exe ./cmd/falcon
 
 ### First Run
 
-1. Falcon creates a `.zap/` folder with config, history, and memory
+1. Falcon creates a `.falcon/` folder with config, history, and memory
 2. Select your LLM provider (Ollama local, Ollama cloud, or Gemini)
 3. Choose your API framework (gin, fastapi, express, etc.)
 4. The web dashboard starts on a random localhost port — URL printed to terminal
@@ -133,7 +133,7 @@ No surprises, no unauthorized changes.
 
 ### Persistent Memory
 
-Falcon maintains a `MemoryStore` across sessions stored in `.zap/memory.json`. The agent tracks conversation turns, tool usage patterns, and key facts to provide more contextual assistance over time.
+Falcon maintains a `MemoryStore` across sessions stored in `.falcon/memory.json`. The agent tracks conversation turns, tool usage patterns, and key facts to provide more contextual assistance over time.
 
 ---
 
@@ -151,7 +151,7 @@ The port is random by default (OS-assigned) and is also shown in the TUI splash 
 Falcon v1.0.0 • Current dir: /your/project • Web UI: http://localhost:54821
 ```
 
-The dashboard is a read/write interface over your `.zap` workspace — no separate server to run, no build step, embedded directly in the binary.
+The dashboard is a read/write interface over your `.falcon` workspace — no separate server to run, no build step, embedded directly in the binary.
 
 ### Dashboard Sections
 
@@ -197,7 +197,7 @@ falcon/
 │   ├── core/                 # Agent logic, ReAct loop, initialization
 │   │   ├── agent.go          # Agent struct: tool registry, limits, history mgmt
 │   │   ├── react.go          # ReAct loop: ProcessMessage / ProcessMessageWithEvents
-│   │   ├── init.go           # .zap folder setup, setup wizard, config migration
+│   │   ├── init.go           # .falcon folder setup, setup wizard, config migration
 │   │   ├── memory.go         # MemoryStore: persistent agent memory (memory.json)
 │   │   ├── analysis.go       # Stack trace parsing, error context extraction
 │   │   ├── prompt/           # System prompt builder (20-section LLM instructions)
@@ -250,7 +250,7 @@ falcon/
 │       ├── keys.go           # Key bindings, input handling, history navigation
 │       ├── styles.go         # Lip Gloss style definitions, color palette
 │       └── highlight.go      # Syntax highlighting helpers
-├── .zap/                     # User config & runtime data (created on first run)
+├── .falcon/                     # User config & runtime data (created on first run)
 └── go.mod                    # Go module (go 1.25.3)
 ```
 
@@ -264,9 +264,9 @@ falcon/
 | **Tool Registry** | `pkg/core/tools/registry.go` | Centralized registration of all 40+ tools |
 | **LLM Clients** | `pkg/llm/` | Ollama (local/cloud) and Gemini with streaming support |
 | **TUI** | `pkg/tui/` | Bubble Tea UI with harmonica spring animations |
-| **Web Dashboard** | `pkg/web/` | Embedded localhost web UI — read/write over `.zap` workspace |
+| **Web Dashboard** | `pkg/web/` | Embedded localhost web UI — read/write over `.falcon` workspace |
 | **Storage** | `pkg/storage/` | YAML I/O, variable substitution, .env loading |
-| **Memory Store** | `pkg/core/memory.go` | Persistent memory in `.zap/memory.json` |
+| **Memory Store** | `pkg/core/memory.go` | Persistent memory in `.falcon/memory.json` |
 
 ### Message Flow
 
@@ -324,7 +324,7 @@ On first run, Falcon walks you through a guided Huh-powered wizard:
 
 # Step 3: Provider-specific config (URL, model, API key)
 
-# Step 4: Confirm and create .zap/config.yaml
+# Step 4: Confirm and create .falcon/config.yaml
 ```
 
 ### CLI Flags
@@ -340,12 +340,12 @@ falcon version                          # Print version, commit, build date
 falcon update                           # Self-update to latest release
 ```
 
-### .zap Folder Structure
+### .falcon Folder Structure
 
-The `.zap` directory is created on first run and acts as Falcon's workspace — config, memory, requests, and baselines all live here.
+The `.falcon` directory is created on first run and acts as Falcon's workspace — config, memory, requests, and baselines all live here.
 
 ```
-.zap/
+.falcon/
 ├── config.yaml         # LLM provider, model, framework, tool limits
 ├── memory.json         # Persistent agent memory (versioned)
 ├── manifest.json       # Workspace manifest (request/environment counts)
@@ -395,7 +395,7 @@ GEMINI_API_KEY=your_key_here
 ### Saved Requests
 
 ```yaml
-# .zap/requests/get-users.yaml
+# .falcon/requests/get-users.yaml
 name: Get Users
 method: GET
 url: "{{BASE_URL}}/api/users"
@@ -406,7 +406,7 @@ headers:
 ### Environments
 
 ```yaml
-# .zap/environments/dev.yaml
+# .falcon/environments/dev.yaml
 BASE_URL: http://localhost:3000
 API_KEY: your-dev-api-key
 ```
@@ -550,7 +550,7 @@ All tools are registered via `pkg/core/tools/registry.go` using a component-base
 | `variable` | Manage session/global variables with disk persistence |
 | `save_request` | Save API request as YAML with `{{VAR}}` placeholders |
 | `load_request` | Load saved request with environment variable substitution |
-| `list_requests` | List all saved requests in `.zap/requests/` |
+| `list_requests` | List all saved requests in `.falcon/requests/` |
 | `set_environment` | Set active environment (dev, prod, staging) |
 | `list_environments` | List available environment files |
 

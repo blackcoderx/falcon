@@ -12,7 +12,7 @@ import (
 )
 
 type handlers struct {
-	zapDir string
+	falconDir string
 }
 
 // writeJSON serializes v as JSON with the given status code.
@@ -45,12 +45,12 @@ func safeName(raw string) (string, bool) {
 // ── Dashboard ──────────────────────────────────────────────────────────────
 
 func (h *handlers) getDashboard(w http.ResponseWriter, r *http.Request) {
-	manifest, err := readManifest(h.zapDir)
+	manifest, err := readManifest(h.falconDir)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	cfg, err := readConfig(h.zapDir)
+	cfg, err := readConfig(h.falconDir)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -68,7 +68,7 @@ func (h *handlers) getDashboard(w http.ResponseWriter, r *http.Request) {
 // ── Config ─────────────────────────────────────────────────────────────────
 
 func (h *handlers) getConfig(w http.ResponseWriter, r *http.Request) {
-	cfg, err := readConfig(h.zapDir)
+	cfg, err := readConfig(h.falconDir)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -82,7 +82,7 @@ func (h *handlers) putConfig(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		return
 	}
-	if err := writeConfig(h.zapDir, &cfg); err != nil {
+	if err := writeConfig(h.falconDir, &cfg); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -92,7 +92,7 @@ func (h *handlers) putConfig(w http.ResponseWriter, r *http.Request) {
 // ── Requests ───────────────────────────────────────────────────────────────
 
 func (h *handlers) listRequests(w http.ResponseWriter, r *http.Request) {
-	names, err := listRequestNames(h.zapDir)
+	names, err := listRequestNames(h.falconDir)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -106,7 +106,7 @@ func (h *handlers) getRequest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid name")
 		return
 	}
-	req, err := readRequest(h.zapDir, name)
+	req, err := readRequest(h.falconDir, name)
 	if err != nil {
 		writeError(w, http.StatusNotFound, err.Error())
 		return
@@ -125,7 +125,7 @@ func (h *handlers) putRequest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		return
 	}
-	if err := writeRequest(h.zapDir, name, &req); err != nil {
+	if err := writeRequest(h.falconDir, name, &req); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -147,7 +147,7 @@ func (h *handlers) createRequest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid name")
 		return
 	}
-	if err := writeRequest(h.zapDir, name, &req); err != nil {
+	if err := writeRequest(h.falconDir, name, &req); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -160,7 +160,7 @@ func (h *handlers) deleteRequest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid name")
 		return
 	}
-	if err := deleteRequestFile(h.zapDir, name); err != nil {
+	if err := deleteRequestFile(h.falconDir, name); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -170,7 +170,7 @@ func (h *handlers) deleteRequest(w http.ResponseWriter, r *http.Request) {
 // ── Environments ───────────────────────────────────────────────────────────
 
 func (h *handlers) listEnvironments(w http.ResponseWriter, r *http.Request) {
-	names, err := listEnvironmentNames(h.zapDir)
+	names, err := listEnvironmentNames(h.falconDir)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -184,7 +184,7 @@ func (h *handlers) getEnvironment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid name")
 		return
 	}
-	env, err := readEnvironment(h.zapDir, name)
+	env, err := readEnvironment(h.falconDir, name)
 	if err != nil {
 		writeError(w, http.StatusNotFound, err.Error())
 		return
@@ -203,7 +203,7 @@ func (h *handlers) putEnvironment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		return
 	}
-	if err := writeEnvironment(h.zapDir, name, vars); err != nil {
+	if err := writeEnvironment(h.falconDir, name, vars); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -231,7 +231,7 @@ func (h *handlers) createEnvironment(w http.ResponseWriter, r *http.Request) {
 	if body.Vars == nil {
 		body.Vars = map[string]string{}
 	}
-	if err := writeEnvironment(h.zapDir, name, body.Vars); err != nil {
+	if err := writeEnvironment(h.falconDir, name, body.Vars); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -244,7 +244,7 @@ func (h *handlers) deleteEnvironment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid name")
 		return
 	}
-	if err := deleteEnvironmentFile(h.zapDir, name); err != nil {
+	if err := deleteEnvironmentFile(h.falconDir, name); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -254,7 +254,7 @@ func (h *handlers) deleteEnvironment(w http.ResponseWriter, r *http.Request) {
 // ── Memory ─────────────────────────────────────────────────────────────────
 
 func (h *handlers) listMemory(w http.ResponseWriter, r *http.Request) {
-	entries, err := readMemory(h.zapDir)
+	entries, err := readMemory(h.falconDir)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -277,7 +277,7 @@ func (h *handlers) putMemoryEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entries, err := readMemory(h.zapDir)
+	entries, err := readMemory(h.falconDir)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -304,7 +304,7 @@ func (h *handlers) putMemoryEntry(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	if err := writeMemory(h.zapDir, entries); err != nil {
+	if err := writeMemory(h.falconDir, entries); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -318,7 +318,7 @@ func (h *handlers) deleteMemoryEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entries, err := readMemory(h.zapDir)
+	entries, err := readMemory(h.falconDir)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -331,7 +331,7 @@ func (h *handlers) deleteMemoryEntry(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := writeMemory(h.zapDir, filtered); err != nil {
+	if err := writeMemory(h.falconDir, filtered); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -341,7 +341,7 @@ func (h *handlers) deleteMemoryEntry(w http.ResponseWriter, r *http.Request) {
 // ── Variables ──────────────────────────────────────────────────────────────
 
 func (h *handlers) listVariables(w http.ResponseWriter, r *http.Request) {
-	vars, err := readVariables(h.zapDir)
+	vars, err := readVariables(h.falconDir)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -363,13 +363,13 @@ func (h *handlers) putVariable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars, err := readVariables(h.zapDir)
+	vars, err := readVariables(h.falconDir)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	vars[name] = body.Value
-	if err := writeVariables(h.zapDir, vars); err != nil {
+	if err := writeVariables(h.falconDir, vars); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -383,13 +383,13 @@ func (h *handlers) deleteVariable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars, err := readVariables(h.zapDir)
+	vars, err := readVariables(h.falconDir)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	delete(vars, name)
-	if err := writeVariables(h.zapDir, vars); err != nil {
+	if err := writeVariables(h.falconDir, vars); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -399,7 +399,7 @@ func (h *handlers) deleteVariable(w http.ResponseWriter, r *http.Request) {
 // ── Read-only ──────────────────────────────────────────────────────────────
 
 func (h *handlers) listHistory(w http.ResponseWriter, r *http.Request) {
-	history, err := readHistory(h.zapDir)
+	history, err := readHistory(h.falconDir)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -408,7 +408,7 @@ func (h *handlers) listHistory(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handlers) listExports(w http.ResponseWriter, r *http.Request) {
-	names, err := listExportFiles(h.zapDir)
+	names, err := listExportFiles(h.falconDir)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -422,7 +422,7 @@ func (h *handlers) getExport(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid name")
 		return
 	}
-	data, err := readExportFile(h.zapDir, name)
+	data, err := readExportFile(h.falconDir, name)
 	if err != nil {
 		writeError(w, http.StatusNotFound, err.Error())
 		return
@@ -437,7 +437,7 @@ func (h *handlers) getExport(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handlers) getAPIGraph(w http.ResponseWriter, r *http.Request) {
-	data, err := readAPIGraph(h.zapDir)
+	data, err := readAPIGraph(h.falconDir)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return

@@ -18,7 +18,7 @@ func NewListRequestsTool(manager *PersistenceManager) *ListRequestsTool {
 func (t *ListRequestsTool) Name() string { return "list_requests" }
 
 func (t *ListRequestsTool) Description() string {
-	return "List all saved API requests in the .zap/requests directory."
+	return "List all saved API requests in the .falcon/requests directory."
 }
 
 func (t *ListRequestsTool) Parameters() string {

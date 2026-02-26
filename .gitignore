@@ -22,7 +22,7 @@ go.work
 *~
 
 # ZAP specific
-.zap/
+.falcon/
 .env
 
 # OS

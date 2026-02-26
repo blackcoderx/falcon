@@ -30,7 +30,7 @@ type Registry struct {
 	Agent          *core.Agent
 	LLMClient      llm.LLMClient
 	WorkDir        string
-	ZapDir         string
+	FalconDir         string
 	MemStore       *core.MemoryStore
 	ConfirmManager *shared.ConfirmationManager
 
@@ -46,7 +46,7 @@ func NewRegistry(
 	agent *core.Agent,
 	llmClient llm.LLMClient,
 	workDir string,
-	zapDir string,
+	falconDir string,
 	memStore *core.MemoryStore,
 	confirmManager *shared.ConfirmationManager,
 ) *Registry {
@@ -54,7 +54,7 @@ func NewRegistry(
 		Agent:          agent,
 		LLMClient:      llmClient,
 		WorkDir:        workDir,
-		ZapDir:         zapDir,
+		FalconDir:         falconDir,
 		MemStore:       memStore,
 		ConfirmManager: confirmManager,
 	}
@@ -78,8 +78,8 @@ func (r *Registry) RegisterAllTools() {
 // initServices initializes shared services used by multiple tools.
 func (r *Registry) initServices() {
 	r.ResponseManager = shared.NewResponseManager()
-	r.VariableStore = shared.NewVariableStore(r.ZapDir)
-	r.PersistManager = persistence.NewPersistenceManager(r.ZapDir)
+	r.VariableStore = shared.NewVariableStore(r.FalconDir)
+	r.PersistManager = persistence.NewPersistenceManager(r.FalconDir)
 	r.HTTPTool = shared.NewHTTPTool(r.ResponseManager, r.VariableStore) // Initialize once
 }
 
@@ -92,7 +92,7 @@ func (r *Registry) registerSharedTools() {
 	r.Agent.RegisterTool(shared.NewAssertTool(r.ResponseManager))
 	r.Agent.RegisterTool(shared.NewExtractTool(r.ResponseManager, r.VariableStore))
 	r.Agent.RegisterTool(shared.NewSchemaValidationTool(r.ResponseManager))
-	r.Agent.RegisterTool(shared.NewCompareResponsesTool(r.ResponseManager, r.ZapDir))
+	r.Agent.RegisterTool(shared.NewCompareResponsesTool(r.ResponseManager, r.FalconDir))
 
 	// utilities
 	r.Agent.RegisterTool(shared.NewWaitTool())
@@ -115,7 +115,7 @@ func (r *Registry) registerSharedTools() {
 		shared.NewExtractTool(r.ResponseManager, r.VariableStore),
 		r.ResponseManager,
 		r.VariableStore,
-		r.ZapDir,
+		r.FalconDir,
 	))
 }
 
@@ -154,7 +154,7 @@ func (r *Registry) registerPersistenceTools() {
 // registerAgentTools registers memory, reporting, and orchestration tools.
 func (r *Registry) registerAgentTools() {
 	r.Agent.RegisterTool(zapagent.NewMemoryTool(r.MemStore))
-	r.Agent.RegisterTool(zapagent.NewExportResultsTool(r.ZapDir))
+	r.Agent.RegisterTool(zapagent.NewExportResultsTool(r.FalconDir))
 
 	// orchestration dependencies - use shared instances
 	assertTool := shared.NewAssertTool(r.ResponseManager)
@@ -174,42 +174,42 @@ func (r *Registry) registerAgentTools() {
 
 // registerSpecIngesterTools registers spec-to-graph transformation tools.
 func (r *Registry) registerSpecIngesterTools() {
-	r.Agent.RegisterTool(spec_ingester.NewIngestSpecTool(r.LLMClient, r.ZapDir))
+	r.Agent.RegisterTool(spec_ingester.NewIngestSpecTool(r.LLMClient, r.FalconDir))
 }
 
 // registerFunctionalTestGeneratorTools registers spec-driven functional test generator.
 func (r *Registry) registerFunctionalTestGeneratorTools() {
 	assertTool := shared.NewAssertTool(r.ResponseManager)
-	r.Agent.RegisterTool(functional_test_generator.NewFunctionalTestGeneratorTool(r.ZapDir, r.HTTPTool, assertTool))
+	r.Agent.RegisterTool(functional_test_generator.NewFunctionalTestGeneratorTool(r.FalconDir, r.HTTPTool, assertTool))
 }
 
 // registerSecurityScannerTools registers the whole security scanner ecosystem.
 func (r *Registry) registerSecurityScannerTools() {
-	r.Agent.RegisterTool(security_scanner.NewSecurityScannerTool(r.ZapDir, r.HTTPTool))
+	r.Agent.RegisterTool(security_scanner.NewSecurityScannerTool(r.FalconDir, r.HTTPTool))
 }
 
 // registerPerformanceEngineTools registers the multi-mode performance engine.
 func (r *Registry) registerPerformanceEngineTools() {
-	r.Agent.RegisterTool(performance_engine.NewPerformanceEngineTool(r.ZapDir, r.HTTPTool))
+	r.Agent.RegisterTool(performance_engine.NewPerformanceEngineTool(r.FalconDir, r.HTTPTool))
 }
 
 // registerModuleTools registers the high-level capability modules (Smoke, Idempotency, etc).
 func (r *Registry) registerModuleTools() {
-	r.Agent.RegisterTool(smoke_runner.NewSmokeRunnerTool(r.ZapDir, r.HTTPTool))
+	r.Agent.RegisterTool(smoke_runner.NewSmokeRunnerTool(r.FalconDir, r.HTTPTool))
 	r.Agent.RegisterTool(unit_test_scaffolder.NewUnitTestScaffolderTool(r.LLMClient))
-	r.Agent.RegisterTool(idempotency_verifier.NewIdempotencyVerifierTool(r.ZapDir, r.HTTPTool))
+	r.Agent.RegisterTool(idempotency_verifier.NewIdempotencyVerifierTool(r.FalconDir, r.HTTPTool))
 	r.Agent.RegisterTool(data_driven_engine.NewDataDrivenEngineTool(r.HTTPTool))
 
 	// Sprint 9 registrations
-	r.Agent.RegisterTool(schema_conformance.NewSchemaConformanceTool(r.ZapDir, r.HTTPTool))
-	r.Agent.RegisterTool(breaking_change_detector.NewBreakingChangeDetectorTool(r.ZapDir))
-	r.Agent.RegisterTool(dependency_mapper.NewDependencyMapperTool(r.ZapDir))
-	r.Agent.RegisterTool(documentation_validator.NewDocumentationValidatorTool(r.ZapDir))
-	r.Agent.RegisterTool(api_drift_analyzer.NewAPIDriftAnalyzerTool(r.ZapDir, r.HTTPTool))
+	r.Agent.RegisterTool(schema_conformance.NewSchemaConformanceTool(r.FalconDir, r.HTTPTool))
+	r.Agent.RegisterTool(breaking_change_detector.NewBreakingChangeDetectorTool(r.FalconDir))
+	r.Agent.RegisterTool(dependency_mapper.NewDependencyMapperTool(r.FalconDir))
+	r.Agent.RegisterTool(documentation_validator.NewDocumentationValidatorTool(r.FalconDir))
+	r.Agent.RegisterTool(api_drift_analyzer.NewAPIDriftAnalyzerTool(r.FalconDir, r.HTTPTool))
 }
 
 // registerWorkflowTools registers integration and regression modules.
 func (r *Registry) registerWorkflowTools() {
-	r.Agent.RegisterTool(integration_orchestrator.NewIntegrationOrchestratorTool(r.ZapDir, r.HTTPTool))
-	r.Agent.RegisterTool(regression_watchdog.NewRegressionWatchdogTool(r.ZapDir, r.HTTPTool))
+	r.Agent.RegisterTool(integration_orchestrator.NewIntegrationOrchestratorTool(r.FalconDir, r.HTTPTool))
+	r.Agent.RegisterTool(regression_watchdog.NewRegressionWatchdogTool(r.FalconDir, r.HTTPTool))
 }

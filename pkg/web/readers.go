@@ -11,14 +11,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func readConfig(zapDir string) (*core.Config, error) {
+func readConfig(falconDir string) (*core.Config, error) {
 	// Try YAML first (new format), fall back to JSON (legacy)
-	yamlPath := filepath.Join(zapDir, "config.yaml")
+	yamlPath := filepath.Join(falconDir, "config.yaml")
 	if data, err := os.ReadFile(yamlPath); err == nil {
 		var cfg core.Config
 		return &cfg, yaml.Unmarshal(data, &cfg)
 	}
-	data, err := os.ReadFile(filepath.Join(zapDir, "config.json"))
+	data, err := os.ReadFile(filepath.Join(falconDir, "config.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -33,8 +33,8 @@ type manifestData struct {
 	LastUpdated string         `json:"last_updated"`
 }
 
-func readManifest(zapDir string) (*manifestData, error) {
-	data, err := os.ReadFile(filepath.Join(zapDir, "manifest.json"))
+func readManifest(falconDir string) (*manifestData, error) {
+	data, err := os.ReadFile(filepath.Join(falconDir, "manifest.json"))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return &manifestData{Counts: map[string]int{}}, nil
@@ -45,8 +45,8 @@ func readManifest(zapDir string) (*manifestData, error) {
 	return &m, json.Unmarshal(data, &m)
 }
 
-func readMemory(zapDir string) ([]core.MemoryEntry, error) {
-	data, err := os.ReadFile(filepath.Join(zapDir, "memory.json"))
+func readMemory(falconDir string) ([]core.MemoryEntry, error) {
+	data, err := os.ReadFile(filepath.Join(falconDir, "memory.json"))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
@@ -70,13 +70,13 @@ func readHistory(_ string) ([]map[string]interface{}, error) {
 	return []map[string]interface{}{}, nil
 }
 
-func readRequest(zapDir, name string) (*storage.Request, error) {
-	path := filepath.Join(zapDir, "requests", name+".yaml")
+func readRequest(falconDir, name string) (*storage.Request, error) {
+	path := filepath.Join(falconDir, "requests", name+".yaml")
 	return storage.LoadRequest(path)
 }
 
-func listRequestNames(zapDir string) ([]string, error) {
-	names, err := storage.ListRequests(zapDir)
+func listRequestNames(falconDir string) ([]string, error) {
+	names, err := storage.ListRequests(falconDir)
 	if err != nil {
 		return nil, err
 	}
@@ -90,8 +90,8 @@ func listRequestNames(zapDir string) ([]string, error) {
 	return result, nil
 }
 
-func readEnvironment(zapDir, name string) (map[string]string, error) {
-	path := filepath.Join(zapDir, "environments", name+".yaml")
+func readEnvironment(falconDir, name string) (map[string]string, error) {
+	path := filepath.Join(falconDir, "environments", name+".yaml")
 	env, err := storage.LoadEnvironment(path)
 	if err != nil {
 		return nil, err
@@ -102,12 +102,12 @@ func readEnvironment(zapDir, name string) (map[string]string, error) {
 	return env, nil
 }
 
-func listEnvironmentNames(zapDir string) ([]string, error) {
-	return storage.ListEnvironments(zapDir)
+func listEnvironmentNames(falconDir string) ([]string, error) {
+	return storage.ListEnvironments(falconDir)
 }
 
-func readVariables(zapDir string) (map[string]string, error) {
-	data, err := os.ReadFile(filepath.Join(zapDir, "variables.json"))
+func readVariables(falconDir string) (map[string]string, error) {
+	data, err := os.ReadFile(filepath.Join(falconDir, "variables.json"))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return map[string]string{}, nil
@@ -124,8 +124,8 @@ func readVariables(zapDir string) (map[string]string, error) {
 	return vars, nil
 }
 
-func readAPIGraph(zapDir string) (json.RawMessage, error) {
-	data, err := os.ReadFile(filepath.Join(zapDir, "snapshots", "api-graph.json"))
+func readAPIGraph(falconDir string) (json.RawMessage, error) {
+	data, err := os.ReadFile(filepath.Join(falconDir, "snapshots", "api-graph.json"))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return json.RawMessage("null"), nil
@@ -135,8 +135,8 @@ func readAPIGraph(zapDir string) (json.RawMessage, error) {
 	return data, nil
 }
 
-func listExportFiles(zapDir string) ([]string, error) {
-	entries, err := os.ReadDir(filepath.Join(zapDir, "exports"))
+func listExportFiles(falconDir string) ([]string, error) {
+	entries, err := os.ReadDir(filepath.Join(falconDir, "exports"))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return []string{}, nil
@@ -155,7 +155,7 @@ func listExportFiles(zapDir string) ([]string, error) {
 	return names, nil
 }
 
-func readExportFile(zapDir, name string) ([]byte, error) {
+func readExportFile(falconDir, name string) ([]byte, error) {
 	clean := filepath.Base(name)
-	return os.ReadFile(filepath.Join(zapDir, "exports", clean))
+	return os.ReadFile(filepath.Join(falconDir, "exports", clean))
 }

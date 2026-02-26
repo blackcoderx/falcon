@@ -9,9 +9,9 @@ import (
 )
 
 // GenerateSecurityReport persists the vulnerabilities and scan parameters into a JSON report.
-func GenerateSecurityReport(zapDir string, vulns []Vulnerability, params ScanParams) (string, error) {
+func GenerateSecurityReport(falconDir string, vulns []Vulnerability, params ScanParams) (string, error) {
 	// Create reports directory
-	reportsDir := filepath.Join(zapDir, "security_reports")
+	reportsDir := filepath.Join(falconDir, "security_reports")
 	if err := os.MkdirAll(reportsDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create security reports directory: %w", err)
 	}

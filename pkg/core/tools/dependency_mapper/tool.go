@@ -10,13 +10,13 @@ import (
 
 // DependencyMapperTool maps relationships between API endpoints.
 type DependencyMapperTool struct {
-	zapDir string
+	falconDir string
 }
 
 // NewDependencyMapperTool creates a new dependency mapper tool.
-func NewDependencyMapperTool(zapDir string) *DependencyMapperTool {
+func NewDependencyMapperTool(falconDir string) *DependencyMapperTool {
 	return &DependencyMapperTool{
-		zapDir: zapDir,
+		falconDir: falconDir,
 	}
 }
 
@@ -48,7 +48,7 @@ func (t *DependencyMapperTool) Parameters() string {
 
 func (t *DependencyMapperTool) Execute(_ string) (string, error) {
 	// 1. Load Knowledge Graph
-	builder := spec_ingester.NewGraphBuilder(t.zapDir)
+	builder := spec_ingester.NewGraphBuilder(t.falconDir)
 	graph, err := builder.LoadGraph()
 	if err != nil {
 		return "", fmt.Errorf("failed to load API Knowledge Graph: %w", err)

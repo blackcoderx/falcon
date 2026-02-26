@@ -11,14 +11,14 @@ import (
 
 // SmokeRunnerTool performs fast health checks and core functionality verification.
 type SmokeRunnerTool struct {
-	zapDir   string
+	falconDir string
 	httpTool *shared.HTTPTool
 }
 
 // NewSmokeRunnerTool creates a new smoke runner tool.
-func NewSmokeRunnerTool(zapDir string, httpTool *shared.HTTPTool) *SmokeRunnerTool {
+func NewSmokeRunnerTool(falconDir string, httpTool *shared.HTTPTool) *SmokeRunnerTool {
 	return &SmokeRunnerTool{
-		zapDir:   zapDir,
+		falconDir: falconDir,
 		httpTool: httpTool,
 	}
 }
@@ -120,7 +120,7 @@ func (t *SmokeRunnerTool) getCriticalEndpoints(specified []string) ([]string, er
 	}
 
 	// Try to find common health endpoints in the Knowledge Graph
-	builder := spec_ingester.NewGraphBuilder(t.zapDir)
+	builder := spec_ingester.NewGraphBuilder(t.falconDir)
 	graph, err := builder.LoadGraph()
 	if err != nil {
 		// If no graph, just return standard defaults

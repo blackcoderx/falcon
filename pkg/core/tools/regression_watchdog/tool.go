@@ -9,14 +9,14 @@ import (
 
 // RegressionWatchdogTool compares current API behavior against a stored baseline.
 type RegressionWatchdogTool struct {
-	zapDir   string
-	httpTool *shared.HTTPTool
+	falconDir string
+	httpTool  *shared.HTTPTool
 }
 
 // NewRegressionWatchdogTool creates a new regression watchdog tool.
-func NewRegressionWatchdogTool(zapDir string, httpTool *shared.HTTPTool) *RegressionWatchdogTool {
+func NewRegressionWatchdogTool(falconDir string, httpTool *shared.HTTPTool) *RegressionWatchdogTool {
 	return &RegressionWatchdogTool{
-		zapDir:   zapDir,
+		falconDir: falconDir,
 		httpTool: httpTool,
 	}
 }
@@ -70,7 +70,7 @@ func (t *RegressionWatchdogTool) Execute(args string) (string, error) {
 		return "", fmt.Errorf("base_url and baseline_name are required")
 	}
 
-	store := NewBaselineStore(t.zapDir)
+	store := NewBaselineStore(t.falconDir)
 	baseline, err := store.Load(params.BaselineName)
 	if err != nil {
 		return "", fmt.Errorf("failed to load baseline: %w", err)

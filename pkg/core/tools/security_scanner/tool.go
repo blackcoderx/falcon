@@ -11,7 +11,7 @@ import (
 
 // SecurityScannerTool performs comprehensive security scans on APIs.
 type SecurityScannerTool struct {
-	zapDir       string
+	falconDir    string
 	httpTool     *shared.HTTPTool
 	owaspChecker *OWASPChecker
 	fuzzer       *Fuzzer
@@ -19,9 +19,9 @@ type SecurityScannerTool struct {
 }
 
 // NewSecurityScannerTool creates a new security scanner tool.
-func NewSecurityScannerTool(zapDir string, httpTool *shared.HTTPTool) *SecurityScannerTool {
+func NewSecurityScannerTool(falconDir string, httpTool *shared.HTTPTool) *SecurityScannerTool {
 	return &SecurityScannerTool{
-		zapDir:       zapDir,
+		falconDir:    falconDir,
 		httpTool:     httpTool,
 		owaspChecker: NewOWASPChecker(httpTool),
 		fuzzer:       NewFuzzer(httpTool),
@@ -153,7 +153,7 @@ func (t *SecurityScannerTool) Execute(args string) (string, error) {
 	severityCounts := categorizeBySeverity(allVulnerabilities)
 
 	// 4. Generate report
-	reportPath, err := GenerateSecurityReport(t.zapDir, allVulnerabilities, params)
+	reportPath, err := GenerateSecurityReport(t.falconDir, allVulnerabilities, params)
 	if err != nil {
 		// Non-fatal, continue
 		reportPath = ""
@@ -190,7 +190,7 @@ func (t *SecurityScannerTool) getEndpoints(specifiedEndpoints []string) (map[str
 	}
 
 	// Load from Knowledge Graph
-	builder := spec_ingester.NewGraphBuilder(t.zapDir)
+	builder := spec_ingester.NewGraphBuilder(t.falconDir)
 	graph, err := builder.LoadGraph()
 	if err != nil {
 		return nil, err

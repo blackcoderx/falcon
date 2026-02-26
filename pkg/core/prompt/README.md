@@ -54,7 +54,7 @@ Instead of showing ALL framework hints, only the user's configured framework is 
 import "github.com/blackcoderx/falcon/pkg/core/prompt"
 
 builder := prompt.NewBuilder().
-    WithZapFolder(".zap").
+    WithZapFolder(".falcon").
     WithFramework("fastapi").
     WithManifestSummary("5 requests, 2 environments").
     WithMemoryPreview("Base URL: http://localhost:8000").

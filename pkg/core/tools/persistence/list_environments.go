@@ -18,7 +18,7 @@ func NewListEnvironmentsTool(manager *PersistenceManager) *ListEnvironmentsTool 
 func (t *ListEnvironmentsTool) Name() string { return "list_environments" }
 
 func (t *ListEnvironmentsTool) Description() string {
-	return "List all available environments in the .zap/environments directory."
+	return "List all available environments in the .falcon/environments directory."
 }
 
 func (t *ListEnvironmentsTool) Parameters() string {
@@ -32,7 +32,7 @@ func (t *ListEnvironmentsTool) Execute(args string) (string, error) {
 	}
 
 	if len(envs) == 0 {
-		return "No environments found. Create YAML files in .zap/environments/ directory.", nil
+		return "No environments found. Create YAML files in .falcon/environments/ directory.", nil
 	}
 
 	var sb strings.Builder

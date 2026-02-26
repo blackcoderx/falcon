@@ -26,7 +26,7 @@ pkg/core/prompt/
 ├── identity.go      # WHO is the agent (role, purpose)
 ├── guardrails.go    # HARD BOUNDARIES (security, scope enforcement)
 ├── workflow.go      # HOW to operate (decision trees, workflows)
-├── context.go       # CURRENT SESSION (framework, .zap state, memory)
+├── context.go       # CURRENT SESSION (framework, .falcon state, memory)
 ├── tools.go         # WHAT tools are available (compact reference)
 ├── format.go        # HOW to respond (output format rules)
 └── README.md        # Documentation

@@ -11,12 +11,12 @@ import (
 // GraphBuilder is responsible for transforming intermediate ParsedSpec into
 // the final APIKnowledgeGraph used by Falcon
 type GraphBuilder struct {
-	ZapDir string
+	FalconDir string
 }
 
-func NewGraphBuilder(zapDir string) *GraphBuilder {
+func NewGraphBuilder(falconDir string) *GraphBuilder {
 	return &GraphBuilder{
-		ZapDir: zapDir,
+		FalconDir: falconDir,
 	}
 }
 
@@ -72,23 +72,23 @@ func (b *GraphBuilder) mapResponses(codes []int) []shared.Response {
 	return result
 }
 
-// SaveGraph persists the graph to .zap/api_graph.json
+// SaveGraph persists the graph to .falcon/api_graph.json
 func (b *GraphBuilder) SaveGraph(graph *shared.APIKnowledgeGraph) error {
 	data, err := json.MarshalIndent(graph, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal graph: %w", err)
 	}
 
-	path := fmt.Sprintf("%s/api_graph.json", b.ZapDir)
+	path := fmt.Sprintf("%s/api_graph.json", b.FalconDir)
 	if err := os.WriteFile(path, data, 0644); err != nil {
 		return fmt.Errorf("failed to save API graph: %w", err)
 	}
 	return nil
 }
 
-// LoadGraph loads the graph from .zap/api_graph.json
+// LoadGraph loads the graph from .falcon/api_graph.json
 func (b *GraphBuilder) LoadGraph() (*shared.APIKnowledgeGraph, error) {
-	path := fmt.Sprintf("%s/api_graph.json", b.ZapDir)
+	path := fmt.Sprintf("%s/api_graph.json", b.FalconDir)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {

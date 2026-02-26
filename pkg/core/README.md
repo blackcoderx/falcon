@@ -9,7 +9,7 @@ pkg/core/
 ├── types.go               # Core interfaces (Tool, AgentEvent, ConfirmableTool)
 ├── agent.go               # Agent struct, tool registration, call limit enforcement
 ├── react.go               # ReAct loop: ProcessMessage, ProcessMessageWithEvents
-├── init.go                # .zap folder setup, setup wizard, config migration
+├── init.go                # .falcon folder setup, setup wizard, config migration
 ├── memory.go              # Persistent MemoryStore across sessions
 ├── analysis.go            # Stack trace parsing, error context extraction
 ├── manifest.go            # Tool manifest metadata
@@ -178,7 +178,7 @@ The prompt in `pkg/core/prompt/` is built from 20 modular sections:
 3. Guardrails & safety
 4. Behavioral rules
 5. Autonomous workflow
-6. `.zap` folder awareness
+6. `.falcon` folder awareness
 7. Secrets handling
 8. Tool usage rules
 9. Memory operations
@@ -196,10 +196,10 @@ The prompt in `pkg/core/prompt/` is built from 20 modular sections:
 
 ## Memory System
 
-`MemoryStore` in `memory.go` persists facts across sessions in `.zap/memory.json`:
+`MemoryStore` in `memory.go` persists facts across sessions in `.falcon/memory.json`:
 
 ```go
-store := core.NewMemoryStore(".zap/memory.json")
+store := core.NewMemoryStore(".falcon/memory.json")
 store.AddFact("The users endpoint is at /api/v2/users")
 facts := store.GetFacts()
 ```
@@ -218,12 +218,12 @@ ctx := core.ExtractErrorContext(jsonResponse)
 // Returns: ErrorContext{Message: "...", Type: "...", Fields: [...]}
 ```
 
-## .zap Folder
+## .falcon Folder
 
-The `.zap` directory is created on first run by `InitializeZapFolder()`:
+The `.falcon` directory is created on first run by `InitializeZapFolder()`:
 
 ```
-.zap/
+.falcon/
 ├── config.yaml         # LLM provider, model, framework, tool limits
 ├── memory.json         # Persistent agent memory (versioned)
 ├── manifest.json       # Workspace manifest (counts for requests, environments, etc.)

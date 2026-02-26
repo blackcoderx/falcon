@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Manifest represents the .zap folder manifest file.
+// Manifest represents the .falcon folder manifest file.
 // It helps the agent understand the knowledge base structure.
 type Manifest struct {
 	Version     int            `json:"version"`
@@ -20,8 +20,8 @@ type Manifest struct {
 // ManifestFilename is the name of the manifest file
 const ManifestFilename = "manifest.json"
 
-// CreateManifest creates a new manifest.json file in the .zap directory.
-func CreateManifest(zapDir string) error {
+// CreateManifest creates a new manifest.json file in the .falcon directory.
+func CreateManifest(falconDir string) error {
 	manifest := &Manifest{
 		Version:     1,
 		Description: "Falcon knowledge base - saved requests, environments, and test artifacts",
@@ -35,13 +35,13 @@ func CreateManifest(zapDir string) error {
 	manifest.Counts["baselines"] = 0
 	manifest.Counts["variables"] = 0
 
-	return saveManifest(zapDir, manifest)
+	return saveManifest(falconDir, manifest)
 }
 
-// LoadManifest reads the manifest file from the .zap directory.
+// LoadManifest reads the manifest file from the .falcon directory.
 // Returns nil if the file doesn't exist.
-func LoadManifest(zapDir string) (*Manifest, error) {
-	manifestPath := filepath.Join(zapDir, ManifestFilename)
+func LoadManifest(falconDir string) (*Manifest, error) {
+	manifestPath := filepath.Join(falconDir, ManifestFilename)
 	data, err := os.ReadFile(manifestPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -58,35 +58,35 @@ func LoadManifest(zapDir string) (*Manifest, error) {
 	return &manifest, nil
 }
 
-// UpdateManifestCounts scans the .zap directory and updates file counts.
-func UpdateManifestCounts(zapDir string) error {
-	manifest, err := LoadManifest(zapDir)
+// UpdateManifestCounts scans the .falcon directory and updates file counts.
+func UpdateManifestCounts(falconDir string) error {
+	manifest, err := LoadManifest(falconDir)
 	if err != nil {
 		return err
 	}
 
 	// If manifest doesn't exist, create it
 	if manifest == nil {
-		if err := CreateManifest(zapDir); err != nil {
+		if err := CreateManifest(falconDir); err != nil {
 			return err
 		}
-		manifest, _ = LoadManifest(zapDir)
+		manifest, _ = LoadManifest(falconDir)
 	}
 
 	// Count requests
-	requestsDir := filepath.Join(zapDir, "requests")
+	requestsDir := filepath.Join(falconDir, "requests")
 	manifest.Counts["requests"] = countYAMLFiles(requestsDir)
 
 	// Count environments
-	environmentsDir := filepath.Join(zapDir, "environments")
+	environmentsDir := filepath.Join(falconDir, "environments")
 	manifest.Counts["environments"] = countYAMLFiles(environmentsDir)
 
 	// Count baselines
-	baselinesDir := filepath.Join(zapDir, "baselines")
+	baselinesDir := filepath.Join(falconDir, "baselines")
 	manifest.Counts["baselines"] = countJSONFiles(baselinesDir)
 
 	// Count global variables (if variables.json exists)
-	variablesPath := filepath.Join(zapDir, "variables.json")
+	variablesPath := filepath.Join(falconDir, "variables.json")
 	if _, err := os.Stat(variablesPath); err == nil {
 		data, err := os.ReadFile(variablesPath)
 		if err == nil {
@@ -100,12 +100,12 @@ func UpdateManifestCounts(zapDir string) error {
 	// Update timestamp
 	manifest.LastUpdated = time.Now().Format(time.RFC3339)
 
-	return saveManifest(zapDir, manifest)
+	return saveManifest(falconDir, manifest)
 }
 
 // saveManifest writes the manifest to disk
-func saveManifest(zapDir string, manifest *Manifest) error {
-	manifestPath := filepath.Join(zapDir, ManifestFilename)
+func saveManifest(falconDir string, manifest *Manifest) error {
+	manifestPath := filepath.Join(falconDir, ManifestFilename)
 	data, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal manifest: %w", err)
@@ -158,8 +158,8 @@ func countJSONFiles(dir string) int {
 }
 
 // GetManifestSummary returns a human-readable summary of the manifest for the agent
-func GetManifestSummary(zapDir string) string {
-	manifest, err := LoadManifest(zapDir)
+func GetManifestSummary(falconDir string) string {
+	manifest, err := LoadManifest(falconDir)
 	if err != nil || manifest == nil {
 		return ""
 	}

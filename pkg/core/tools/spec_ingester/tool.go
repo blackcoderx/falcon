@@ -15,14 +15,14 @@ import (
 // IngestSpecTool provides commands to index API specifications
 type IngestSpecTool struct {
 	llmClient llm.LLMClient
-	zapDir    string
+	falconDir string
 }
 
 // NewIngestSpecTool creates a new spec ingestion tool
-func NewIngestSpecTool(llmClient llm.LLMClient, zapDir string) *IngestSpecTool {
+func NewIngestSpecTool(llmClient llm.LLMClient, falconDir string) *IngestSpecTool {
 	return &IngestSpecTool{
 		llmClient: llmClient,
-		zapDir:    zapDir,
+		falconDir: falconDir,
 	}
 }
 
@@ -55,7 +55,7 @@ func (t *IngestSpecTool) Execute(args string) (string, error) {
 
 	if params.Action == "status" {
 		// Just check if we have a graph
-		builder := NewGraphBuilder(t.zapDir)
+		builder := NewGraphBuilder(t.falconDir)
 		graph, err := builder.LoadGraph()
 		if err != nil {
 			return "No API Knowledge Graph found. Use 'index' to create one.", nil
@@ -101,7 +101,7 @@ func (t *IngestSpecTool) Execute(args string) (string, error) {
 		SpecPath: params.Source,
 	}
 
-	builder := NewGraphBuilder(t.zapDir)
+	builder := NewGraphBuilder(t.falconDir)
 	graph, err := builder.BuildGraph(parsedSpec, ctx)
 	if err != nil {
 		return "", fmt.Errorf("graph build failed: %w", err)

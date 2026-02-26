@@ -90,7 +90,7 @@ type Model struct {
 
 `InitialModel()` in `init.go`:
 
-1. Loads `config.yaml` from `.zap/`
+1. Loads `config.yaml` from `.falcon/`
 2. Runs the setup wizard (Huh forms) if no config exists
 3. Creates the LLM client (Ollama or Gemini)
 4. Creates the `Agent` and registers all 40+ tools via the central `Registry`

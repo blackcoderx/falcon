@@ -9,13 +9,13 @@ import (
 
 // DocumentationValidatorTool verifies documentation against actual API implementation.
 type DocumentationValidatorTool struct {
-	zapDir string
+	falconDir string
 }
 
 // NewDocumentationValidatorTool creates a new documentation validator tool.
-func NewDocumentationValidatorTool(zapDir string) *DocumentationValidatorTool {
+func NewDocumentationValidatorTool(falconDir string) *DocumentationValidatorTool {
 	return &DocumentationValidatorTool{
-		zapDir: zapDir,
+		falconDir: falconDir,
 	}
 }
 
@@ -59,7 +59,7 @@ func (t *DocumentationValidatorTool) Execute(args string) (string, error) {
 	}
 
 	// 1. Load Knowledge Graph
-	builder := spec_ingester.NewGraphBuilder(t.zapDir)
+	builder := spec_ingester.NewGraphBuilder(t.falconDir)
 	graph, err := builder.LoadGraph()
 	if err != nil {
 		return "", fmt.Errorf("failed to load API Knowledge Graph: %w", err)

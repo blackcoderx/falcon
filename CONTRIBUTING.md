@@ -45,7 +45,7 @@ falcon/
 │   ├── storage/       # Low-level I/O
 │   ├── web/           # Embedded web dashboard
 │   └── tui/           # Terminal UI
-├── .zap/              # Runtime config & memory (created on first run)
+├── .falcon/              # Runtime config & memory (created on first run)
 ├── CLAUDE.md          # Development guidelines for AI assistants
 └── README.md          # User documentation
 ```

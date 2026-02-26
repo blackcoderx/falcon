@@ -7,8 +7,8 @@ import (
 
 // Minimal test to verify compilation and basic function references
 func TestGraphBuilder(t *testing.T) {
-	zapDir := os.TempDir()
-	builder := NewGraphBuilder(zapDir)
+	falconDir := os.TempDir()
+	builder := NewGraphBuilder(falconDir)
 	if builder == nil {
 		t.Fatal("NewGraphBuilder returned nil")
 	}

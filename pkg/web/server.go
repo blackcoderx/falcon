@@ -16,7 +16,7 @@ var staticFiles embed.FS
 // Start binds to the requested port (0 = OS-assigned), registers all routes,
 // and begins serving in a background goroutine. Returns the actual bound port
 // and a shutdown function that drains the server gracefully.
-func Start(zapDir string, port int) (actualPort int, shutdown func(), err error) {
+func Start(falconDir string, port int) (actualPort int, shutdown func(), err error) {
 	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
 		return 0, nil, fmt.Errorf("web: failed to bind port: %w", err)
@@ -30,7 +30,7 @@ func Start(zapDir string, port int) (actualPort int, shutdown func(), err error)
 	}
 
 	mux := http.NewServeMux()
-	registerRoutes(mux, zapDir, staticFS)
+	registerRoutes(mux, falconDir, staticFS)
 
 	srv := &http.Server{
 		Handler:      corsMiddleware(mux),

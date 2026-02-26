@@ -7,13 +7,13 @@ import (
 
 // BreakingChangeDetectorTool identifies breaking changes between two API specifications.
 type BreakingChangeDetectorTool struct {
-	zapDir string
+	falconDir string
 }
 
 // NewBreakingChangeDetectorTool creates a new breaking change detector tool.
-func NewBreakingChangeDetectorTool(zapDir string) *BreakingChangeDetectorTool {
+func NewBreakingChangeDetectorTool(falconDir string) *BreakingChangeDetectorTool {
 	return &BreakingChangeDetectorTool{
-		zapDir: zapDir,
+		falconDir: falconDir,
 	}
 }
 

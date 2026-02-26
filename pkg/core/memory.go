@@ -31,13 +31,13 @@ type memoryFile struct {
 type MemoryStore struct {
 	entries []MemoryEntry
 	mu      sync.RWMutex
-	zapDir  string
+	falconDir string
 }
 
 // NewMemoryStore creates a MemoryStore and loads existing memory.
-func NewMemoryStore(zapDir string) *MemoryStore {
+func NewMemoryStore(falconDir string) *MemoryStore {
 	ms := &MemoryStore{
-		zapDir: zapDir,
+		falconDir: falconDir,
 	}
 	ms.loadMemory()
 	return ms
@@ -147,7 +147,7 @@ func (ms *MemoryStore) GetCompactSummary() string {
 	hasContent := false
 
 	// Inject falcon.md knowledge base
-	falconPath := filepath.Join(ms.zapDir, "falcon.md")
+	falconPath := filepath.Join(ms.falconDir, "falcon.md")
 	if falconData, err := os.ReadFile(falconPath); err == nil && len(falconData) > 0 {
 		content := string(falconData)
 		if strings.Contains(content, "##") {
@@ -183,7 +183,7 @@ func (ms *MemoryStore) UpdateKnowledge(section, newContent string) error {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 
-	falconPath := filepath.Join(ms.zapDir, "falcon.md")
+	falconPath := filepath.Join(ms.falconDir, "falcon.md")
 	data, err := os.ReadFile(falconPath)
 	if err != nil {
 		return fmt.Errorf("failed to read falcon.md: %w", err)
@@ -234,7 +234,7 @@ func (ms *MemoryStore) UpdateKnowledge(section, newContent string) error {
 
 // loadMemory reads memory.json from disk, handling both old ({}) and new (versioned) formats.
 func (ms *MemoryStore) loadMemory() {
-	memPath := filepath.Join(ms.zapDir, "memory.json")
+	memPath := filepath.Join(ms.falconDir, "memory.json")
 	data, err := os.ReadFile(memPath)
 	if err != nil {
 		return // File doesn't exist yet
@@ -263,6 +263,6 @@ func (ms *MemoryStore) saveMemory() error {
 		return fmt.Errorf("failed to marshal memory: %w", err)
 	}
 
-	memPath := filepath.Join(ms.zapDir, "memory.json")
+	memPath := filepath.Join(ms.falconDir, "memory.json")
 	return os.WriteFile(memPath, data, 0644)
 }

@@ -5,11 +5,11 @@ import (
 )
 
 // BuildContextSection generates dynamic context about the current session.
-// This includes .zap folder state, active environment, and framework hints.
+// This includes .falcon folder state, active environment, and framework hints.
 func BuildContextSection(zapFolder, framework, manifestSummary, memoryPreview string) string {
 	var result string
 
-	// .zap folder context
+	// .falcon folder context
 	result += "# SESSION CONTEXT\n\n"
 	result += fmt.Sprintf("**Workspace**: %s\n", zapFolder)
 
@@ -17,9 +17,9 @@ func BuildContextSection(zapFolder, framework, manifestSummary, memoryPreview st
 		result += fmt.Sprintf("**State**: %s\n", manifestSummary)
 	}
 
-	result += "\n**Your .zap folder** (this is your brain — read before acting, write after learning):\n"
+	result += "\n**Your .falcon folder** (this is your brain — read before acting, write after learning):\n"
 	result += "```\n"
-	result += ".zap/\n"
+	result += ".falcon/\n"
 	result += "├── config.yaml        # LLM provider, model, framework, tool limits\n"
 	result += "├── memory.json        # memory(action=save/recall) — persistent learnings\n"
 	result += "├── falcon.md          # API knowledge base — endpoints, auth, errors, models. Use memory(update_knowledge) to update.\n"

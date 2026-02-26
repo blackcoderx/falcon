@@ -14,15 +14,15 @@ type VariableStore struct {
 	session map[string]string // In-memory session variables
 	global  map[string]string // Persistent global variables
 	mu      sync.RWMutex
-	zapDir  string // Path to .zap directory
+	falconDir string // Path to .falcon directory
 }
 
 // NewVariableStore creates a new variable store
-func NewVariableStore(zapDir string) *VariableStore {
+func NewVariableStore(falconDir string) *VariableStore {
 	store := &VariableStore{
 		session: make(map[string]string),
 		global:  make(map[string]string),
-		zapDir:  zapDir,
+		falconDir: falconDir,
 	}
 	store.loadGlobalVariables()
 	return store
@@ -116,7 +116,7 @@ func (vs *VariableStore) Substitute(text string) string {
 
 // loadGlobalVariables reads global variables from disk
 func (vs *VariableStore) loadGlobalVariables() error {
-	varFile := filepath.Join(vs.zapDir, "variables.json")
+	varFile := filepath.Join(vs.falconDir, "variables.json")
 	data, err := os.ReadFile(varFile)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -130,7 +130,7 @@ func (vs *VariableStore) loadGlobalVariables() error {
 
 // saveGlobalVariables writes global variables to disk
 func (vs *VariableStore) saveGlobalVariables() error {
-	varFile := filepath.Join(vs.zapDir, "variables.json")
+	varFile := filepath.Join(vs.falconDir, "variables.json")
 	data, err := json.MarshalIndent(vs.global, "", "  ")
 	if err != nil {
 		return err
@@ -141,7 +141,7 @@ func (vs *VariableStore) saveGlobalVariables() error {
 	}
 
 	// Update manifest counts
-	UpdateManifestCounts(vs.zapDir)
+	UpdateManifestCounts(vs.falconDir)
 	return nil
 }
 

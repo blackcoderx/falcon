@@ -11,7 +11,7 @@ import (
 // FunctionalTestGeneratorTool generates comprehensive functional tests
 // from the API Knowledge Graph using various testing strategies.
 type FunctionalTestGeneratorTool struct {
-	zapDir         string
+	falconDir      string
 	httpTool       *shared.HTTPTool
 	assertTool     *shared.AssertTool
 	strategyEngine *StrategyEngine
@@ -19,9 +19,9 @@ type FunctionalTestGeneratorTool struct {
 }
 
 // NewFunctionalTestGeneratorTool creates a new functional test generator tool.
-func NewFunctionalTestGeneratorTool(zapDir string, httpTool *shared.HTTPTool, assertTool *shared.AssertTool) *FunctionalTestGeneratorTool {
+func NewFunctionalTestGeneratorTool(falconDir string, httpTool *shared.HTTPTool, assertTool *shared.AssertTool) *FunctionalTestGeneratorTool {
 	return &FunctionalTestGeneratorTool{
-		zapDir:         zapDir,
+		falconDir:      falconDir,
 		httpTool:       httpTool,
 		assertTool:     assertTool,
 		strategyEngine: NewStrategyEngine(),
@@ -86,7 +86,7 @@ func (t *FunctionalTestGeneratorTool) Execute(args string) (string, error) {
 	}
 
 	// 1. Load API Knowledge Graph
-	builder := spec_ingester.NewGraphBuilder(t.zapDir)
+	builder := spec_ingester.NewGraphBuilder(t.falconDir)
 	graph, err := builder.LoadGraph()
 	if err != nil {
 		return "", fmt.Errorf("failed to load API Knowledge Graph: %w", err)
@@ -126,7 +126,7 @@ func (t *FunctionalTestGeneratorTool) Execute(args string) (string, error) {
 	// 5. Export to file if requested
 	exportPath := ""
 	if params.Export {
-		path, err := ExportScenarios(t.zapDir, scenarios)
+		path, err := ExportScenarios(t.falconDir, scenarios)
 		if err != nil {
 			return "", fmt.Errorf("failed to export scenarios: %w", err)
 		}

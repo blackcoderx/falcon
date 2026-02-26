@@ -10,14 +10,14 @@ import (
 
 // SchemaConformanceTool verifies that API responses strictly follow their defined schemas.
 type SchemaConformanceTool struct {
-	zapDir   string
-	httpTool *shared.HTTPTool
+	falconDir string
+	httpTool  *shared.HTTPTool
 }
 
 // NewSchemaConformanceTool creates a new schema conformance tool.
-func NewSchemaConformanceTool(zapDir string, httpTool *shared.HTTPTool) *SchemaConformanceTool {
+func NewSchemaConformanceTool(falconDir string, httpTool *shared.HTTPTool) *SchemaConformanceTool {
 	return &SchemaConformanceTool{
-		zapDir:   zapDir,
+		falconDir: falconDir,
 		httpTool: httpTool,
 	}
 }
@@ -107,7 +107,7 @@ func (t *SchemaConformanceTool) Execute(args string) (string, error) {
 }
 
 func (t *SchemaConformanceTool) getEndpoints(specified []string) (map[string]shared.EndpointAnalysis, error) {
-	builder := spec_ingester.NewGraphBuilder(t.zapDir)
+	builder := spec_ingester.NewGraphBuilder(t.falconDir)
 	graph, err := builder.LoadGraph()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load API Knowledge Graph: %w", err)
