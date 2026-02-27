@@ -3,6 +3,8 @@ package agent
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -12,14 +14,16 @@ import (
 
 // RunTestsTool executes multiple test scenarios
 type RunTestsTool struct {
+	falconDir  string
 	httpTool   *shared.HTTPTool
 	assertTool *shared.AssertTool
 	varStore   *shared.VariableStore
 }
 
 // NewRunTestsTool creates a new run_tests tool
-func NewRunTestsTool(httpTool *shared.HTTPTool, assertTool *shared.AssertTool, varStore *shared.VariableStore) *RunTestsTool {
+func NewRunTestsTool(falconDir string, httpTool *shared.HTTPTool, assertTool *shared.AssertTool, varStore *shared.VariableStore) *RunTestsTool {
 	return &RunTestsTool{
+		falconDir:  falconDir,
 		httpTool:   httpTool,
 		assertTool: assertTool,
 		varStore:   varStore,
@@ -34,6 +38,7 @@ type RunTestsParams struct {
 	Categories  []string              `json:"categories,omitempty"`
 	Concurrency int                   `json:"concurrency,omitempty"`
 	TimeoutMs   int                   `json:"timeout_ms,omitempty"`
+	ReportName  string                `json:"report_name,omitempty"` // e.g. "test_report_users_api"
 }
 
 func (t *RunTestsTool) Name() string {
@@ -119,7 +124,7 @@ func (t *RunTestsTool) Execute(args string) (string, error) {
 	passed := 0
 	failed := 0
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Test Results (%d tests):\n\n", len(results)))
+	fmt.Fprintf(&sb, "Test Results (%d tests):\n\n", len(results))
 
 	for _, res := range results {
 		statusIcon := "✓"
@@ -129,18 +134,79 @@ func (t *RunTestsTool) Execute(args string) (string, error) {
 		} else {
 			passed++
 		}
-		sb.WriteString(fmt.Sprintf("%s [%s] %s (%dms)\n", statusIcon, res.Category, res.ScenarioName, res.DurationMs))
+		fmt.Fprintf(&sb, "%s [%s] %s (%dms)\n", statusIcon, res.Category, res.ScenarioName, res.DurationMs)
 		if !res.Passed {
-			sb.WriteString(fmt.Sprintf("  Error: %s\n", res.Error))
+			fmt.Fprintf(&sb, "  Error: %s\n", res.Error)
 			if res.ExpectedStatus != 0 {
-				sb.WriteString(fmt.Sprintf("  Status: Expected %d, Got %d\n", res.ExpectedStatus, res.ActualStatus))
+				fmt.Fprintf(&sb, "  Status: Expected %d, Got %d\n", res.ExpectedStatus, res.ActualStatus)
 			}
 		}
 	}
 
-	sb.WriteString(fmt.Sprintf("\nSummary: %d Passed, %d Failed\n", passed, failed))
+	fmt.Fprintf(&sb, "\nSummary: %d Passed, %d Failed\n", passed, failed)
 
-	return sb.String(), nil
+	summary := sb.String()
+
+	reportPath, err := generateTestReport(t.falconDir, params.ReportName, results, passed, failed)
+	if err != nil {
+		return summary + fmt.Sprintf("\n\nWarning: failed to save report: %v", err), nil
+	}
+
+	return summary + fmt.Sprintf("\n\nReport saved to: %s", reportPath), nil
+}
+
+// generateTestReport writes test results directly to a Markdown file in .falcon/reports/.
+func generateTestReport(falconDir, reportName string, results []shared.TestResult, passed, failed int) (string, error) {
+	reportsDir := filepath.Join(falconDir, "reports")
+	if err := os.MkdirAll(reportsDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create reports directory: %w", err)
+	}
+
+	name := reportName
+	if name == "" {
+		name = fmt.Sprintf("test_report_%s", time.Now().Format("20060102_150405"))
+	}
+	name = strings.ReplaceAll(name, " ", "_")
+	if !strings.HasSuffix(name, ".md") {
+		name += ".md"
+	}
+	reportPath := filepath.Join(reportsDir, name)
+
+	var sb strings.Builder
+
+	fmt.Fprintf(&sb, "# Test Results Report\n\n")
+	fmt.Fprintf(&sb, "**Generated:** %s\n\n", time.Now().Format(time.RFC1123))
+	fmt.Fprintf(&sb, "## Summary\n\n")
+	fmt.Fprintf(&sb, "| Metric | Value |\n|--------|-------|\n")
+	fmt.Fprintf(&sb, "| Total  | %d |\n", len(results))
+	fmt.Fprintf(&sb, "| Passed | %d |\n", passed)
+	fmt.Fprintf(&sb, "| Failed | %d |\n\n", failed)
+
+	fmt.Fprintf(&sb, "## Results\n\n")
+	for _, res := range results {
+		status := "PASS"
+		if !res.Passed {
+			status = "FAIL"
+		}
+		fmt.Fprintf(&sb, "### [%s] %s — %s\n\n", res.ScenarioID, res.ScenarioName, status)
+		fmt.Fprintf(&sb, "- **Category:** %s\n", res.Category)
+		fmt.Fprintf(&sb, "- **Duration:** %dms\n", res.DurationMs)
+		fmt.Fprintf(&sb, "- **Status Code:** %d\n", res.ActualStatus)
+		if res.Error != "" {
+			fmt.Fprintf(&sb, "- **Error:** %s\n", res.Error)
+		}
+		fmt.Fprintf(&sb, "\n")
+	}
+
+	if err := os.WriteFile(reportPath, []byte(sb.String()), 0644); err != nil {
+		return "", fmt.Errorf("failed to write report: %w", err)
+	}
+
+	if err := shared.ValidateReport(reportPath); err != nil {
+		return "", err
+	}
+
+	return reportPath, nil
 }
 
 func (t *RunTestsTool) runSingleScenario(s shared.TestScenario, baseURL string) shared.TestResult {

@@ -232,6 +232,7 @@ The `.falcon` directory is created on first run by `InitializeZapFolder()`:
 ├── environments/       # Environment variable files (dev.yaml, prod.yaml, staging.yaml)
 ├── baselines/          # Reference snapshots for regression testing
 └── flows/              # Saved multi-step API flows
+└── reports/
 ```
 
 `config.yaml` is YAML (not JSON). Example:

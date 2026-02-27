@@ -294,26 +294,50 @@ func (t *TestSuiteTool) formatResults(result SuiteResult) string {
 	return sb.String()
 }
 
-// saveResults saves test results to disk
+// saveResults saves test results to disk as a Markdown report.
 func (t *TestSuiteTool) saveResults(result SuiteResult) error {
-	resultsDir := filepath.Join(t.falconDir, "test-results")
-	if err := os.MkdirAll(resultsDir, 0755); err != nil {
+	reportsDir := filepath.Join(t.falconDir, "reports")
+	if err := os.MkdirAll(reportsDir, 0755); err != nil {
 		return err
 	}
 
 	// Generate filename with timestamp
-	timestamp := result.StartTime.Format("2006-01-02-15-04-05")
-	safeName := strings.ReplaceAll(result.Name, " ", "-")
+	timestamp := result.StartTime.Format("20060102_150405")
+	safeName := strings.ReplaceAll(result.Name, " ", "_")
 	safeName = strings.ToLower(safeName)
-	filename := fmt.Sprintf("%s-%s.json", safeName, timestamp)
-	resultPath := filepath.Join(resultsDir, filename)
+	filename := fmt.Sprintf("suite_report_%s_%s.md", safeName, timestamp)
+	reportPath := filepath.Join(reportsDir, filename)
 
-	// Marshal results
-	data, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
+	// Build markdown report
+	var sb strings.Builder
+
+	fmt.Fprintf(&sb, "# Test Suite Report: %s\n\n", result.Name)
+	fmt.Fprintf(&sb, "**Date:** %s\n\n", result.StartTime.Format(time.RFC1123))
+	fmt.Fprintf(&sb, "## Summary\n\n")
+	fmt.Fprintf(&sb, "| Metric | Value |\n|--------|-------|\n")
+	fmt.Fprintf(&sb, "| Total  | %d |\n", result.TotalTests)
+	fmt.Fprintf(&sb, "| Passed | %d |\n", result.Passed)
+	fmt.Fprintf(&sb, "| Failed | %d |\n", result.Failed)
+	fmt.Fprintf(&sb, "| Duration | %v |\n\n", result.Duration)
+
+	fmt.Fprintf(&sb, "## Test Results\n\n")
+	for i, test := range result.Tests {
+		status := "PASS"
+		if !test.Passed {
+			status = "FAIL"
+		}
+		fmt.Fprintf(&sb, "### %d. [%s] %s\n\n", i+1, status, test.Name)
+		fmt.Fprintf(&sb, "- **Status Code:** %d\n", test.StatusCode)
+		fmt.Fprintf(&sb, "- **Duration:** %v\n", test.Duration)
+		if test.Error != "" {
+			fmt.Fprintf(&sb, "- **Error:** %s\n", test.Error)
+		}
+		fmt.Fprintf(&sb, "\n")
+	}
+
+	if err := os.WriteFile(reportPath, []byte(sb.String()), 0644); err != nil {
 		return err
 	}
 
-	// Write to file
-	return os.WriteFile(resultPath, data, 0644)
+	return ValidateReport(reportPath)
 }

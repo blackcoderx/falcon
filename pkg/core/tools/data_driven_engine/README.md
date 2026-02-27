@@ -12,6 +12,10 @@ This tool iterates over a dataset (CSV, JSON) and injects values into a test sce
 - **Variable Mapping**: Maps column names to request templates (e.g., `{{email}}` -> `user@example.com`).
 - **Batch Processing**: Executes the scenario for every row in the dataset.
 
+## Reports
+
+After every run, `run_data_driven` automatically writes a Markdown report to `.falcon/reports/`. Pass `report_name` to set the filename (e.g. `data_driven_report_users`). If omitted, the filename defaults to `data_driven_report_<timestamp>.md`. A validator confirms the file has content before the tool returns success.
+
 ## Usage
 
 Ideal for testing bulk creation endpoints or checking how an API handles a wide variety of inputs.

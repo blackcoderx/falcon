@@ -154,12 +154,11 @@ func (r *Registry) registerPersistenceTools() {
 // registerAgentTools registers memory, reporting, and orchestration tools.
 func (r *Registry) registerAgentTools() {
 	r.Agent.RegisterTool(zapagent.NewMemoryTool(r.MemStore))
-	r.Agent.RegisterTool(zapagent.NewExportResultsTool(r.FalconDir))
 
 	// orchestration dependencies - use shared instances
 	assertTool := shared.NewAssertTool(r.ResponseManager)
 
-	runTests := zapagent.NewRunTestsTool(r.HTTPTool, assertTool, r.VariableStore)
+	runTests := zapagent.NewRunTestsTool(r.FalconDir, r.HTTPTool, assertTool, r.VariableStore)
 	r.Agent.RegisterTool(runTests)
 	r.Agent.RegisterTool(zapagent.NewRunSingleTestTool(r.HTTPTool, assertTool, r.VariableStore))
 
@@ -198,7 +197,7 @@ func (r *Registry) registerModuleTools() {
 	r.Agent.RegisterTool(smoke_runner.NewSmokeRunnerTool(r.FalconDir, r.HTTPTool))
 	r.Agent.RegisterTool(unit_test_scaffolder.NewUnitTestScaffolderTool(r.LLMClient))
 	r.Agent.RegisterTool(idempotency_verifier.NewIdempotencyVerifierTool(r.FalconDir, r.HTTPTool))
-	r.Agent.RegisterTool(data_driven_engine.NewDataDrivenEngineTool(r.HTTPTool))
+	r.Agent.RegisterTool(data_driven_engine.NewDataDrivenEngineTool(r.FalconDir, r.HTTPTool))
 
 	// Sprint 9 registrations
 	r.Agent.RegisterTool(schema_conformance.NewSchemaConformanceTool(r.FalconDir, r.HTTPTool))

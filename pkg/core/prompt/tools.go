@@ -58,7 +58,7 @@ func BuildToolsSection(tools map[string]Tool) string {
 		case "orchestrate_integration", "test_suite", "scaffold_unit_tests":
 			domains["Orchestration"] = append(domains["Orchestration"], tool)
 
-		case "security_report", "export_results", "memory":
+		case "security_report", "memory":
 			domains["Reporting"] = append(domains["Reporting"], tool)
 		}
 	}
@@ -124,7 +124,6 @@ const CompactToolReference = `# QUICK TOOL REFERENCE
 | Read file | read_file | path, start_line?, end_line? |
 | Write file | write_file | path, content |
 | List files | list_files | path?, pattern? |
-| Export results | export_results | format (json/markdown), output_path? |
 | Save to memory | memory | action="save", key, value |
 | Recall memory | memory | action="recall" |
 | Wait/delay | wait | seconds |
@@ -139,6 +138,6 @@ const CompactToolReference = `# QUICK TOOL REFERENCE
 **Debug**: find_handler, analyze_failure, propose_fix, read_file, search_code, write_file, list_files, create_test_file
 **Performance**: run_performance, performance_test, wait, retry, webhook_listener
 **Orchestration**: orchestrate_integration, test_suite, scaffold_unit_tests
-**Reports**: export_results, memory
+**Reports**: memory
 
 `

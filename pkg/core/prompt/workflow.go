@@ -104,7 +104,12 @@ memory(action="save")          → writes .falcon/memory.json
 memory(action="recall")        → reads  .falcon/memory.json
 memory(action="update_knowledge") → writes .falcon/falcon.md (API knowledge base)
 check_regression               → reads + writes .falcon/baselines/ (.yaml files)
-export_results                 → writes to stdout or file
+scan_security                  → writes .falcon/reports/security_report_<timestamp>.md  (automatic)
+run_performance                → writes .falcon/reports/<report_name>.md  (automatic)
+run_tests                      → writes .falcon/reports/<report_name>.md  (automatic)
+run_data_driven                → writes .falcon/reports/<report_name>.md  (automatic)
+generate_functional_tests      → writes .falcon/reports/functional_report_<timestamp>.md  (automatic)
+test_suite (save_results=true) → writes .falcon/reports/suite_report_<name>_<timestamp>.md  (automatic)
 ` + "```" + `
 
 ---
@@ -115,13 +120,28 @@ export_results                 → writes to stdout or file
 |-----------|-----------|------|
 | Test an endpoint | memory → list_requests → http_request | assert_response → extract_value → save_request |
 | Diagnose a failure | search_code → find_handler → read_file | analyze_failure → propose_fix |
-| Generate test suite | ingest_spec → generate_functional_tests | run_tests → analyze_failure |
+| Generate test suite | ingest_spec → generate_functional_tests | run_tests (pass report_name) → analyze_failure |
 | Security audit | ingest_spec → scan_security | find_handler → propose_fix |
-| Performance test | http_request (verify it works first) | run_performance → export_results |
+| Performance test | http_request (verify it works first) | run_performance (pass report_name e.g. "performance_report_<api>_<resource>") — report is saved automatically |
 | Check for regressions | check_regression | compare_responses |
 | Set up authentication | auth_bearer or auth_oauth2 | variable(scope="session") |
 | Explore the codebase | search_code → read_file | find_handler |
 | Smoke test all endpoints | ingest_spec → run_smoke | analyze_failure |
+
+## Reports
+
+All reports are written directly as Markdown — there is no intermediate JSON format. Every report tool writes straight to .falcon/reports/ using fmt.Fprintf into a strings.Builder, then flushes to disk.
+
+**Rules:**
+- Every report MUST be saved to .falcon/reports/ — never the project root, never a subfolder inside reports/
+- File naming convention:
+  - Performance: performance_report_<api>_<resource>.md
+  - Security: security_report_<timestamp>.md
+  - Functional tests: functional_report_<timestamp>.md
+  - Test suite: suite_report_<name>_<timestamp>.md
+  - run_tests / run_data_driven: test_report_<name>.md / data_driven_report_<name>.md
+- After writing, a validator checks the file exists and has real content. If it is empty or missing, the tool returns an error — fix the data, do not retry blindly.
+- NEVER create report files manually with write_file. Always use the dedicated tool (scan_security, run_performance, run_tests, etc.) so validation runs.
 
 ## Persistence Rules
 

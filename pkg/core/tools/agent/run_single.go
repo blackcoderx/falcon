@@ -54,7 +54,7 @@ func (t *RunSingleTestTool) Execute(args string) (string, error) {
 		return "", fmt.Errorf("scenario definition is required for run_single_test currently (persistence not implemented)")
 	}
 
-	runner := NewRunTestsTool(t.httpTool, t.assertTool, t.varStore)
+	runner := NewRunTestsTool("", t.httpTool, t.assertTool, t.varStore)
 	result := runner.runSingleScenario(*params.Scenario, params.BaseURL)
 
 	resJSON, _ := json.MarshalIndent(result, "", "  ")

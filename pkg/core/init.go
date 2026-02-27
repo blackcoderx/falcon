@@ -418,7 +418,7 @@ func InitializeFalconFolder(framework string, skipIndex bool) error {
 		}
 
 		// Create new folder structure
-		newFolders := []string{"baselines", "flows", "exports"}
+		newFolders := []string{"baselines", "flows", "reports"}
 		for _, folder := range newFolders {
 			if err := os.Mkdir(filepath.Join(FalconFolderName, folder), 0755); err != nil {
 				return fmt.Errorf("failed to create %s folder: %w", folder, err)
@@ -495,7 +495,7 @@ func InitializeFalconFolder(framework string, skipIndex bool) error {
 	if err := ensureDir(filepath.Join(FalconFolderName, "flows")); err != nil {
 		return err
 	}
-	if err := ensureDir(filepath.Join(FalconFolderName, "exports")); err != nil {
+	if err := ensureDir(filepath.Join(FalconFolderName, "reports")); err != nil {
 		return err
 	}
 
@@ -633,7 +633,7 @@ func createDefaultEnvironment() error {
 		{
 			"dev.yaml",
 			`# Development environment
-BASE_URL: http://localhost:3000
+BASE_URL: http://localhost:8000
 API_KEY: your-dev-api-key
 `,
 		},
@@ -701,7 +701,6 @@ var DefaultToolLimits = map[string]int{
 	"create_test_file": 10,
 	// Sprint 4: Reporting
 	"security_report": 20,
-	"export_results":  20,
 	// Memory tool
 	"memory": 50,
 }

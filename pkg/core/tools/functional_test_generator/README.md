@@ -13,7 +13,7 @@ This tool generates and optionally executes comprehensive functional tests.
     - **Negative**: Invalid inputs, missing fields, wrong types.
     - **Boundary**: Edge cases, min/max values.
 - **Filtering**: Target specific endpoints or strategies.
-- **Export**: Save generated scenarios to JSON for later use.
+- **Export**: Automatically saves a Markdown report of all generated scenarios to `.falcon/reports/functional_report_<timestamp>.md`.
 
 ## Usage
 

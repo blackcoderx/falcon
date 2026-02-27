@@ -12,6 +12,10 @@ This tool runs a battery of security tests including OWASP Top 10 checks, fuzzin
 - **Fuzzing**: Sends malformed data to endpoints to detect crashes or improper error handling.
 - **Auth Audit**: Checks for weak tokens, missing authorization checks, and privilege escalation risks.
 
+## Reports
+
+After every scan, `scan_security` automatically writes a Markdown report to `.falcon/reports/security_report_<timestamp>.md`. The report includes a severity summary table and full details for each vulnerability found. A validator confirms the file has content before the tool returns success.
+
 ## Usage
 
 Use this tool to actively probe your API for vulnerabilities.

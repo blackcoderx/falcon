@@ -3,28 +3,35 @@ package data_driven_engine
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 )
 
 // DataDrivenEngineTool executes test scenarios using data from external sources.
 type DataDrivenEngineTool struct {
-	httpTool *shared.HTTPTool
+	falconDir string
+	httpTool  *shared.HTTPTool
 }
 
 // NewDataDrivenEngineTool creates a new data-driven engine tool.
-func NewDataDrivenEngineTool(httpTool *shared.HTTPTool) *DataDrivenEngineTool {
+func NewDataDrivenEngineTool(falconDir string, httpTool *shared.HTTPTool) *DataDrivenEngineTool {
 	return &DataDrivenEngineTool{
-		httpTool: httpTool,
+		falconDir: falconDir,
+		httpTool:  httpTool,
 	}
 }
 
 // DataDrivenParams defines parameters for data-driven testing.
 type DataDrivenParams struct {
-	Scenario   shared.TestScenario `json:"scenario"`           // Base scenario template
-	DataSource string              `json:"data_source"`        // Path to CSV/JSON file or 'fake'
-	Variables  []string            `json:"variables"`          // Variable names to map
-	MaxRows    int                 `json:"max_rows,omitempty"` // Limit number of rows to process
+	Scenario   shared.TestScenario `json:"scenario"`              // Base scenario template
+	DataSource string              `json:"data_source"`           // Path to CSV/JSON file or 'fake'
+	Variables  []string            `json:"variables"`             // Variable names to map
+	MaxRows    int                 `json:"max_rows,omitempty"`    // Limit number of rows to process
+	ReportName string              `json:"report_name,omitempty"` // e.g. "data_driven_report_users"
 }
 
 // DataDrivenResult represents the outcome of the data-driven test run.
@@ -108,8 +115,67 @@ func (t *DataDrivenEngineTool) Execute(args string) (string, error) {
 	}
 	result.Summary = t.formatSummary(result)
 
-	_ = result
-	return result.Summary, nil
+	reportPath, err := generateDataDrivenReport(t.falconDir, params.ReportName, result)
+	if err != nil {
+		return result.Summary + fmt.Sprintf("\n\nWarning: failed to save report: %v", err), nil
+	}
+
+	return result.Summary + fmt.Sprintf("\n\nReport saved to: %s", reportPath), nil
+}
+
+// generateDataDrivenReport writes data-driven test results to a Markdown file in .falcon/reports/.
+func generateDataDrivenReport(falconDir, reportName string, result DataDrivenResult) (string, error) {
+	reportsDir := filepath.Join(falconDir, "reports")
+	if err := os.MkdirAll(reportsDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create reports directory: %w", err)
+	}
+
+	name := reportName
+	if name == "" {
+		name = fmt.Sprintf("data_driven_report_%s", time.Now().Format("20060102_150405"))
+	}
+	name = strings.ReplaceAll(name, " ", "_")
+	if !strings.HasSuffix(name, ".md") {
+		name += ".md"
+	}
+	reportPath := filepath.Join(reportsDir, name)
+
+	var sb strings.Builder
+
+	fmt.Fprintf(&sb, "# Data-Driven Test Report\n\n")
+	fmt.Fprintf(&sb, "**Generated:** %s\n\n", time.Now().Format(time.RFC1123))
+	fmt.Fprintf(&sb, "## Summary\n\n")
+	fmt.Fprintf(&sb, "| Metric | Value |\n|--------|-------|\n")
+	fmt.Fprintf(&sb, "| Total Rows | %d |\n", result.TotalRows)
+	fmt.Fprintf(&sb, "| Passed | %d |\n", result.PassedRows)
+	fmt.Fprintf(&sb, "| Failed | %d |\n\n", result.FailedRows)
+
+	if len(result.Results) > 0 {
+		fmt.Fprintf(&sb, "## Row Results\n\n")
+		for _, res := range result.Results {
+			status := "PASS"
+			if !res.Passed {
+				status = "FAIL"
+			}
+			fmt.Fprintf(&sb, "### [%s] %s — %s\n\n", res.ScenarioID, res.ScenarioName, status)
+			fmt.Fprintf(&sb, "- **Duration:** %dms\n", res.DurationMs)
+			fmt.Fprintf(&sb, "- **Status Code:** %d\n", res.ActualStatus)
+			if res.Error != "" {
+				fmt.Fprintf(&sb, "- **Error:** %s\n", res.Error)
+			}
+			fmt.Fprintf(&sb, "\n")
+		}
+	}
+
+	if err := os.WriteFile(reportPath, []byte(sb.String()), 0644); err != nil {
+		return "", fmt.Errorf("failed to write report: %w", err)
+	}
+
+	if err := shared.ValidateReport(reportPath); err != nil {
+		return "", err
+	}
+
+	return reportPath, nil
 }
 
 func (t *DataDrivenEngineTool) formatSummary(r DataDrivenResult) string {

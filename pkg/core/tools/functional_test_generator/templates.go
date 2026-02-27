@@ -1,40 +1,66 @@
 package functional_test_generator
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 )
 
-// ExportScenarios exports test scenarios to a JSON file.
+// ExportScenarios exports test scenarios to a Markdown report.
 func ExportScenarios(falconDir string, scenarios []shared.TestScenario) (string, error) {
-	// Create exports directory if it doesn't exist
-	exportsDir := filepath.Join(falconDir, "exports")
-	if err := os.MkdirAll(exportsDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create exports directory: %w", err)
+	// Save into shared reports directory
+	reportsDir := filepath.Join(falconDir, "reports")
+	if err := os.MkdirAll(reportsDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create reports directory: %w", err)
 	}
 
 	// Generate filename with timestamp
 	timestamp := time.Now().Format("20060102_150405")
-	filename := fmt.Sprintf("functional_tests_%s.json", timestamp)
-	filepath := filepath.Join(exportsDir, filename)
+	filename := fmt.Sprintf("functional_report_%s.md", timestamp)
+	reportPath := filepath.Join(reportsDir, filename)
 
-	// Marshal scenarios to JSON
-	data, err := json.MarshalIndent(scenarios, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal scenarios: %w", err)
+	// Build markdown report
+	var sb strings.Builder
+
+	fmt.Fprintf(&sb, "# Functional Test Report\n\n")
+	fmt.Fprintf(&sb, "**Generated:** %s\n\n", time.Now().Format(time.RFC1123))
+	fmt.Fprintf(&sb, "**Total Scenarios:** %d\n\n", len(scenarios))
+
+	if len(scenarios) == 0 {
+		fmt.Fprintf(&sb, "No test scenarios were generated.\n")
+	} else {
+		fmt.Fprintf(&sb, "## Scenarios\n\n")
+		for _, s := range scenarios {
+			fmt.Fprintf(&sb, "### %s\n\n", s.Name)
+			fmt.Fprintf(&sb, "- **ID:** %s\n", s.ID)
+			fmt.Fprintf(&sb, "- **Category:** %s\n", s.Category)
+			fmt.Fprintf(&sb, "- **Severity:** %s\n", s.Severity)
+			fmt.Fprintf(&sb, "- **Description:** %s\n", s.Description)
+			fmt.Fprintf(&sb, "- **Method:** %s\n", s.Method)
+			fmt.Fprintf(&sb, "- **URL:** %s\n", s.URL)
+			if s.OWASPRef != "" {
+				fmt.Fprintf(&sb, "- **OWASP Ref:** %s\n", s.OWASPRef)
+			}
+			if s.CWERef != "" {
+				fmt.Fprintf(&sb, "- **CWE Ref:** %s\n", s.CWERef)
+			}
+			fmt.Fprintf(&sb, "\n")
+		}
 	}
 
-	// Write to file
-	if err := os.WriteFile(filepath, data, 0644); err != nil {
-		return "", fmt.Errorf("failed to write file: %w", err)
+	if err := os.WriteFile(reportPath, []byte(sb.String()), 0644); err != nil {
+		return "", fmt.Errorf("failed to write report: %w", err)
 	}
 
-	return filepath, nil
+	if err := shared.ValidateReport(reportPath); err != nil {
+		return "", err
+	}
+
+	return reportPath, nil
 }
 
 // ExportTemplate generates exportable test code templates.

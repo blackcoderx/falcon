@@ -17,6 +17,10 @@ This tool executes multi-mode performance tests and tracks high-resolution laten
 
 Tracks total requests, success rate, RPS (Requests Per Second), and latency percentiles (p50, p95, p99).
 
+## Reports
+
+After every run, `run_performance` automatically writes a Markdown report to `.falcon/reports/`. Pass `report_name` to set the filename (e.g. `performance_report_dummyjson_products`). If omitted, the filename defaults to `performance_report_<timestamp>.md`. No separate export step is needed — the report is written and validated internally.
+
 ## Example Prompts
 
 Trigger this tool by asking:

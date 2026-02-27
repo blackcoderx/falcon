@@ -3,6 +3,9 @@ package performance_engine
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
@@ -31,17 +34,7 @@ type PerformanceParams struct {
 	Concurrency int      `json:"concurrency,omitempty"`  // Number of concurrent virtual users (default: 10)
 	Duration    int      `json:"duration_sec,omitempty"` // Duration of test in seconds (default: 30)
 	RPS         int      `json:"rps,omitempty"`          // Target requests per second (optional)
-}
-
-// PerformanceResult holds the aggregated metrics of a test run.
-type PerformanceResult struct {
-	Mode          string           `json:"mode"`
-	TotalRequests int              `json:"total_requests"`
-	SuccessRate   float64          `json:"success_rate"`
-	Metrics       ExecutionMetrics `json:"metrics"`
-	StartTime     time.Time        `json:"start_time"`
-	Duration      time.Duration    `json:"duration"`
-	Summary       string           `json:"summary"`
+	ReportName  string   `json:"report_name,omitempty"`  // e.g. "performance_report_dummyjson_products"
 }
 
 // Name returns the tool name.
@@ -62,7 +55,8 @@ func (t *PerformanceEngineTool) Parameters() string {
   "endpoints": ["GET /api/users"],
   "concurrency": 10,
   "duration_sec": 30,
-  "rps": 50
+  "rps": 50,
+  "report_name": "performance_report_<api>_<resource>"
 }`
 }
 
@@ -88,26 +82,82 @@ func (t *PerformanceEngineTool) Execute(args string) (string, error) {
 		return "", fmt.Errorf("failed to get endpoints: %w", err)
 	}
 
-	// Initialize test runner
 	runner := NewLoadTestRunner(t.httpTool, params)
 
-	// Execute test
 	startTime := time.Now()
 	metrics := runner.Run(endpoints)
 	duration := time.Since(startTime)
 
-	// Build result
-	result := PerformanceResult{
-		Mode:          params.Mode,
-		TotalRequests: metrics.Total,
-		SuccessRate:   metrics.SuccessRate,
-		Metrics:       metrics,
-		StartTime:     startTime,
-		Duration:      duration,
-		Summary:       metrics.FormatSummary(params.Mode),
+	reportPath, err := generatePerformanceReport(t.falconDir, params, metrics, startTime, duration)
+	if err != nil {
+		return metrics.FormatSummary(params.Mode) + fmt.Sprintf("\n\nWarning: failed to save report: %v", err), nil
 	}
-	_ = result // Suppress unused write to field info lint
-	return result.Summary, nil
+
+	return metrics.FormatSummary(params.Mode) + fmt.Sprintf("\n\nReport saved to: %s", reportPath), nil
+}
+
+// generatePerformanceReport writes the metrics directly to a Markdown file in .falcon/reports/.
+func generatePerformanceReport(falconDir string, params PerformanceParams, metrics ExecutionMetrics, startTime time.Time, duration time.Duration) (string, error) {
+	reportsDir := filepath.Join(falconDir, "reports")
+	if err := os.MkdirAll(reportsDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create reports directory: %w", err)
+	}
+
+	name := params.ReportName
+	if name == "" {
+		name = fmt.Sprintf("performance_report_%s", startTime.Format("20060102_150405"))
+	}
+	name = strings.ReplaceAll(name, " ", "_")
+	if !strings.HasSuffix(name, ".md") {
+		name += ".md"
+	}
+	reportPath := filepath.Join(reportsDir, name)
+
+	var sb strings.Builder
+
+	fmt.Fprintf(&sb, "# Performance Test Report\n\n")
+	fmt.Fprintf(&sb, "**Date:** %s\n\n", startTime.Format(time.RFC1123))
+	fmt.Fprintf(&sb, "**Target:** %s\n\n", params.BaseURL)
+	fmt.Fprintf(&sb, "**Mode:** %s\n\n", params.Mode)
+
+	fmt.Fprintf(&sb, "## Configuration\n\n")
+	fmt.Fprintf(&sb, "| Parameter | Value |\n|-----------|-------|\n")
+	fmt.Fprintf(&sb, "| Concurrency | %d virtual users |\n", params.Concurrency)
+	fmt.Fprintf(&sb, "| Duration | %ds |\n", params.Duration)
+	if params.RPS > 0 {
+		fmt.Fprintf(&sb, "| Target RPS | %d |\n", params.RPS)
+	}
+	if len(params.Endpoints) > 0 {
+		fmt.Fprintf(&sb, "| Endpoints | %s |\n", strings.Join(params.Endpoints, ", "))
+	}
+	fmt.Fprintf(&sb, "\n")
+
+	fmt.Fprintf(&sb, "## Results\n\n")
+	fmt.Fprintf(&sb, "| Metric | Value |\n|--------|-------|\n")
+	fmt.Fprintf(&sb, "| Total Requests | %d |\n", metrics.Total)
+	fmt.Fprintf(&sb, "| Successful | %d |\n", metrics.Success)
+	fmt.Fprintf(&sb, "| Failed | %d |\n", metrics.Fail)
+	fmt.Fprintf(&sb, "| Success Rate | %.2f%% |\n", metrics.SuccessRate)
+	fmt.Fprintf(&sb, "| Test Duration | %v |\n\n", duration)
+
+	fmt.Fprintf(&sb, "## Latency\n\n")
+	fmt.Fprintf(&sb, "| Percentile | Latency |\n|------------|--------|\n")
+	fmt.Fprintf(&sb, "| Avg | %v |\n", metrics.AvgLatency)
+	fmt.Fprintf(&sb, "| Min | %v |\n", metrics.Min)
+	fmt.Fprintf(&sb, "| p50 | %v |\n", metrics.P50)
+	fmt.Fprintf(&sb, "| p95 | %v |\n", metrics.P95)
+	fmt.Fprintf(&sb, "| p99 | %v |\n", metrics.P99)
+	fmt.Fprintf(&sb, "| Max | %v |\n", metrics.Max)
+
+	if err := os.WriteFile(reportPath, []byte(sb.String()), 0644); err != nil {
+		return "", fmt.Errorf("failed to write report: %w", err)
+	}
+
+	if err := shared.ValidateReport(reportPath); err != nil {
+		return "", err
+	}
+
+	return reportPath, nil
 }
 
 func (t *PerformanceEngineTool) getEndpoints(specified []string) (map[string]shared.EndpointAnalysis, error) {
