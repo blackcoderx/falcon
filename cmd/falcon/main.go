@@ -141,11 +141,11 @@ func runCLI(requestName, env string) error {
 		// varStore.LoadEnvironment(envName) // Hypothetical
 	}
 
-	// Load request
-	loadTool := persistence.NewLoadRequestTool(persistManager)
-	loadArgs := fmt.Sprintf(`{"name_or_id": "%s"}`, requestName)
+	// Load request using unified request tool
+	requestTool := persistence.NewRequestTool(persistManager)
+	loadArgs := fmt.Sprintf(`{"action":"load","name":"%s"}`, requestName)
 
-	reqArgs, err := loadTool.Execute(loadArgs)
+	reqArgs, err := requestTool.Execute(loadArgs)
 	if err != nil {
 		return fmt.Errorf("failed to load request '%s': %w", requestName, err)
 	}

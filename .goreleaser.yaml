@@ -8,7 +8,7 @@ before:
     - go build ./...
 
 builds:
-  - id: zap
+  - id: falcon
     main: ./cmd/falcon
     binary: falcon
     env:

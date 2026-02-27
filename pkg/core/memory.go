@@ -34,6 +34,9 @@ type MemoryStore struct {
 	falconDir string
 }
 
+// FalconDir returns the base .falcon directory path.
+func (ms *MemoryStore) FalconDir() string { return ms.falconDir }
+
 // NewMemoryStore creates a MemoryStore and loads existing memory.
 func NewMemoryStore(falconDir string) *MemoryStore {
 	ms := &MemoryStore{

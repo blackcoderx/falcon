@@ -3,9 +3,11 @@ package agent
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/blackcoderx/falcon/pkg/core"
+	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 )
 
 // MemoryTool provides persistent memory operations for the agent.
@@ -138,7 +140,12 @@ func (t *MemoryTool) Execute(args string) (string, error) {
 		if err := t.store.UpdateKnowledge(params.Section, params.Content); err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("Updated '%s' section in falcon.md", params.Section), nil
+		// Validate that the write produced meaningful content
+		falconMDPath := filepath.Join(t.store.FalconDir(), "falcon.md")
+		if err := shared.ValidateFalconMD(falconMDPath); err != nil {
+			return fmt.Sprintf("Updated '%s' in falcon.md but validation warning: %v", params.Section, err), nil
+		}
+		return fmt.Sprintf("Updated '%s' section in falcon.md (validated)", params.Section), nil
 
 	default:
 		return "", fmt.Errorf("unknown action '%s' (use: save, recall, forget, list, update_knowledge)", params.Action)

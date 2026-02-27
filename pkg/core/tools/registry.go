@@ -3,24 +3,18 @@ package tools
 import (
 	"github.com/blackcoderx/falcon/pkg/core"
 	zapagent "github.com/blackcoderx/falcon/pkg/core/tools/agent"
-	"github.com/blackcoderx/falcon/pkg/core/tools/api_drift_analyzer"
-	"github.com/blackcoderx/falcon/pkg/core/tools/breaking_change_detector"
 	"github.com/blackcoderx/falcon/pkg/core/tools/data_driven_engine"
 	"github.com/blackcoderx/falcon/pkg/core/tools/debugging"
-	"github.com/blackcoderx/falcon/pkg/core/tools/dependency_mapper"
-	"github.com/blackcoderx/falcon/pkg/core/tools/documentation_validator"
 	"github.com/blackcoderx/falcon/pkg/core/tools/functional_test_generator"
 	"github.com/blackcoderx/falcon/pkg/core/tools/idempotency_verifier"
 	"github.com/blackcoderx/falcon/pkg/core/tools/integration_orchestrator"
 	"github.com/blackcoderx/falcon/pkg/core/tools/performance_engine"
 	"github.com/blackcoderx/falcon/pkg/core/tools/persistence"
 	"github.com/blackcoderx/falcon/pkg/core/tools/regression_watchdog"
-	"github.com/blackcoderx/falcon/pkg/core/tools/schema_conformance"
 	"github.com/blackcoderx/falcon/pkg/core/tools/security_scanner"
 	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 	"github.com/blackcoderx/falcon/pkg/core/tools/smoke_runner"
 	"github.com/blackcoderx/falcon/pkg/core/tools/spec_ingester"
-	"github.com/blackcoderx/falcon/pkg/core/tools/unit_test_scaffolder"
 	"github.com/blackcoderx/falcon/pkg/llm"
 )
 
@@ -30,7 +24,7 @@ type Registry struct {
 	Agent          *core.Agent
 	LLMClient      llm.LLMClient
 	WorkDir        string
-	FalconDir         string
+	FalconDir      string
 	MemStore       *core.MemoryStore
 	ConfirmManager *shared.ConfirmationManager
 
@@ -54,7 +48,7 @@ func NewRegistry(
 		Agent:          agent,
 		LLMClient:      llmClient,
 		WorkDir:        workDir,
-		FalconDir:         falconDir,
+		FalconDir:      falconDir,
 		MemStore:       memStore,
 		ConfirmManager: confirmManager,
 	}
@@ -80,12 +74,12 @@ func (r *Registry) initServices() {
 	r.ResponseManager = shared.NewResponseManager()
 	r.VariableStore = shared.NewVariableStore(r.FalconDir)
 	r.PersistManager = persistence.NewPersistenceManager(r.FalconDir)
-	r.HTTPTool = shared.NewHTTPTool(r.ResponseManager, r.VariableStore) // Initialize once
+	r.HTTPTool = shared.NewHTTPTool(r.ResponseManager, r.VariableStore)
 }
 
 // registerSharedTools registers foundational tools (HTTP, Assertions, Auth, etc).
 func (r *Registry) registerSharedTools() {
-	// core tools - use the shared instance
+	// core HTTP tool - shared instance
 	r.Agent.RegisterTool(r.HTTPTool)
 
 	// assertions & extraction
@@ -98,17 +92,13 @@ func (r *Registry) registerSharedTools() {
 	r.Agent.RegisterTool(shared.NewWaitTool())
 	r.Agent.RegisterTool(shared.NewRetryTool(r.Agent))
 
-	// auth tools
-	r.Agent.RegisterTool(shared.NewBearerTool(r.VariableStore))
-	r.Agent.RegisterTool(shared.NewBasicTool(r.VariableStore))
-	r.Agent.RegisterTool(shared.NewHelperTool(r.ResponseManager, r.VariableStore))
-	r.Agent.RegisterTool(shared.NewOAuth2Tool(r.VariableStore))
+	// unified auth tool (replaces auth_bearer, auth_basic, auth_oauth2, auth_helper)
+	r.Agent.RegisterTool(shared.NewAuthTool(r.ResponseManager, r.VariableStore))
 
-	// webhooks & performance
+	// webhooks
 	r.Agent.RegisterTool(shared.NewWebhookListenerTool(r.VariableStore))
-	r.Agent.RegisterTool(shared.NewPerformanceTool(r.HTTPTool, r.VariableStore))
 
-	// suites
+	// test suites
 	r.Agent.RegisterTool(shared.NewTestSuiteTool(
 		r.HTTPTool,
 		shared.NewAssertTool(r.ResponseManager),
@@ -117,6 +107,11 @@ func (r *Registry) registerSharedTools() {
 		r.VariableStore,
 		r.FalconDir,
 	))
+
+	// .falcon-scoped read/write tools
+	r.Agent.RegisterTool(shared.NewFalconWriteTool(r.FalconDir))
+	r.Agent.RegisterTool(shared.NewFalconReadTool(r.FalconDir))
+	r.Agent.RegisterTool(shared.NewSessionLogTool(r.FalconDir))
 }
 
 // registerDebuggingTools registers tools for code analysis and fixing.
@@ -131,41 +126,36 @@ func (r *Registry) registerDebuggingTools() {
 	r.Agent.RegisterTool(debugging.NewFindHandlerTool(r.WorkDir))
 	r.Agent.RegisterTool(debugging.NewAnalyzeEndpointTool(r.LLMClient))
 	r.Agent.RegisterTool(debugging.NewAnalyzeFailureTool(r.LLMClient))
-	r.Agent.RegisterTool(debugging.NewGenerateTestsTool(r.LLMClient))
 	r.Agent.RegisterTool(debugging.NewProposeFixTool(r.LLMClient))
 	r.Agent.RegisterTool(debugging.NewCreateTestFileTool(r.LLMClient))
 }
 
 // registerPersistenceTools registers tools for saving state and requests.
 func (r *Registry) registerPersistenceTools() {
-	// variables (wrapped)
+	// variables
 	r.Agent.RegisterTool(persistence.NewVariableTool(r.VariableStore))
 
-	// request management
-	r.Agent.RegisterTool(persistence.NewSaveRequestTool(r.PersistManager))
-	r.Agent.RegisterTool(persistence.NewLoadRequestTool(r.PersistManager))
-	r.Agent.RegisterTool(persistence.NewListRequestsTool(r.PersistManager))
+	// unified request management (replaces save_request, load_request, list_requests)
+	r.Agent.RegisterTool(persistence.NewRequestTool(r.PersistManager))
 
-	// environment management
-	r.Agent.RegisterTool(persistence.NewSetEnvironmentTool(r.PersistManager))
-	r.Agent.RegisterTool(persistence.NewListEnvironmentsTool(r.PersistManager))
+	// unified environment management (replaces set_environment, list_environments)
+	r.Agent.RegisterTool(persistence.NewEnvironmentTool(r.PersistManager))
 }
 
 // registerAgentTools registers memory, reporting, and orchestration tools.
 func (r *Registry) registerAgentTools() {
 	r.Agent.RegisterTool(zapagent.NewMemoryTool(r.MemStore))
 
-	// orchestration dependencies - use shared instances
 	assertTool := shared.NewAssertTool(r.ResponseManager)
 
+	// run_tests now handles both single and bulk execution via optional scenario param
 	runTests := zapagent.NewRunTestsTool(r.FalconDir, r.HTTPTool, assertTool, r.VariableStore)
 	r.Agent.RegisterTool(runTests)
-	r.Agent.RegisterTool(zapagent.NewRunSingleTestTool(r.HTTPTool, assertTool, r.VariableStore))
 
 	// auto test orchestrator
 	r.Agent.RegisterTool(zapagent.NewAutoTestTool(
+		r.LLMClient,
 		debugging.NewAnalyzeEndpointTool(r.LLMClient),
-		debugging.NewGenerateTestsTool(r.LLMClient),
 		runTests,
 		debugging.NewAnalyzeFailureTool(r.LLMClient),
 	))
@@ -192,19 +182,11 @@ func (r *Registry) registerPerformanceEngineTools() {
 	r.Agent.RegisterTool(performance_engine.NewPerformanceEngineTool(r.FalconDir, r.HTTPTool))
 }
 
-// registerModuleTools registers the high-level capability modules (Smoke, Idempotency, etc).
+// registerModuleTools registers high-level capability modules.
 func (r *Registry) registerModuleTools() {
 	r.Agent.RegisterTool(smoke_runner.NewSmokeRunnerTool(r.FalconDir, r.HTTPTool))
-	r.Agent.RegisterTool(unit_test_scaffolder.NewUnitTestScaffolderTool(r.LLMClient))
 	r.Agent.RegisterTool(idempotency_verifier.NewIdempotencyVerifierTool(r.FalconDir, r.HTTPTool))
 	r.Agent.RegisterTool(data_driven_engine.NewDataDrivenEngineTool(r.FalconDir, r.HTTPTool))
-
-	// Sprint 9 registrations
-	r.Agent.RegisterTool(schema_conformance.NewSchemaConformanceTool(r.FalconDir, r.HTTPTool))
-	r.Agent.RegisterTool(breaking_change_detector.NewBreakingChangeDetectorTool(r.FalconDir))
-	r.Agent.RegisterTool(dependency_mapper.NewDependencyMapperTool(r.FalconDir))
-	r.Agent.RegisterTool(documentation_validator.NewDocumentationValidatorTool(r.FalconDir))
-	r.Agent.RegisterTool(api_drift_analyzer.NewAPIDriftAnalyzerTool(r.FalconDir, r.HTTPTool))
 }
 
 // registerWorkflowTools registers integration and regression modules.

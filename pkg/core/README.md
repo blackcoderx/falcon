@@ -16,8 +16,8 @@ pkg/core/
 ├── secrets.go             # Secrets detection and handling
 ├── prompt_integration.go  # Helpers for injecting tool descriptions into system prompt
 ├── react_test.go          # Unit tests for the ReAct loop
-├── prompt/                # Modular system prompt builder (20 sections)
-└── tools/                 # All 40+ tool implementations (see tools/README.md)
+├── prompt/                # Modular system prompt builder (workflow + tools sections)
+└── tools/                 # 28-tool implementations organized by testing type (see tools/README.md)
 ```
 
 ## Core Interfaces
@@ -171,28 +171,23 @@ if agent.totalCalls >= agent.totalLimit {
 
 ## System Prompt
 
-The prompt in `pkg/core/prompt/` is built from 20 modular sections:
+The prompt in `pkg/core/prompt/` is built from modular sections defined in `workflow.go` and `tools.go`:
 
-1. Identity & response format
-2. Scope (what Falcon does and does not do)
-3. Guardrails & safety
-4. Behavioral rules
-5. Autonomous workflow
-6. `.falcon` folder awareness
-7. Secrets handling
-8. Tool usage rules
-9. Memory operations
-10. Tools catalog
-11. Framework-specific hints (gin, fastapi, express, etc.)
-12. Natural language parsing
-13. Error diagnosis
-14. Common errors
-15. Persistence (save/load patterns)
-16. Testing patterns
-17. Request chaining
-18. Authentication flows
-19. Test suites
-20. Output format
+**workflow.go:**
+- **Mandatory Session Start**: memory(recall) + session_log(start) at every conversation beginning
+- **Mandatory Session End**: session_log(end, summary) before final answer
+- **Which Testing Type?**: Decision table for 8 API testing types (Unit, Integration, Smoke, Functional, Contract, Performance, Security, E2E)
+- **The Five Phases**: Orient, Hypothesize, Act, Interpret, Persist
+- **Tool Disambiguation**: Clarifies merged tools (auth, request, environment) and new tools (falcon_write, falcon_read, session_log)
+- **.falcon File Naming Convention**: Flat structure with type-prefixed filenames
+- **Tool Selection**: Cost hierarchy and when to use which tool
+- **Confidence Calibration**: When to stop investigating vs. admit uncertainty
+- **Reports**: Validation rules for all report types
+- **Persistence Rules**: What to save and where
+
+**tools.go:**
+- **Available Tools**: All 28 tools organized by domain (Core, Persistence, Spec, Unit, Integration, Smoke, Functional, Contract, Performance, Security, Debugging, Orchestration)
+- **Compact Tool Reference**: Quick lookup table with tool intent, params, and domains
 
 ## Memory System
 
@@ -218,24 +213,73 @@ ctx := core.ExtractErrorContext(jsonResponse)
 // Returns: ErrorContext{Message: "...", Type: "...", Fields: [...]}
 ```
 
-## .falcon Folder
+## .falcon Folder Structure
 
-The `.falcon` directory is created on first run by `InitializeZapFolder()`:
+The `.falcon` directory is created on first run by `InitializeDefaultFolder()`. It uses a **flat structure** — no subdirectories in `reports/` or `flows/`. Filenames carry context via type prefix:
 
 ```
 .falcon/
-├── config.yaml         # LLM provider, model, framework, tool limits
-├── memory.json         # Persistent agent memory (versioned)
-├── manifest.json       # Workspace manifest (counts for requests, environments, etc.)
-├── falcon.md           # Falcon knowledge base template
-├── requests/           # Saved API requests (YAML)
-├── environments/       # Environment variable files (dev.yaml, prod.yaml, staging.yaml)
-├── baselines/          # Reference snapshots for regression testing
-└── flows/              # Saved multi-step API flows
+├── config.yaml              # LLM provider, model, framework, tool limits
+├── manifest.json            # Workspace manifest (counts)
+├── memory.json              # Persistent agent memory
+├── falcon.md                # API knowledge base (validated on write)
+├── spec.yaml                # Ingested API spec (YAML, single file)
+├── variables.json           # Global variables
+├── sessions/
+│   ├── session_2026-02-27T14:32:01Z.json
+│   └── session_2026-02-27T15:45:22Z.json
+├── environments/
+│   ├── dev.yaml
+│   ├── prod.yaml
+│   └── staging.yaml
+├── requests/
+│   ├── create_user.yaml
+│   └── get_users.yaml
+├── baselines/
+│   ├── baseline_users_api.json
+│   └── baseline_products_api.json
+├── flows/
+│   ├── unit_get_users.yaml
+│   ├── integration_login_create_delete.yaml
+│   ├── smoke_all_endpoints.yaml
+│   └── security_auth_bypass.yaml
 └── reports/
+    ├── performance_report_dummyjson_products_20260227.md
+    ├── security_report_products_api_20260227.md
+    ├── functional_report_users_api_20260227.md
+    └── unit_report_get_users_20260227.md
 ```
 
-`config.yaml` is YAML (not JSON). Example:
+### File Naming Conventions
+
+**Reports**: `<type>_report_<api-name>_<timestamp>.md`
+- Examples: `performance_report_dummyjson_products.md`, `security_report_auth_api.md`
+
+**Flows**: `<type>_<description>.yaml`
+- Examples: `unit_get_users.yaml`, `integration_login_flow.yaml`, `security_auth_bypass.yaml`
+
+**Spec**: `spec.yaml` (single file, YAML format for human readability)
+
+### Validators
+
+Two new validators ensure report and knowledge base quality:
+
+1. **ValidateReportContent** (`shared/report_validator.go`):
+   - Checks file exists and is > 64 bytes
+   - Verifies Markdown heading present (`# ` or `## `)
+   - Confirms result indicators (table `|`, code block ` ``` `, or keywords like `PASS`, `FAIL`, `✓`, `✗`)
+   - Rejects unresolved placeholders (`{{`, `TODO`, `[placeholder]`)
+   - Called after every report write; returns error if validation fails so agent can retry
+
+2. **ValidateFalconMD** (`shared/report_validator.go`):
+   - Checks file exists and is > 200 bytes
+   - Verifies required sections: `# Base URLs`, `# Known Endpoints`
+   - Confirms each section has non-empty content
+   - Called after `memory(action=update_knowledge)`; returns validation warning if it fails
+
+### config.yaml Format
+
+Example:
 
 ```yaml
 provider: ollama
@@ -251,13 +295,31 @@ tool_limits:
   total_limit: 200
   per_tool:
     http_request: 25
-    variable: 100
+    auth: 50
+    request: 50
+    memory: 100
+    run_performance: 10
 web_ui:
   enabled: true
   port: 0
 ```
 
 Config migration (`migrateLegacyConfig`) automatically promotes legacy top-level `ollama_url` / `ollama_api_key` fields into the `ollama` sub-object.
+
+### Session Logging
+
+Each session writes a JSON record to `.falcon/sessions/session_<timestamp>.json`:
+
+```json
+{
+  "session_id": "2026-02-27T14:32:01Z",
+  "start_time": "2026-02-27T14:32:01Z",
+  "end_time": "2026-02-27T14:45:22Z",
+  "summary": "Tested POST /users — found 422 on missing email field, fixed validation in user_handler.go"
+}
+```
+
+Sessions are an audit trail: user can call `session_log(action=list)` to see recent tests or `session_log(action=read, session="...")` to review a specific session.
 
 ## Adding New Functionality
 

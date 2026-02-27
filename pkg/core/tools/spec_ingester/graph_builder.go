@@ -1,26 +1,24 @@
 package spec_ingester
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 
 	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
+	"gopkg.in/yaml.v3"
 )
 
 // GraphBuilder is responsible for transforming intermediate ParsedSpec into
-// the final APIKnowledgeGraph used by Falcon
+// the final APIKnowledgeGraph used by Falcon.
 type GraphBuilder struct {
 	FalconDir string
 }
 
 func NewGraphBuilder(falconDir string) *GraphBuilder {
-	return &GraphBuilder{
-		FalconDir: falconDir,
-	}
+	return &GraphBuilder{FalconDir: falconDir}
 }
 
-// BuildGraph takes parsing results and "fuses" them into a single graph
+// BuildGraph takes parsing results and fuses them into a single graph.
 func (b *GraphBuilder) BuildGraph(spec *ParsedSpec, context shared.ProjectContext) (*shared.APIKnowledgeGraph, error) {
 	graph := &shared.APIKnowledgeGraph{
 		Endpoints: make(map[string]shared.EndpointAnalysis),
@@ -31,19 +29,12 @@ func (b *GraphBuilder) BuildGraph(spec *ParsedSpec, context shared.ProjectContex
 
 	for _, endpoint := range spec.Endpoints {
 		uniqueID := fmt.Sprintf("%s %s", endpoint.Method, endpoint.Path)
-
-		// Map ParsedEndpoint to shared.EndpointAnalysis
-		analysis := shared.EndpointAnalysis{
+		graph.Endpoints[uniqueID] = shared.EndpointAnalysis{
 			Summary:    endpoint.Summary,
 			Parameters: b.mapParameters(endpoint.Parameters),
 			Responses:  b.mapResponses(endpoint.Responses),
-			// AuthType and Security will need enrichment from framework scan later
 		}
-
-		graph.Endpoints[uniqueID] = analysis
 	}
-
-	// TODO: Map Models (Schemas) from spec once we implement schema extraction deep-dive
 
 	return graph, nil
 }
@@ -72,34 +63,34 @@ func (b *GraphBuilder) mapResponses(codes []int) []shared.Response {
 	return result
 }
 
-// SaveGraph persists the graph to .falcon/api_graph.json
+// SaveGraph persists the graph to .falcon/spec.yaml (human-readable YAML).
 func (b *GraphBuilder) SaveGraph(graph *shared.APIKnowledgeGraph) error {
-	data, err := json.MarshalIndent(graph, "", "  ")
+	data, err := yaml.Marshal(graph)
 	if err != nil {
-		return fmt.Errorf("failed to marshal graph: %w", err)
+		return fmt.Errorf("failed to marshal graph to YAML: %w", err)
 	}
 
-	path := fmt.Sprintf("%s/api_graph.json", b.FalconDir)
+	path := fmt.Sprintf("%s/spec.yaml", b.FalconDir)
 	if err := os.WriteFile(path, data, 0644); err != nil {
-		return fmt.Errorf("failed to save API graph: %w", err)
+		return fmt.Errorf("failed to save API spec: %w", err)
 	}
 	return nil
 }
 
-// LoadGraph loads the graph from .falcon/api_graph.json
+// LoadGraph loads the graph from .falcon/spec.yaml.
 func (b *GraphBuilder) LoadGraph() (*shared.APIKnowledgeGraph, error) {
-	path := fmt.Sprintf("%s/api_graph.json", b.FalconDir)
+	path := fmt.Sprintf("%s/spec.yaml", b.FalconDir)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil // Return nil if no graph exists yet
+			return nil, nil // Return nil if no spec has been ingested yet
 		}
-		return nil, fmt.Errorf("failed to read API graph: %w", err)
+		return nil, fmt.Errorf("failed to read spec.yaml: %w", err)
 	}
 
 	var graph shared.APIKnowledgeGraph
-	if err := json.Unmarshal(data, &graph); err != nil {
-		return nil, fmt.Errorf("failed to parse API graph: %w", err)
+	if err := yaml.Unmarshal(data, &graph); err != nil {
+		return nil, fmt.Errorf("failed to parse spec.yaml: %w", err)
 	}
 
 	return &graph, nil

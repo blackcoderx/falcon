@@ -417,12 +417,18 @@ func InitializeFalconFolder(framework string, skipIndex bool) error {
 			return fmt.Errorf("failed to create environments folder: %w", err)
 		}
 
-		// Create new folder structure
-		newFolders := []string{"baselines", "flows", "reports"}
+		// Create folder structure
+		newFolders := []string{"baselines", "flows", "reports", "sessions"}
 		for _, folder := range newFolders {
 			if err := os.Mkdir(filepath.Join(FalconFolderName, folder), 0755); err != nil {
 				return fmt.Errorf("failed to create %s folder: %w", folder, err)
 			}
+		}
+
+		// Create empty spec.yaml (populated by ingest_spec)
+		specPath := filepath.Join(FalconFolderName, "spec.yaml")
+		if err := os.WriteFile(specPath, []byte("# Falcon API Specification\n# Populated automatically by ingest_spec.\n"), 0644); err != nil {
+			return fmt.Errorf("failed to create spec.yaml: %w", err)
 		}
 
 		// Create baselines README
@@ -496,6 +502,9 @@ func InitializeFalconFolder(framework string, skipIndex bool) error {
 		return err
 	}
 	if err := ensureDir(filepath.Join(FalconFolderName, "reports")); err != nil {
+		return err
+	}
+	if err := ensureDir(filepath.Join(FalconFolderName, "sessions")); err != nil {
 		return err
 	}
 
@@ -664,45 +673,56 @@ API_KEY: your-prod-api-key
 
 // DefaultToolLimits defines the default per-tool call limits.
 var DefaultToolLimits = map[string]int{
-	// High-risk tools (external I/O)
+	// Core HTTP
 	"http_request":     25,
-	"performance_test": 5,
 	"webhook_listener": 10,
-	"auth_oauth2":      10,
-	// Medium-risk tools (file system)
-	"read_file":    50,
-	"list_files":   50,
-	"search_code":  30,
-	"save_request": 20,
-	"load_request": 30,
-	// Low-risk tools (in-memory)
-	"variable":             100,
+	// Unified auth (replaces auth_bearer, auth_basic, auth_oauth2, auth_helper)
+	"auth": 50,
+	// Utilities
+	"wait":  20,
+	"retry": 15,
+	// Assertions & extraction
 	"assert_response":      100,
 	"extract_value":        100,
-	"auth_bearer":          50,
-	"auth_basic":           50,
-	"auth_helper":          50,
 	"validate_json_schema": 50,
 	"compare_responses":    30,
-	// Special tools
-	"retry":      15,
-	"wait":       20,
-	"test_suite": 10,
-	// AI Analysis & Orchestration
+	// Unified persistence (replaces save_request, load_request, list_requests)
+	"request": 50,
+	// Unified environment (replaces set_environment, list_environments)
+	"environment": 30,
+	// Variables
+	"variable": 100,
+	// .falcon-scoped tools
+	"falcon_write": 30,
+	"falcon_read":  50,
+	"session_log":  20,
+	// Memory
+	"memory": 50,
+	// Test suites & orchestration
+	"test_suite":              10,
+	"run_tests":               10,
+	"auto_test":               5,
+	"orchestrate_integration": 5,
+	// Spec & test generation
+	"ingest_spec":               5,
+	"generate_functional_tests": 5,
+	// Specialized testing modules
+	"run_smoke":          15,
+	"run_data_driven":    10,
+	"verify_idempotency": 10,
+	"check_regression":   10,
+	"run_performance":    5,
+	"scan_security":      3,
+	// Debugging (file system reads)
+	"read_file":        50,
+	"list_files":       50,
+	"search_code":      30,
+	"find_handler":     20,
 	"analyze_endpoint": 15,
 	"analyze_failure":  15,
-	"generate_tests":   10,
-	"run_tests":        10,
-	"run_single_test":  20,
-	"auto_test":        5,
-	// Sprint 3: Codebase Intelligence & Fixing
-	"find_handler":     20,
 	"propose_fix":      10,
 	"create_test_file": 10,
-	// Sprint 4: Reporting
-	"security_report": 20,
-	// Memory tool
-	"memory": 50,
+	"write_file":       10,
 }
 
 // createDefaultConfig creates a default configuration file with the setup wizard results.

@@ -80,16 +80,6 @@ go build -o falcon.exe ./cmd/falcon
 4. The web dashboard starts on a random localhost port — URL printed to terminal
 5. The interactive TUI launches with the Falcon ASCII splash screen showing version, working directory, and web UI URL
 
-### Try It
-
-```bash
-# In the TUI, type natural language commands:
-> GET http://localhost:8000/api/users
-
-# Falcon makes the request, shows the response, and if there's an error,
-# searches your code to find and explain the cause
-```
-
 ---
 
 ## Features
@@ -104,9 +94,19 @@ Falcon doesn't just show you errors — it explains them:
 - **Regression testing** — Auto-generate test files so bugs stay fixed
 - **Framework patterns** — Detects endpoint handlers across 15+ frameworks using framework-specific idioms
 
-### 40+ Advanced Tools
+### 28 Specialized Tools
 
-Falcon organizes 40+ tools into logical packages via a central `Registry`. See [Available Tools](#available-tools) for the complete list.
+Falcon's toolkit is precisely curated to support 8 API testing types:
+- **Unit**: Test individual endpoints with assertions
+- **Integration**: Chain endpoints into multi-step workflows
+- **Smoke**: Fast health checks across all endpoints
+- **Functional**: Comprehensive happy-path, negative, and edge-case testing
+- **Contract**: Verify API spec compliance and prevent regressions
+- **Performance**: Load testing, stress testing, soak testing
+- **Security**: OWASP vulnerability scanning and auth bypass detection
+- **E2E**: End-to-end user journeys across services
+
+Tools are organized by domain via a central `Registry`. See [Available Tools](#available-tools) for the complete list.
 
 ### Beautiful Terminal Interface
 
@@ -340,21 +340,7 @@ falcon version                          # Print version, commit, build date
 falcon update                           # Self-update to latest release
 ```
 
-### .falcon Folder Structure
 
-The `.falcon` directory is created on first run and acts as Falcon's workspace — config, memory, requests, and baselines all live here.
-
-```
-.falcon/
-├── config.yaml         # LLM provider, model, framework, tool limits
-├── memory.json         # Persistent agent memory (versioned)
-├── manifest.json       # Workspace manifest (request/environment counts)
-├── falcon.md           # Falcon knowledge base template
-├── requests/           # Saved API requests (YAML with {{VAR}} placeholders)
-├── environments/       # Environment variable files (dev.yaml, prod.yaml, staging.yaml)
-├── baselines/          # Reference response snapshots for regression testing
-└── flows/              # Saved multi-step API flows
-```
 
 ### config.yaml Schema
 
@@ -431,44 +417,6 @@ Prevent runaway execution with per-tool and global limits:
 ./falcon
 ```
 
-#### Natural Language Commands
-
-```bash
-# HTTP requests
-> GET http://localhost:8000/api/users
-> POST /api/users with {"name": "John"}
-
-# Save and load requests
-> save this request as get-users
-> load the get-users request
-> list my saved requests
-
-# Environment management
-> switch to prod environment
-> show available environments
-
-# Code analysis & debugging
-> search for the /users endpoint handler
-> read the file api/handlers.go
-> find where UserService is defined
-> why did this 500 error happen?
-> propose a fix for this authentication bug
-
-# Testing workflows
-> validate the response matches this schema: {...}
-> run the auto_test workflow for /api/orders
-> run a smoke test against staging
-> run a load test with 50 concurrent users for 30s
-> check for security vulnerabilities in /api/auth/*
-> verify that PUT /api/items is idempotent
-
-# API intelligence
-> ingest my openapi.yaml spec
-> generate functional tests from the spec
-> check if the API has drifted from the spec
-> detect breaking changes since last baseline
-```
-
 #### Keyboard Shortcuts
 
 | Key | Action |
@@ -507,107 +455,137 @@ When Falcon wants to modify a file, it enters confirmation mode:
 
 ## Available Tools
 
-All tools are registered via `pkg/core/tools/registry.go` using a component-based `Registry` struct. Tools are grouped into packages by domain.
+All 28 tools are registered via `pkg/core/tools/registry.go` and organized by testing type and domain.
 
-### Foundation (`shared/`)
+### Core Tools (5)
+
+Essential for every interaction:
 
 | Tool | Description |
 |------|-------------|
 | `http_request` | Make HTTP requests with status code hints and variable substitution |
-| `assert_response` | Validate status codes, headers, body content, JSON path, timing |
-| `extract_value` | Extract values via JSON path, headers, cookies, or regex |
-| `validate_json_schema` | Validate responses against JSON Schema (draft-07, draft-2020-12) |
-| `compare_responses` | Regression testing via baseline comparison |
-| `auth_bearer` | Create Bearer token headers (JWT, API tokens) |
-| `auth_basic` | Create HTTP Basic authentication headers |
-| `auth_oauth2` | OAuth2 flows (client_credentials, password grant) |
-| `auth_helper` | Parse JWT tokens, decode Basic auth |
-| `wait` | Add delays for async operations |
-| `retry` | Retry with configurable attempts and exponential backoff |
-| `test_suite` | Run organized test suites with grouped assertions |
-| `webhook_listener` | Temporary HTTP server to capture webhook callbacks |
-| `performance_test` | Basic load test with concurrent users, p50/p95/p99 latency |
+| `variable` | Get/set session-scoped (temp) or global-scoped (persistent) variables |
+| `auth` | Unified authentication — bearer, basic, OAuth2, JWT parsing (merged 4 tools) |
+| `wait` | Add delays for async operations, polling, backoff |
+| `retry` | Retry failed tool calls with exponential backoff |
 
-### Codebase Intelligence (`debugging/`)
+### Persistence Tools (6)
+
+Manage requests, environments, and .falcon artifacts:
 
 | Tool | Description |
 |------|-------------|
-| `read_file` | Read file contents (100KB security limit) |
-| `write_file` | Write files with human-in-the-loop confirmation and diff view |
-| `list_files` | List files with glob patterns (e.g., `**/*.go`) |
-| `search_code` | Search patterns with ripgrep (native Go fallback) |
+| `request` | Save/load/list API requests with `{{VAR}}` placeholders (merged 3 tools) |
+| `environment` | Set/list environment variables (dev, prod, staging) (merged 2 tools) |
+| `falcon_write` | Write validated YAML/JSON/Markdown to .falcon/ with path safety |
+| `falcon_read` | Read artifacts from .falcon/ (reports, flows, specs) |
+| `memory` | Recall/save/update API knowledge base across sessions |
+| `session_log` | Create session audit trail — start/end, summary, searchable history |
+
+### Testing Tools by Type
+
+#### Unit (3 tools) — Test individual endpoints
+| Tool | Description |
+|------|-------------|
+| `assert_response` | Validate status codes, headers, body content, JSON paths |
+| `extract_value` | Extract values via JSON path, headers, cookies, regex for chaining |
+| `validate_json_schema` | Strict validation against JSON Schema (draft-07, draft-2020-12) |
+
+#### Integration (1 tool) — Multi-step workflows
+| Tool | Description |
+|------|-------------|
+| `orchestrate_integration` | Chain multiple requests in a single transaction with resource linking |
+
+#### Smoke (1 tool) — Fast health checks
+| Tool | Description |
+|------|-------------|
+| `run_smoke` | Hit all endpoints once to verify API is up |
+
+#### Functional (3 tools) — Happy path, negative, edge cases
+| Tool | Description |
+|------|-------------|
+| `generate_functional_tests` | LLM-driven test generation with strategies (Happy/Negative/Boundary) |
+| `run_tests` | Execute test scenarios in parallel; optional `scenario` param for single test |
+| `run_data_driven` | Bulk testing with CSV/JSON data sources |
+
+#### Contract (3 tools) — Spec compliance & regression
+| Tool | Description |
+|------|-------------|
+| `verify_idempotency` | Confirm requests have no side effects (safe to retry) |
+| `compare_responses` | Compare two responses for differences (regression testing) |
+| `check_regression` | Compare against baseline snapshots from `.falcon/baselines/` |
+
+#### Performance (2 tools) — Load & resilience testing
+| Tool | Description |
+|------|-------------|
+| `run_performance` | Load/stress/spike/soak testing with latency metrics (p50/p95/p99) |
+| `webhook_listener` | Temporary HTTP server to capture webhook callbacks during async tests |
+
+#### Security (1 tool) — OWASP & auth auditing
+| Tool | Description |
+|------|-------------|
+| `scan_security` | OWASP vulnerability scanning, input fuzzing, auth bypass detection |
+
+### Debugging Tools (7)
+
+Root cause analysis and code fixes:
+
+| Tool | Description |
+|------|-------------|
 | `find_handler` | Framework-aware discovery of endpoint source code handlers |
 | `analyze_endpoint` | LLM-powered deep analysis of endpoint structure and security risks |
 | `analyze_failure` | Expert LLM assessment of why a test failed, with remediation steps |
-| `generate_tests` | LLM-driven generation of comprehensive, categorized test scenarios |
 | `propose_fix` | Generate unified diffs to fix identified bugs or vulnerabilities |
-| `create_test_file` | Generate regression test files so bugs stay fixed |
+| `read_file` | Read file contents (100KB security limit) |
+| `search_code` | Search patterns with ripgrep (native Go fallback) |
+| `write_file` | Write files with human-in-the-loop confirmation and diff view |
 
-### Persistence (`persistence/`)
+### Orchestration Tools (2)
 
-| Tool | Description |
-|------|-------------|
-| `variable` | Manage session/global variables with disk persistence |
-| `save_request` | Save API request as YAML with `{{VAR}}` placeholders |
-| `load_request` | Load saved request with environment variable substitution |
-| `list_requests` | List all saved requests in `.falcon/requests/` |
-| `set_environment` | Set active environment (dev, prod, staging) |
-| `list_environments` | List available environment files |
-
-### Agent Lifecycle (`agent/`)
+Advanced multi-test management:
 
 | Tool | Description |
 |------|-------------|
-| `memory` | Read/write persistent agent memory across sessions |
-| `export_results` | Export results to JSON (CI/CD) or Markdown (reporting) |
-| `run_tests` | Parallel execution of multiple test scenarios with filtering |
-| `run_single_test` | Trigger a specific test scenario (useful for fix verification) |
-| `auto_test` | Autonomous workflow: analyze → generate → execute → assess |
+| `auto_test` | Autonomous workflow: ingest spec → generate tests → run → fix failures |
+| `test_suite` | Bundle multiple flows into a named, reusable suite |
 
-### API Intelligence (`spec_ingester/`)
+### Spec Ingestion (1)
 
 | Tool | Description |
 |------|-------------|
-| `ingest_spec` | Transform OpenAPI/Swagger or Postman specs into a Knowledge Graph (`api-graph.json`) |
+| `ingest_spec` | Transform OpenAPI/Swagger or Postman specs into `.falcon/spec.yaml` (YAML) |
 
-### Functional Test Generation (`functional_test_generator/`)
+---
 
-| Tool | Description |
-|------|-------------|
-| `generate_functional_tests` | Generate and run spec-driven functional test suites from the Knowledge Graph |
+---
 
-### Security & Performance
+## .falcon Folder Structure
 
-| Tool | Package | Description |
-|------|---------|-------------|
-| `security_scanner` | `security_scanner/` | OWASP-style security vulnerability scanning across endpoints |
-| `performance_engine` | `performance_engine/` | Multi-mode performance testing: burst, ramp-up, soak testing |
+Falcon creates a persistent `.falcon/` folder on first run:
 
-### Quality & Contract Testing
+```
+.falcon/
+├── config.yaml              # LLM provider, model, framework, tool limits
+├── memory.json              # Persistent agent memory
+├── falcon.md                # API knowledge base (validated on write)
+├── spec.yaml                # Ingested API spec (YAML, human-readable)
+├── variables.json           # Global variables
+├── sessions/                # Session audit logs
+├── environments/            # Environment files (dev.yaml, prod.yaml, etc.)
+├── requests/                # Saved API requests
+├── baselines/               # Regression testing baselines
+├── flows/                   # Multi-step test flows (flat, type-prefixed)
+└── reports/                 # Test reports (flat, type-prefixed)
+```
 
-| Tool | Package | Description |
-|------|---------|-------------|
-| `smoke_runner` | `smoke_runner/` | Quick smoke test suite against live endpoints |
-| `idempotency_verifier` | `idempotency_verifier/` | Verify that PUT/POST requests are idempotent |
-| `data_driven_engine` | `data_driven_engine/` | Execute tests driven by external data sets |
-| `schema_conformance` | `schema_conformance/` | Check that live API responses conform to spec schema |
-| `unit_test_scaffolder` | `unit_test_scaffolder/` | LLM-powered unit test code generation |
-
-### Observability & Evolution
-
-| Tool | Package | Description |
-|------|---------|-------------|
-| `breaking_change_detector` | `breaking_change_detector/` | Detect breaking API changes vs. stored baselines |
-| `dependency_mapper` | `dependency_mapper/` | Map API dependency relationships for impact analysis |
-| `documentation_validator` | `documentation_validator/` | Validate API documentation accuracy against live behavior |
-| `api_drift_analyzer` | `api_drift_analyzer/` | Detect runtime drift between live API and its spec |
-
-### Workflow Orchestration
-
-| Tool | Package | Description |
-|------|---------|-------------|
-| `integration_orchestrator` | `integration_orchestrator/` | Orchestrate multi-service integration test flows |
-| `regression_watchdog` | `regression_watchdog/` | Automated regression detection against saved baselines |
+**Key improvements:**
+- **Flat structure**: No subdirectories in `reports/` or `flows/` — filenames carry type context
+- **YAML spec**: `spec.yaml` is human-readable (not JSON)
+- **Validated artifacts**: Reports and falcon.md are validated on write to catch empty/incomplete content
+- **Session audit trail**: Each conversation logs to `.falcon/sessions/session_<timestamp>.json`
+- **Flat naming conventions**:
+  - Reports: `<type>_report_<api-name>_<timestamp>.md` (e.g., `performance_report_users_api_20260227.md`)
+  - Flows: `<type>_<description>.yaml` (e.g., `integration_login_create_delete.yaml`)
 
 ---
 
