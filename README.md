@@ -1,8 +1,6 @@
 # Falcon ( formerly Zap)
 
-> AI-powered API testing that understands your codebase
-
-**Falcon** is a terminal-based AI assistant that doesn't just test your APIs — it debugs them. When an endpoint returns an error, Falcon searches your actual source code to find the cause and suggests fixes. Works with local LLMs (Ollama) or cloud providers (Gemini).
+**Falcon** is a terminal-based AI agent built for API developers who are tired of switching between their terminal, browser, and code editor just to debug a failing endpoint. You describe what you want to test — Falcon handles the rest. It does not just test your APIs , it debug them. When an endpoint returns an error, Falcon searches your actual source code to find the cause and suggests fixes
 
 ![A picture of the TUI of Falcon](falcon-UI.png)
 
