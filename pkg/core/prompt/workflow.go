@@ -20,6 +20,14 @@ Both are required. Memory recall prevents re-discovering facts you already know.
 - If memory has auth patterns → apply them, don't guess
 - If memory is empty → proceed normally and save discoveries as you go
 
+Then immediately orient your environment:
+` + "```" + `
+ACTION: environment({"action":"list"})
+` + "```" + `
+- If an environment is already active → its variables (BASE_URL, credentials, API keys) are loaded. Use them.
+- If no environment is active and the user mentioned one (e.g. "test in dev") → call environment({"action":"set", "name":"dev"}) before any http_request
+- If unsure which environment → ask the user: "Which environment should I use? (dev / staging / prod)"
+
 ## Mandatory Session End
 
 **Before giving your final answer, always close the session:**
@@ -71,6 +79,22 @@ variable({"action":"get",...})     → Do I have tokens or config stored?
 ` + "```" + `
 
 **Rule**: Never start from scratch when .falcon has answers.
+
+**Environment variables rule**: When an environment is active (e.g. dev, staging, prod), its variables are automatically loaded into memory. Use them directly in tool calls with'{{VAR_NAME}}' syntax — do NOT hardcode values the environment already provides.
+
+Common environment variables and how to use them:
+` + "```" + `
+# Example dev.yaml might contain:
+BASE_URL: http://localhost:3000
+USERNAME: admin@example.com
+PASSWORD: secret123
+API_KEY: dev-key-abc
+
+# Use them in requests like this:
+http_request({"method":"POST", "url":"{{BASE_URL}}/auth/login", "body":{"email":"{{USERNAME}}", "password":"{{PASSWORD}}"}})
+` + "```" + `
+
+If the user says "use dev" or the context implies a specific environment, call 'environment({"action":"set", "name":"dev"}' before making any requests. After setting, all '{{VAR}}' references resolve from that environment's .yaml file.
 
 ### 2. Hypothesize — What Am I Testing?
 
@@ -134,9 +158,9 @@ Common sources of confusion — read this before picking a tool:
 
 - **run_tests** handles both bulk and single execution — pass an optional scenario param for a single test
 
-- **run_performance** is the only performance tool — performance_test was removed
+- **run_performance** is the only performance tool
 
-- **generate_functional_tests** is the only test generator — generate_tests was removed
+- **generate_functional_tests** is the only test generator
 
 - **falcon_write** for writing to .falcon/; **write_file** for writing to source code
 
@@ -177,7 +201,10 @@ environment(action="set")         → writes .falcon/environments/<name>.yaml
 environment(action="list")        → reads  .falcon/environments/
 falcon_write                      → writes .falcon/<path> (validated, YAML/JSON/md)
 falcon_read                       → reads  .falcon/<path>
-session_log(action="start/end")   → writes .falcon/sessions/session_<ts>.json
+session_log(action="start")        → creates .falcon/sessions/session_<ts>.json
+session_log(action="end")          → closes  .falcon/sessions/session_<ts>.json (with summary)
+session_log(action="list")         → reads   .falcon/sessions/ (all sessions)
+session_log(action="read")         → reads   .falcon/sessions/session_<ts>.json (specific session)
 variable(scope="global")          → writes .falcon/variables.json
 variable(scope="session")         → in-memory only (cleared on exit)
 memory(action="save")             → writes .falcon/memory.json

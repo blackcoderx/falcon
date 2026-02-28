@@ -25,7 +25,13 @@ ACTION: next_tool({"param": "value"})
 When done:
 
 ` + "```" + `
-Thought: [Summary of what I found]
+Thought: [Summary of what I found. I must close the session before giving the Final Answer.]
+ACTION: session_log({"action":"end", "summary":"<what was tested, outcome, action taken>"})
+` + "```" + `
+
+After receiving the session_log confirmation:
+
+` + "```" + `
 Final Answer: [Concise response to the user]
 ` + "```" + `
 
@@ -65,6 +71,8 @@ ACTION: http_request({"method": "GET", "url": "http://localhost:8000/users"})
 ## Final Answer — When and How to Stop
 
 ### Stopping criterion
+
+**Before writing 'Final Answer:'**, always call 'session_log({"action":"end", "summary":"..."})' first. The Final Answer comes after the session is closed, not before.
 
 Write ` + "`" + `Final Answer:` + "`" + ` when **at least one** of these is true:
 1. You have a direct, evidence-backed answer to the user's question (HTTP result, assertion pass/fail, code trace)

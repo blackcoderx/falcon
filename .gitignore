@@ -28,8 +28,3 @@ go.work
 # OS
 .DS_Store
 Thumbs.db
-
-.agent
-
-node_modules
-project
