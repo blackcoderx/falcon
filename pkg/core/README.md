@@ -279,15 +279,15 @@ Two new validators ensure report and knowledge base quality:
 
 ### config.yaml Format
 
-Example:
+Provider-specific settings are stored in a generic `provider_config` map, so new providers never require a change to the `Config` struct.
 
 ```yaml
 provider: ollama
-ollama:
+default_model: llama3
+provider_config:
   mode: local
   url: http://localhost:11434
   api_key: ""
-default_model: llama3
 framework: gin
 theme: dark
 tool_limits:
@@ -304,7 +304,15 @@ web_ui:
   port: 0
 ```
 
-Config migration (`migrateLegacyConfig`) automatically promotes legacy top-level `ollama_url` / `ollama_api_key` fields into the `ollama` sub-object.
+**OpenRouter example:**
+```yaml
+provider: openrouter
+default_model: google/gemini-2.5-flash-lite
+provider_config:
+  api_key: sk-or-...
+```
+
+Config migration (`migrateLegacyConfig`) automatically converts older per-provider sub-objects (`ollama:`, `gemini:`, `openrouter:`) and legacy top-level fields (`ollama_url`, `ollama_api_key`) into the new `provider_config` map.
 
 ### Session Logging
 
@@ -335,11 +343,15 @@ Sessions are an audit trail: user can call `session_log(action=list)` to see rec
 2. Register it in `prompt/builder.go`
 3. Test with different LLM providers
 
-### New Config Option
+### New LLM Provider
 
-1. Add field to the config struct in `init.go`
-2. Update the setup wizard if it should be user-configurable
-3. Update `config.yaml` documentation
+See `pkg/llm/README.md` — adding a provider is self-contained in `pkg/llm/` and requires no changes here.
+
+### New Non-Provider Config Option
+
+1. Add the field to `Config` in `init.go`
+2. If user-configurable at setup time, add it to `runSetupWizard()`
+3. Update the `config.yaml` example in this README
 
 ## Testing
 

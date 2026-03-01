@@ -284,7 +284,7 @@ func buildProviderForm(p llm.Provider, values map[string]string) ([]huh.Field, s
 	huhFields = append(huhFields,
 		huh.NewInput().
 			Title("Model name").
-			Description(fmt.Sprintf("The model to use (default: %s). Browse models at openrouter.ai/models.", p.DefaultModel())).
+			Description(fmt.Sprintf("The model to use. Leave blank to use the default: %s", p.DefaultModel())).
 			Placeholder(p.DefaultModel()).
 			Value(&modelVar),
 	)
@@ -314,7 +314,9 @@ func buildConfirmSummary(result *SetupResult, p llm.Provider) string {
 			v = maskAPIKey(v)
 		}
 		if v != "" {
-			fmt.Fprintf(&sb, "%-10s %s\n", strings.Title(strings.ReplaceAll(f.Key, "_", " "))+":", v)
+			label := strings.ReplaceAll(f.Key, "_", " ")
+			label = strings.ToUpper(label[:1]) + label[1:]
+			fmt.Fprintf(&sb, "%-10s %s\n", label+":", v)
 		}
 	}
 	return strings.TrimRight(sb.String(), "\n")
@@ -753,16 +755,6 @@ func createMemoryFile() error {
 		return fmt.Errorf("failed to write memory file: %w", err)
 	}
 
-	return nil
-}
-
-// createFile creates an empty file
-func createFile(path string) error {
-	file, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("failed to create %s: %w", path, err)
-	}
-	defer file.Close()
 	return nil
 }
 

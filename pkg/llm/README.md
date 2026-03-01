@@ -1,32 +1,32 @@
 # pkg/llm
 
-This package provides LLM (Large Language Model) client implementations. ZAP supports multiple LLM providers through a common interface.
+This package provides LLM (Large Language Model) client implementations and a provider registry. Falcon supports multiple LLM backends through a common interface and a self-registering provider system — adding a new provider requires no changes to the setup wizard or client factory.
 
 ## Package Overview
 
 ```
 pkg/llm/
-├── client.go    # LLMClient interface definition
-├── ollama.go    # Ollama client (local and cloud)
-└── gemini.go    # Google Gemini client
+├── client.go                # LLMClient interface + Message/StreamCallback types
+├── provider.go              # Provider interface + SetupField types
+├── registry.go              # Global provider registry (Register, Get, All)
+├── register_providers.go    # init() — registers all built-in providers
+├── ollama.go                # Ollama HTTP client (local and cloud)
+├── ollama_provider.go       # OllamaProvider — registry metadata + BuildClient
+├── gemini.go                # Google Gemini client (official SDK)
+├── gemini_provider.go       # GeminiProvider — registry metadata + BuildClient
+├── openrouter.go            # OpenRouter HTTP client (OpenAI-compatible gateway)
+└── openrouter_provider.go   # OpenRouterProvider — registry metadata + BuildClient
 ```
 
 ## LLMClient Interface
 
-All LLM providers must implement this interface:
+All provider clients implement this interface (`client.go`):
 
 ```go
 type LLMClient interface {
-    // Chat sends messages and returns the complete response
     Chat(messages []Message) (string, error)
-
-    // ChatStream sends messages and streams the response via callback
     ChatStream(messages []Message, callback StreamCallback) (string, error)
-
-    // CheckConnection verifies the LLM is accessible
     CheckConnection() error
-
-    // GetModel returns the current model name
     GetModel() string
 }
 
@@ -38,70 +38,126 @@ type Message struct {
 type StreamCallback func(chunk string)
 ```
 
+## Provider Interface
+
+Every provider registration implements this interface (`provider.go`). It describes both how to show setup UI and how to build the client at runtime.
+
+```go
+type Provider interface {
+    ID() string                // stable config key, e.g. "openrouter"
+    DisplayName() string       // shown in setup wizard
+    DefaultModel() string      // used when user leaves model field blank
+    SetupFields() []SetupField // fields to collect during first-run setup
+    BuildClient(values map[string]string, model string) (LLMClient, error)
+}
+```
+
+### SetupField
+
+Describes a single configuration field rendered by the setup wizard:
+
+```go
+type SetupField struct {
+    Key         string        // config key, e.g. "api_key"
+    Type        FieldType     // FieldInput (default) or FieldSelect
+    Title       string        // label shown in wizard
+    Description string
+    Placeholder string
+    Secret      bool          // echo as password
+    Default     string        // applied when user leaves blank
+    Options     []FieldOption // only for FieldSelect
+    EnvFallback string        // env var checked at runtime when viper value is empty
+}
+```
+
 ## Supported Providers
 
-### Ollama (ollama.go)
+### Ollama (`ollama.go` + `ollama_provider.go`)
 
-Supports both local and cloud Ollama instances.
-
-**Local Mode:**
+Local and cloud Ollama instances. Uses Ollama's `/api/chat` endpoint with newline-delimited JSON streaming.
 
 ```go
 client := llm.NewOllamaClient("http://localhost:11434", "llama3", "")
 ```
 
-**Cloud Mode (with API key):**
-
-```go
-client := llm.NewOllamaClient("https://ollama.example.com", "llama3", "your-api-key")
+**Config format:**
+```yaml
+provider: ollama
+default_model: llama3
+provider_config:
+  mode: local          # "local" or "cloud"
+  url: http://localhost:11434
+  api_key: ""          # required for cloud mode
 ```
 
-**Features:**
+**Setup fields:** mode (select), url, api_key
+**Env fallback:** `OLLAMA_API_KEY`
 
-- Streaming support for real-time response display
-- Bearer token authentication for cloud instances
-- Two HTTP clients: regular (60s timeout) and streaming (no timeout)
-- Automatic retry on connection errors
+---
 
-**Configuration:**
+### Google Gemini (`gemini.go` + `gemini_provider.go`)
 
-```json
-{
-  "provider": "ollama",
-  "ollama": {
-    "mode": "local",
-    "url": "http://localhost:11434",
-    "api_key": ""
-  },
-  "default_model": "llama3"
+Uses the official `google.golang.org/genai` SDK. Handles Gemini's role mapping (`"assistant"` → `"model"`) and system instruction extraction automatically.
+
+```go
+client, err := llm.NewGeminiClient("your-api-key", "gemini-2.5-flash-lite")
+```
+
+**Config format:**
+```yaml
+provider: gemini
+default_model: gemini-2.5-flash-lite
+provider_config:
+  api_key: your-api-key
+```
+
+**Setup fields:** api_key
+**Env fallback:** `GEMINI_API_KEY`
+
+---
+
+### OpenRouter (`openrouter.go` + `openrouter_provider.go`)
+
+OpenAI-compatible gateway giving access to hundreds of models (Claude, GPT-4, Llama, Gemini, etc.) through a single API endpoint at `https://openrouter.ai/api/v1`. Uses SSE streaming.
+
+```go
+client := llm.NewOpenRouterClient("your-api-key", "google/gemini-2.5-flash-lite")
+```
+
+**Config format:**
+```yaml
+provider: openrouter
+default_model: google/gemini-2.5-flash-lite
+provider_config:
+  api_key: your-api-key
+```
+
+**Setup fields:** api_key
+**Env fallback:** `OPENROUTER_API_KEY`
+**Browse models:** https://openrouter.ai/models
+
+---
+
+## Registry
+
+The registry (`registry.go`) is a simple ordered map. All built-in providers are registered in `register_providers.go` via `init()`:
+
+```go
+func init() {
+    Register(&OllamaProvider{})
+    Register(&GeminiProvider{})
+    Register(&OpenRouterProvider{})
 }
 ```
 
-### Google Gemini (gemini.go)
-
-Uses the Google Generative AI API.
+**API:**
 
 ```go
-client := llm.NewGeminiClient("your-api-key", "gemini-pro")
+llm.All()          // []Provider in registration order — used to build wizard UI
+llm.Get("gemini")  // (Provider, bool) — used by the client factory at runtime
 ```
 
-**Features:**
-
-- Streaming support
-- Automatic content safety handling
-- Supports Gemini Pro and Gemini Pro Vision
-
-**Configuration:**
-
-```json
-{
-  "provider": "gemini",
-  "gemini": {
-    "api_key": "your-api-key"
-  },
-  "default_model": "gemini-pro"
-}
-```
+The setup wizard and client factory consume the registry — they never need to change when a provider is added.
 
 ## Usage
 
@@ -116,17 +172,12 @@ messages := []llm.Message{
 }
 
 response, err := client.Chat(messages)
-if err != nil {
-    log.Fatal(err)
-}
-fmt.Println(response)
 ```
 
 ### Streaming Chat
 
 ```go
 response, err := client.ChatStream(messages, func(chunk string) {
-    // Called for each chunk of the response
     fmt.Print(chunk)
 })
 ```
@@ -139,195 +190,89 @@ if err := client.CheckConnection(); err != nil {
 }
 ```
 
-## Implementation Details
-
-### Ollama Client
-
-The Ollama client makes POST requests to the `/api/chat` endpoint:
-
-```go
-type ollamaRequest struct {
-    Model    string    `json:"model"`
-    Messages []Message `json:"messages"`
-    Stream   bool      `json:"stream"`
-}
-
-type ollamaResponse struct {
-    Message struct {
-        Content string `json:"content"`
-    } `json:"message"`
-    Done bool `json:"done"`
-}
-```
-
-**Streaming:**
-
-For streaming, the client reads newline-delimited JSON:
-
-```go
-scanner := bufio.NewScanner(resp.Body)
-for scanner.Scan() {
-    var chunk ollamaResponse
-    json.Unmarshal(scanner.Bytes(), &chunk)
-    callback(chunk.Message.Content)
-    if chunk.Done {
-        break
-    }
-}
-```
-
-### Gemini Client
-
-Uses the official Google Generative AI SDK:
-
-```go
-import "google.golang.org/genai"
-
-client, _ := genai.NewClient(ctx, option.WithAPIKey(apiKey))
-model := client.GenerativeModel(modelName)
-
-resp, _ := model.GenerateContent(ctx, genai.Text(prompt))
-```
-
-**Streaming:**
-
-```go
-iter := model.GenerateContentStream(ctx, genai.Text(prompt))
-for {
-    resp, err := iter.Next()
-    if err == iterator.Done {
-        break
-    }
-    callback(resp.Candidates[0].Content.Parts[0].(genai.Text))
-}
-```
-
 ## Adding a New Provider
 
-### Step 1: Create the File
+Three steps, no changes to any other package:
+
+### Step 1: Implement LLMClient
 
 ```go
-// pkg/llm/newprovider.go
+// pkg/llm/myprovider.go
 package llm
 
-type NewProviderClient struct {
+type MyProviderClient struct {
     apiKey string
     model  string
-    // Add other fields
 }
 
-func NewNewProviderClient(apiKey, model string) *NewProviderClient {
-    return &NewProviderClient{
-        apiKey: apiKey,
-        model:  model,
+func NewMyProviderClient(apiKey, model string) *MyProviderClient { ... }
+
+func (c *MyProviderClient) Chat(messages []Message) (string, error)                          { ... }
+func (c *MyProviderClient) ChatStream(messages []Message, cb StreamCallback) (string, error) { ... }
+func (c *MyProviderClient) CheckConnection() error                                            { ... }
+func (c *MyProviderClient) GetModel() string                                                  { return c.model }
+```
+
+### Step 2: Implement Provider
+
+```go
+// pkg/llm/myprovider_provider.go
+package llm
+
+type MyProvider struct{}
+
+func (p *MyProvider) ID() string          { return "myprovider" }
+func (p *MyProvider) DisplayName() string  { return "My Provider" }
+func (p *MyProvider) DefaultModel() string { return "my-default-model" }
+
+func (p *MyProvider) SetupFields() []SetupField {
+    return []SetupField{
+        {
+            Key:         "api_key",
+            Title:       "API Key",
+            Secret:      true,
+            EnvFallback: "MYPROVIDER_API_KEY",
+        },
     }
 }
-```
 
-### Step 2: Implement the Interface
-
-```go
-func (c *NewProviderClient) Chat(messages []Message) (string, error) {
-    // Convert messages to provider format
-    // Make API call
-    // Return response
-}
-
-func (c *NewProviderClient) ChatStream(messages []Message, callback StreamCallback) (string, error) {
-    // Similar to Chat but stream chunks via callback
-}
-
-func (c *NewProviderClient) CheckConnection() error {
-    // Make a lightweight API call to verify connectivity
-}
-
-func (c *NewProviderClient) GetModel() string {
-    return c.model
-}
-```
-
-### Step 3: Update Configuration
-
-Add provider config in `pkg/core/init.go`:
-
-```go
-type Config struct {
-    Provider    string `json:"provider"`
-    NewProvider struct {
-        APIKey string `json:"api_key"`
-    } `json:"new_provider"`
-    // ...
-}
-```
-
-### Step 4: Update Setup Wizard
-
-Add option in `pkg/tui/setup/` for new provider selection.
-
-### Step 5: Update TUI Initialization
-
-In `pkg/tui/init.go`:
-
-```go
-switch config.Provider {
-case "ollama":
-    client = llm.NewOllamaClient(...)
-case "gemini":
-    client = llm.NewGeminiClient(...)
-case "newprovider":
-    client = llm.NewNewProviderClient(...)
-}
-```
-
-## Error Handling
-
-All clients should return descriptive errors:
-
-```go
-func (c *OllamaClient) Chat(messages []Message) (string, error) {
-    resp, err := c.httpClient.Do(req)
-    if err != nil {
-        return "", fmt.Errorf("failed to connect to Ollama at %s: %w", c.url, err)
+func (p *MyProvider) BuildClient(values map[string]string, model string) (LLMClient, error) {
+    if model == "" {
+        model = p.DefaultModel()
     }
-
-    if resp.StatusCode != http.StatusOK {
-        body, _ := io.ReadAll(resp.Body)
-        return "", fmt.Errorf("Ollama error (status %d): %s", resp.StatusCode, body)
-    }
-
-    // ...
+    return NewMyProviderClient(values["api_key"], model), nil
 }
 ```
+
+### Step 3: Register
+
+```go
+// pkg/llm/register_providers.go — add one line:
+func init() {
+    Register(&OllamaProvider{})
+    Register(&GeminiProvider{})
+    Register(&OpenRouterProvider{})
+    Register(&MyProvider{})   // ← add this
+}
+```
+
+The provider now appears in the setup wizard, gets its own config section, and is instantiated at runtime. **Zero changes to `pkg/core/init.go` or `pkg/tui/init.go`.**
 
 ## Testing
 
-Create mock clients for testing:
+Create a mock client for unit tests:
 
 ```go
 type MockLLMClient struct {
     Response string
-    Error    error
+    Err      error
 }
 
-func (m *MockLLMClient) Chat(messages []Message) (string, error) {
-    return m.Response, m.Error
-}
-
-func (m *MockLLMClient) ChatStream(messages []Message, callback StreamCallback) (string, error) {
-    callback(m.Response)
-    return m.Response, m.Error
-}
-
-func (m *MockLLMClient) CheckConnection() error {
-    return m.Error
-}
-
-func (m *MockLLMClient) GetModel() string {
-    return "mock"
-}
+func (m *MockLLMClient) Chat(_ []Message) (string, error)                          { return m.Response, m.Err }
+func (m *MockLLMClient) ChatStream(_ []Message, cb StreamCallback) (string, error) { cb(m.Response); return m.Response, m.Err }
+func (m *MockLLMClient) CheckConnection() error                                     { return m.Err }
+func (m *MockLLMClient) GetModel() string                                           { return "mock" }
 ```
-
-Run tests:
 
 ```bash
 go test ./pkg/llm/...
