@@ -75,83 +75,56 @@ func registerTools(agent *core.Agent, falconDir, workDir string, confirmManager 
 }
 
 // newLLMClient creates and configures the LLM client from Viper config.
-// Supports multiple providers: ollama (local/cloud) and gemini.
-// Falls back to legacy config format for backward compatibility.
+// Provider selection and instantiation are fully driven by the llm.Provider
+// registry — adding a new provider requires no changes here.
 func newLLMClient() llm.LLMClient {
-	provider := viper.GetString("provider")
+	providerID := viper.GetString("provider")
+	model := viper.GetString("default_model")
 
-	// Default model from config
-	defaultModel := viper.GetString("default_model")
-
-	switch provider {
-	case "gemini":
-		// Gemini configuration
-		apiKey := viper.GetString("gemini.api_key")
-		if apiKey == "" {
-			apiKey = os.Getenv("GEMINI_API_KEY")
-		}
-
-		if defaultModel == "" {
-			defaultModel = "gemini-2.5-flash-lite"
-		}
-
-		client, err := llm.NewGeminiClient(apiKey, defaultModel)
-		if err != nil {
-			// Fall back to Ollama if Gemini client creation fails
-			return newOllamaClientFallback(defaultModel)
-		}
-		return client
-
-	case "ollama":
-		// New Ollama config format
-		ollamaURL := viper.GetString("ollama.url")
-		ollamaAPIKey := viper.GetString("ollama.api_key")
-
-		if ollamaURL == "" {
-			// Check mode for defaults
-			mode := viper.GetString("ollama.mode")
-			if mode == "local" {
-				ollamaURL = "http://localhost:11434"
-			} else {
-				ollamaURL = "https://ollama.com"
-			}
-		}
-
-		if defaultModel == "" {
-			mode := viper.GetString("ollama.mode")
-			if mode == "local" {
-				defaultModel = "llama3"
-			} else {
-				defaultModel = "qwen3-coder:480b-cloud"
-			}
-		}
-
-		return llm.NewOllamaClient(ollamaURL, defaultModel, ollamaAPIKey)
-
-	default:
-		// Legacy config format (backward compatibility)
-		return newOllamaClientFallback(defaultModel)
+	p, ok := llm.Get(providerID)
+	if !ok {
+		// Unknown provider — fall back to legacy Ollama config
+		return newOllamaClientFallback(model)
 	}
+
+	values := collectProviderValues(p)
+	client, err := p.BuildClient(values, model)
+	if err != nil {
+		return newOllamaClientFallback(model)
+	}
+	return client
 }
 
-// newOllamaClientFallback creates an Ollama client using legacy config fields.
-// Used for backward compatibility with existing config files.
-func newOllamaClientFallback(defaultModel string) *llm.OllamaClient {
-	ollamaURL := viper.GetString("ollama_url")
-	if ollamaURL == "" {
-		ollamaURL = "https://ollama.com"
+// collectProviderValues reads provider_config from viper and applies env-variable
+// fallbacks for any fields whose value is empty.
+func collectProviderValues(p llm.Provider) map[string]string {
+	values := viper.GetStringMapString("provider_config")
+	for _, f := range p.SetupFields() {
+		if values[f.Key] == "" && f.EnvFallback != "" {
+			values[f.Key] = os.Getenv(f.EnvFallback)
+		}
+	}
+	return values
+}
+
+// newOllamaClientFallback creates an Ollama client using legacy top-level config
+// fields. Used for backward compatibility when the provider registry lookup fails.
+func newOllamaClientFallback(model string) *llm.OllamaClient {
+	url := viper.GetString("ollama_url")
+	if url == "" {
+		url = "http://localhost:11434"
 	}
 
-	ollamaAPIKey := viper.GetString("ollama_api_key")
-	if ollamaAPIKey == "" {
-		ollamaAPIKey = os.Getenv("OLLAMA_API_KEY")
+	apiKey := viper.GetString("ollama_api_key")
+	if apiKey == "" {
+		apiKey = os.Getenv("OLLAMA_API_KEY")
 	}
 
-	if defaultModel == "" {
-		defaultModel = "llama3"
+	if model == "" {
+		model = "llama3"
 	}
 
-	return llm.NewOllamaClient(ollamaURL, defaultModel, ollamaAPIKey)
+	return llm.NewOllamaClient(url, model, apiKey)
 }
 
 // newSpinner creates a spinner with the Falcon style (points animation).

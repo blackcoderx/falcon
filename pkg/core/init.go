@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 	"github.com/blackcoderx/falcon/pkg/core/tools/spec_ingester"
+	"github.com/blackcoderx/falcon/pkg/llm"
 	"github.com/charmbracelet/huh"
 	"gopkg.in/yaml.v3"
 )
@@ -20,38 +22,49 @@ type ToolLimitsConfig struct {
 	PerTool      map[string]int `yaml:"per_tool"`      // Per-tool limits (tool_name -> max_calls)
 }
 
-// OllamaConfig holds Ollama-specific configuration
-type OllamaConfig struct {
-	Mode   string `yaml:"mode"`    // "local" or "cloud"
-	URL    string `yaml:"url"`     // API URL
-	APIKey string `yaml:"api_key"` // API key (for cloud mode)
-}
-
-// GeminiConfig holds Gemini-specific configuration
-type GeminiConfig struct {
-	APIKey string `yaml:"api_key"` // Gemini API key
-}
-
 // WebUIConfig controls the embedded web dashboard
 type WebUIConfig struct {
 	Enabled bool `yaml:"enabled"` // default true
 	Port    int  `yaml:"port"`    // 0 = OS-assigned random port
 }
 
-// Config represents the user's Falcon configuration
+// Config represents the user's Falcon configuration.
+// Provider-specific settings are stored generically in ProviderConfig so that
+// new providers can be added without changing this struct.
 type Config struct {
-	Provider     string           `yaml:"provider"` // "ollama" or "gemini"
-	OllamaConfig *OllamaConfig    `yaml:"ollama,omitempty"`
-	GeminiConfig *GeminiConfig    `yaml:"gemini,omitempty"`
-	DefaultModel string           `yaml:"default_model"`
-	Theme        string           `yaml:"theme"`
-	Framework    string           `yaml:"framework"` // API framework (e.g., gin, fastapi, express)
-	ToolLimits   ToolLimitsConfig `yaml:"tool_limits"`
-	WebUI        WebUIConfig      `yaml:"web_ui"`
+	Provider       string            `yaml:"provider"`                // "ollama", "gemini", "openrouter", …
+	ProviderConfig map[string]string `yaml:"provider_config,omitempty"` // provider-specific key/value pairs
+	DefaultModel   string            `yaml:"default_model"`
+	Theme          string            `yaml:"theme"`
+	Framework      string            `yaml:"framework"` // API framework (e.g., gin, fastapi, express)
+	ToolLimits     ToolLimitsConfig  `yaml:"tool_limits"`
+	WebUI          WebUIConfig       `yaml:"web_ui"`
 
-	// Legacy fields for backward compatibility (deprecated)
-	OllamaURL    string `yaml:"ollama_url,omitempty"`
-	OllamaAPIKey string `yaml:"ollama_api_key,omitempty"`
+	// Legacy fields — migrated automatically on first load; do not use in new code.
+	OllamaConfig     *OllamaConfig     `yaml:"ollama,omitempty"`
+	GeminiConfig     *GeminiConfig     `yaml:"gemini,omitempty"`
+	OpenRouterConfig *OpenRouterConfig `yaml:"openrouter,omitempty"`
+	OllamaURL        string            `yaml:"ollama_url,omitempty"`
+	OllamaAPIKey     string            `yaml:"ollama_api_key,omitempty"`
+}
+
+// --- Legacy config structs (kept for migration only) ---
+
+// OllamaConfig holds Ollama-specific configuration (legacy).
+type OllamaConfig struct {
+	Mode   string `yaml:"mode"`    // "local" or "cloud"
+	URL    string `yaml:"url"`     // API URL
+	APIKey string `yaml:"api_key"` // API key (for cloud mode)
+}
+
+// GeminiConfig holds Gemini-specific configuration (legacy).
+type GeminiConfig struct {
+	APIKey string `yaml:"api_key"`
+}
+
+// OpenRouterConfig holds OpenRouter-specific configuration (legacy).
+type OpenRouterConfig struct {
+	APIKey string `yaml:"api_key"`
 }
 
 // SupportedFrameworks lists frameworks that Falcon recognizes
@@ -74,15 +87,12 @@ var SupportedFrameworks = []string{
 	"other",   // Other/custom framework
 }
 
-// SetupResult holds the collected values from the first-run setup wizard.
+// SetupResult holds the values collected by the first-run setup wizard.
 type SetupResult struct {
-	Framework  string
-	Provider   string // "ollama" or "gemini"
-	OllamaMode string // "local" or "cloud" (for Ollama only)
-	OllamaURL  string // Ollama API URL
-	GeminiKey  string // Gemini API key
-	OllamaKey  string // Ollama API key (for cloud mode)
-	Model      string
+	Framework      string
+	Provider       string
+	ProviderValues map[string]string // keyed by SetupField.Key
+	Model          string
 }
 
 // frameworkGroup organizes frameworks by language for the setup wizard.
@@ -119,35 +129,23 @@ func buildFrameworkOptions() []huh.Option[string] {
 	return options
 }
 
-// providerOptions returns the available LLM provider options for the setup wizard.
+// providerOptions builds huh.Option entries from the registered provider registry.
+// Adding a new provider to llm.Register() automatically surfaces it here.
 func providerOptions() []huh.Option[string] {
-	return []huh.Option[string]{
-		huh.NewOption("Ollama (local or cloud)", "ollama"),
-		huh.NewOption("Gemini (Google AI)", "gemini"),
+	var opts []huh.Option[string]
+	for _, p := range llm.All() {
+		opts = append(opts, huh.NewOption(p.DisplayName(), p.ID()))
 	}
+	return opts
 }
 
-// ollamaModeOptions returns the Ollama mode options (local vs cloud).
-func ollamaModeOptions() []huh.Option[string] {
-	return []huh.Option[string]{
-		huh.NewOption("Local (run on your machine)", "local"),
-		huh.NewOption("Cloud (Ollama Cloud)", "cloud"),
-	}
-}
-
-// runSetupWizard displays an interactive setup wizard on first run using the huh library.
-// If frameworkFlag is non-empty, the framework selection step is skipped.
+// runSetupWizard displays an interactive setup wizard on first run.
+// Provider-specific forms are generated from the provider's SetupFields(),
+// so this function never needs to change when a new provider is added.
 func runSetupWizard(frameworkFlag string) (*SetupResult, error) {
-	// Use separate local variables for huh bindings to avoid
-	// any pre-initialized value interference with input fields
 	var (
 		selectedFramework = frameworkFlag
 		selectedProvider  string
-		ollamaMode        string
-		ollamaURL         string
-		ollamaKey         string
-		geminiKey         string
-		modelName         string
 	)
 
 	fmt.Println()
@@ -186,160 +184,40 @@ func runSetupWizard(frameworkFlag string) (*SetupResult, error) {
 		return nil, fmt.Errorf("setup cancelled: %w", err)
 	}
 
-	// Phase 3: Provider-specific configuration
+	// Phase 3: Provider-specific fields (driven by the provider's SetupFields)
 	result := &SetupResult{
-		Framework: selectedFramework,
-		Provider:  selectedProvider,
+		Framework:      selectedFramework,
+		Provider:       selectedProvider,
+		ProviderValues: map[string]string{},
 	}
 
-	if selectedProvider == "ollama" {
-		// Ollama mode selection
-		modeForm := huh.NewForm(
-			huh.NewGroup(
-				huh.NewSelect[string]().
-					Title("Select Ollama mode").
-					Description("Local runs on your machine, Cloud uses Ollama's hosted service.").
-					Options(ollamaModeOptions()...).
-					Value(&ollamaMode),
-			),
-		).WithTheme(huh.ThemeDracula())
-
-		if err := modeForm.Run(); err != nil {
-			return nil, fmt.Errorf("setup cancelled: %w", err)
-		}
-
-		result.OllamaMode = ollamaMode
-
-		if ollamaMode == "local" {
-			// Local Ollama configuration
-			localForm := huh.NewForm(
-				huh.NewGroup(
-					huh.NewInput().
-						Title("Ollama URL").
-						Description("Local Ollama server URL (default: http://localhost:11434).").
-						Placeholder("http://localhost:11434").
-						Value(&ollamaURL),
-					huh.NewInput().
-						Title("Model name").
-						Description("The model to use (must be installed locally).").
-						Placeholder("llama3").
-						Value(&modelName),
-				),
-			).WithTheme(huh.ThemeDracula())
-
-			if err := localForm.Run(); err != nil {
-				return nil, fmt.Errorf("setup cancelled: %w", err)
-			}
-
-			// Set defaults for local mode
-			if ollamaURL == "" {
-				ollamaURL = "http://localhost:11434"
-			}
-			if modelName == "" {
-				modelName = "llama3"
-			}
-
-			result.OllamaURL = ollamaURL
-			result.Model = modelName
-
-		} else {
-			// Cloud Ollama configuration
-			cloudForm := huh.NewForm(
-				huh.NewGroup(
-					huh.NewInput().
-						Title("Ollama Cloud URL").
-						Description("Ollama Cloud API endpoint (default: https://ollama.com).").
-						Placeholder("https://ollama.com").
-						Value(&ollamaURL),
-					huh.NewInput().
-						Title("Model name").
-						Description("The cloud model to use.").
-						Placeholder("qwen3-coder:480b-cloud").
-						Value(&modelName),
-					huh.NewInput().
-						Title("API Key").
-						Description("Your Ollama Cloud API key.").
-						Placeholder("Enter your API key...").
-						EchoMode(huh.EchoModePassword).
-						Value(&ollamaKey),
-				),
-			).WithTheme(huh.ThemeDracula())
-
-			if err := cloudForm.Run(); err != nil {
-				return nil, fmt.Errorf("setup cancelled: %w", err)
-			}
-
-			// Set defaults for cloud mode
-			if ollamaURL == "" {
-				ollamaURL = "https://ollama.com"
-			}
-			if modelName == "" {
-				modelName = "qwen3-coder:480b-cloud"
-			}
-
-			result.OllamaURL = ollamaURL
-			result.OllamaKey = ollamaKey
-			result.Model = modelName
-		}
-
-	} else {
-		// Gemini configuration
-		geminiForm := huh.NewForm(
-			huh.NewGroup(
-				huh.NewInput().
-					Title("Gemini API Key").
-					Description("Get your API key from aistudio.google.com.").
-					Placeholder("Enter your Gemini API key...").
-					EchoMode(huh.EchoModePassword).
-					Value(&geminiKey),
-				huh.NewInput().
-					Title("Model name").
-					Description("The Gemini model to use (default: gemini-2.5-flash-lite).").
-					Placeholder("gemini-2.5-flash-lite").
-					Value(&modelName),
-			),
-		).WithTheme(huh.ThemeDracula())
-
-		if err := geminiForm.Run(); err != nil {
-			return nil, fmt.Errorf("setup cancelled: %w", err)
-		}
-
-		// Set defaults for Gemini
-		if modelName == "" {
-			modelName = "gemini-2.5-flash-lite"
-		}
-
-		result.GeminiKey = geminiKey
-		result.Model = modelName
+	p, ok := llm.Get(selectedProvider)
+	if !ok {
+		return nil, fmt.Errorf("unknown provider %q", selectedProvider)
 	}
 
-	// Phase 4: Confirmation with actual entered values
-	var confirmDescription string
-	if result.Provider == "ollama" {
-		if result.OllamaMode == "local" {
-			confirmDescription = fmt.Sprintf(
-				"Provider:  Ollama (local)\nFramework: %s\nURL:       %s\nModel:     %s",
-				result.Framework,
-				result.OllamaURL,
-				result.Model,
-			)
-		} else {
-			confirmDescription = fmt.Sprintf(
-				"Provider:  Ollama (cloud)\nFramework: %s\nURL:       %s\nModel:     %s\nAPI Key:   %s",
-				result.Framework,
-				result.OllamaURL,
-				result.Model,
-				maskAPIKey(result.OllamaKey),
-			)
+	fields := p.SetupFields()
+	if len(fields) > 0 {
+		providerFields, modelVar, err := buildProviderForm(p, result.ProviderValues)
+		if err != nil {
+			return nil, err
 		}
-	} else {
-		confirmDescription = fmt.Sprintf(
-			"Provider:  Gemini\nFramework: %s\nModel:     %s\nAPI Key:   %s",
-			result.Framework,
-			result.Model,
-			maskAPIKey(result.GeminiKey),
-		)
+		result.Model = modelVar
+		_ = providerFields // values written directly into result.ProviderValues via pointers
 	}
+
+	// Apply per-field defaults
+	for _, f := range fields {
+		if result.ProviderValues[f.Key] == "" && f.Default != "" {
+			result.ProviderValues[f.Key] = f.Default
+		}
+	}
+	if result.Model == "" {
+		result.Model = p.DefaultModel()
+	}
+
+	// Phase 4: Confirmation
+	confirmDescription := buildConfirmSummary(result, p)
 
 	var confirmed bool
 	confirmForm := huh.NewForm(
@@ -362,6 +240,84 @@ func runSetupWizard(frameworkFlag string) (*SetupResult, error) {
 	}
 
 	return result, nil
+}
+
+// buildProviderForm creates and runs the huh form for a provider's setup fields,
+// writing collected values into the provided map. Also collects model name.
+// Returns the model name the user entered (may be empty — caller applies default).
+func buildProviderForm(p llm.Provider, values map[string]string) ([]huh.Field, string, error) {
+	fields := p.SetupFields()
+	// Allocate string variables for each field so huh can bind to them.
+	vars := make([]string, len(fields))
+	var modelVar string
+
+	var huhFields []huh.Field
+	for i, f := range fields {
+		fi := i
+		switch f.Type {
+		case llm.FieldSelect:
+			opts := make([]huh.Option[string], len(f.Options))
+			for j, o := range f.Options {
+				opts[j] = huh.NewOption(o.Label, o.Value)
+			}
+			huhFields = append(huhFields,
+				huh.NewSelect[string]().
+					Title(f.Title).
+					Description(f.Description).
+					Options(opts...).
+					Value(&vars[fi]),
+			)
+		default:
+			inp := huh.NewInput().
+				Title(f.Title).
+				Description(f.Description).
+				Placeholder(f.Placeholder).
+				Value(&vars[fi])
+			if f.Secret {
+				inp = inp.EchoMode(huh.EchoModePassword)
+			}
+			huhFields = append(huhFields, inp)
+		}
+	}
+
+	// Always append a model name field at the end
+	huhFields = append(huhFields,
+		huh.NewInput().
+			Title("Model name").
+			Description(fmt.Sprintf("The model to use (default: %s). Browse models at openrouter.ai/models.", p.DefaultModel())).
+			Placeholder(p.DefaultModel()).
+			Value(&modelVar),
+	)
+
+	form := huh.NewForm(huh.NewGroup(huhFields...)).WithTheme(huh.ThemeDracula())
+	if err := form.Run(); err != nil {
+		return nil, "", fmt.Errorf("setup cancelled: %w", err)
+	}
+
+	// Write collected values back into the map
+	for i, f := range fields {
+		values[f.Key] = vars[i]
+	}
+
+	return huhFields, modelVar, nil
+}
+
+// buildConfirmSummary builds the confirmation text shown before writing config.
+func buildConfirmSummary(result *SetupResult, p llm.Provider) string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "Provider:  %s\n", p.DisplayName())
+	fmt.Fprintf(&sb, "Framework: %s\n", result.Framework)
+	fmt.Fprintf(&sb, "Model:     %s\n", result.Model)
+	for _, f := range p.SetupFields() {
+		v := result.ProviderValues[f.Key]
+		if f.Secret {
+			v = maskAPIKey(v)
+		}
+		if v != "" {
+			fmt.Fprintf(&sb, "%-10s %s\n", strings.Title(strings.ReplaceAll(f.Key, "_", " "))+":", v)
+		}
+	}
+	return strings.TrimRight(sb.String(), "\n")
 }
 
 // maskAPIKey returns a masked version of the API key for display.
@@ -463,10 +419,6 @@ func InitializeFalconFolder(framework string, skipIndex bool) error {
 
 			if foundSpec != "" {
 				fmt.Printf("Found spec file: %s. Indexing...\n", foundSpec)
-				// We create a temporary tool instance to run the logic
-				// Note: LLM client is nil here as initial indexing (parsing) might not need it yet
-				// If parsing needs LLM, we'd need to init it. But our current implementation describes
-				// LLM for fusion. Let's stick to parsing for now.
 				tool := spec_ingester.NewIngestSpecTool(nil, FalconFolderName)
 
 				params := fmt.Sprintf(`{"action":"index", "source":"%s"}`, foundSpec)
@@ -489,23 +441,10 @@ func InitializeFalconFolder(framework string, skipIndex bool) error {
 	}
 
 	// Ensure subdirectories exist (for upgrades from older versions)
-	if err := ensureDir(filepath.Join(FalconFolderName, "requests")); err != nil {
-		return err
-	}
-	if err := ensureDir(filepath.Join(FalconFolderName, "environments")); err != nil {
-		return err
-	}
-	if err := ensureDir(filepath.Join(FalconFolderName, "baselines")); err != nil {
-		return err
-	}
-	if err := ensureDir(filepath.Join(FalconFolderName, "flows")); err != nil {
-		return err
-	}
-	if err := ensureDir(filepath.Join(FalconFolderName, "reports")); err != nil {
-		return err
-	}
-	if err := ensureDir(filepath.Join(FalconFolderName, "sessions")); err != nil {
-		return err
+	for _, dir := range []string{"requests", "environments", "baselines", "flows", "reports", "sessions"} {
+		if err := ensureDir(filepath.Join(FalconFolderName, dir)); err != nil {
+			return err
+		}
 	}
 
 	// Ensure manifest exists (for upgrades)
@@ -521,58 +460,102 @@ func InitializeFalconFolder(framework string, skipIndex bool) error {
 	return nil
 }
 
-// migrateLegacyConfig moves legacy top-level Ollama fields to the new OllamaConfig struct.
+// migrateLegacyConfig converts old per-provider typed config sub-structs to the
+// new generic provider_config map. Safe to run on every startup — it no-ops when
+// there is nothing to migrate.
 func migrateLegacyConfig() error {
 	configPath := filepath.Join(FalconFolderName, "config.yaml")
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil // No config to migrate
+			return nil
 		}
 		return err
 	}
 
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return err // Malformed config, skip migration
+		return nil // Malformed config, skip migration
 	}
 
 	changed := false
 
-	// Check for legacy fields
-	if (config.OllamaURL != "" || config.OllamaAPIKey != "") && config.OllamaConfig == nil {
-		config.OllamaConfig = &OllamaConfig{
-			Mode:   "local",
-			URL:    config.OllamaURL,
-			APIKey: config.OllamaAPIKey,
+	// Skip migration if provider_config already populated
+	if config.ProviderConfig != nil {
+		// Still clear any leftover legacy sub-structs
+		if config.OllamaConfig != nil || config.GeminiConfig != nil || config.OpenRouterConfig != nil ||
+			config.OllamaURL != "" || config.OllamaAPIKey != "" {
+			config.OllamaConfig = nil
+			config.GeminiConfig = nil
+			config.OpenRouterConfig = nil
+			config.OllamaURL = ""
+			config.OllamaAPIKey = ""
+			changed = true
 		}
-		// If API key is present, assume cloud or authenticated instance
-		if config.OllamaAPIKey != "" {
-			if config.OllamaURL == "https://ollama.com" || config.OllamaURL == "" {
+		if !changed {
+			return nil
+		}
+	} else {
+		// Migrate flat legacy fields → OllamaConfig first
+		if (config.OllamaURL != "" || config.OllamaAPIKey != "") && config.OllamaConfig == nil {
+			config.OllamaConfig = &OllamaConfig{
+				Mode:   "local",
+				URL:    config.OllamaURL,
+				APIKey: config.OllamaAPIKey,
+			}
+			if config.OllamaAPIKey != "" {
 				config.OllamaConfig.Mode = "cloud"
 				if config.OllamaConfig.URL == "" {
 					config.OllamaConfig.URL = "https://ollama.com"
 				}
+			} else if config.OllamaConfig.URL == "" {
+				config.OllamaConfig.URL = "http://localhost:11434"
 			}
-		} else if config.OllamaURL == "" {
-			config.OllamaConfig.URL = "http://localhost:11434"
+			config.OllamaURL = ""
+			config.OllamaAPIKey = ""
+			changed = true
 		}
 
-		// Clear legacy fields
-		config.OllamaURL = ""
-		config.OllamaAPIKey = ""
-		changed = true
-	}
-
-	if changed {
-		newData, err := yaml.Marshal(config)
-		if err != nil {
-			return err
+		// Migrate typed sub-structs → provider_config map
+		switch config.Provider {
+		case "ollama":
+			if config.OllamaConfig != nil {
+				config.ProviderConfig = map[string]string{
+					"mode":    config.OllamaConfig.Mode,
+					"url":     config.OllamaConfig.URL,
+					"api_key": config.OllamaConfig.APIKey,
+				}
+				config.OllamaConfig = nil
+				changed = true
+			}
+		case "gemini":
+			if config.GeminiConfig != nil {
+				config.ProviderConfig = map[string]string{
+					"api_key": config.GeminiConfig.APIKey,
+				}
+				config.GeminiConfig = nil
+				changed = true
+			}
+		case "openrouter":
+			if config.OpenRouterConfig != nil {
+				config.ProviderConfig = map[string]string{
+					"api_key": config.OpenRouterConfig.APIKey,
+				}
+				config.OpenRouterConfig = nil
+				changed = true
+			}
 		}
-		return os.WriteFile(configPath, newData, 0644)
 	}
 
-	return nil
+	if !changed {
+		return nil
+	}
+
+	newData, err := yaml.Marshal(config)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(configPath, newData, 0644)
 }
 
 // updateConfigFramework updates the framework in an existing config file
@@ -621,7 +604,6 @@ func GetConfigFramework() string {
 }
 
 // ensureDir creates a directory if it doesn't exist.
-// Returns an error if directory creation fails.
 func ensureDir(path string) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		if err := os.Mkdir(path, 0755); err != nil {
@@ -725,33 +707,21 @@ var DefaultToolLimits = map[string]int{
 	"write_file":       10,
 }
 
-// createDefaultConfig creates a default configuration file with the setup wizard results.
+// createDefaultConfig writes a fresh config.yaml from the setup wizard results.
+// Provider-specific values are stored in the generic provider_config map —
+// no switches required here.
 func createDefaultConfig(setup *SetupResult) error {
 	config := Config{
-		Provider:     setup.Provider,
-		DefaultModel: setup.Model,
-		Theme:        "dark",
-		Framework:    setup.Framework,
+		Provider:       setup.Provider,
+		ProviderConfig: setup.ProviderValues,
+		DefaultModel:   setup.Model,
+		Theme:          "dark",
+		Framework:      setup.Framework,
 		ToolLimits: ToolLimitsConfig{
-			DefaultLimit: 50,  // Default: 50 calls per tool
-			TotalLimit:   200, // Safety cap: 200 total calls per session
+			DefaultLimit: 50,
+			TotalLimit:   200,
 			PerTool:      DefaultToolLimits,
 		},
-	}
-
-	// Set provider-specific config (only for the selected provider)
-	if setup.Provider == "ollama" {
-		config.OllamaConfig = &OllamaConfig{
-			Mode:   setup.OllamaMode,
-			URL:    setup.OllamaURL,
-			APIKey: setup.OllamaKey,
-		}
-		// Don't set GeminiConfig - it will be omitted from YAML
-	} else {
-		config.GeminiConfig = &GeminiConfig{
-			APIKey: setup.GeminiKey,
-		}
-		// Don't set OllamaConfig - it will be omitted from YAML
 	}
 
 	data, err := yaml.Marshal(config)
