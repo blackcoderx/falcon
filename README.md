@@ -641,6 +641,9 @@ For tools requiring human approval (e.g., file writes), implement `core.Confirma
 
 MIT
 
+--- 
+NB: Some documentations in the codebase may be outdate. Let us know if you find anything. 
+
 ## Acknowledgments
 
 Built with the amazing [Charm](https://charm.sh/) ecosystem.
