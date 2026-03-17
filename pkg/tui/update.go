@@ -54,6 +54,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Handle special keys
 		updatedModel, cmd := m.handleKeyMsg(msg)
 		if cmd != nil {
+			updatedModel.viewport.Height = updatedModel.calcViewportHeight() // sync before returning
 			return updatedModel, cmd
 		}
 		// If handleKeyMsg returned nil cmd, continue to handle the key

@@ -7,6 +7,7 @@ import (
 	"github.com/blackcoderx/falcon/pkg/llm"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/spf13/viper"
 )
 
 // openModelPicker initializes and opens the model picker.
@@ -17,8 +18,8 @@ func (m Model) openModelPicker() Model {
 	m.modelPickerItems = llm.All()
 	m.modelPickerIdx = 0
 
-	// Pre-select current provider if found
-	currentProvider := "" // read from viper or current client
+	// Pre-select current provider
+	currentProvider := viper.GetString("provider")
 	for i, p := range m.modelPickerItems {
 		if p.ID() == currentProvider {
 			m.modelPickerIdx = i
@@ -44,14 +45,14 @@ func (m Model) handleModelPickerKeys(msg tea.KeyMsg) (bool, Model, tea.Cmd) {
 			} else {
 				m.modelPickerIdx = len(m.modelPickerItems) - 1
 			}
-			return true, m, m.spinner.Tick
+			return true, m, nil
 		case "down", "tab":
 			if m.modelPickerIdx < len(m.modelPickerItems)-1 {
 				m.modelPickerIdx++
 			} else {
 				m.modelPickerIdx = 0
 			}
-			return true, m, m.spinner.Tick
+			return true, m, nil
 		case "enter":
 			// Advance to model name step
 			m.modelPickerStep = 1
@@ -65,7 +66,7 @@ func (m Model) handleModelPickerKeys(msg tea.KeyMsg) (bool, Model, tea.Cmd) {
 			return true, m, textinput.Blink
 		case "esc":
 			m.modelPickerActive = false
-			return true, m, m.spinner.Tick
+			return true, m, nil
 		}
 
 	case 1: // Model name input step
@@ -76,7 +77,7 @@ func (m Model) handleModelPickerKeys(msg tea.KeyMsg) (bool, Model, tea.Cmd) {
 		case "esc":
 			// Go back to provider step
 			m.modelPickerStep = 0
-			return true, m, m.spinner.Tick
+			return true, m, nil
 		default:
 			// Pass key to the text input
 			var cmd tea.Cmd

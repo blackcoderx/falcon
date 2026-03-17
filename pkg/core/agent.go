@@ -13,6 +13,7 @@ import (
 // executes tools, and provides API debugging assistance.
 type Agent struct {
 	llmClient    llm.LLMClient
+	clientMu     sync.RWMutex // Protects access to llmClient
 	tools        map[string]Tool
 	toolsMu      sync.RWMutex // Protects access to tools map
 	history      []llm.Message
@@ -99,12 +100,15 @@ func (a *Agent) SetToolLimit(toolName string, limit int) {
 
 // LLMClient returns the agent's LLM client.
 func (a *Agent) LLMClient() llm.LLMClient {
+	a.clientMu.RLock()
+	defer a.clientMu.RUnlock()
 	return a.llmClient
 }
 
 // SwapLLMClient replaces the agent's LLM client at runtime.
-// Only call this when the agent is not actively processing (m.thinking == false).
 func (a *Agent) SwapLLMClient(client llm.LLMClient) {
+	a.clientMu.Lock()
+	defer a.clientMu.Unlock()
 	a.llmClient = client
 }
 

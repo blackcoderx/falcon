@@ -110,10 +110,6 @@ const FalconASCII = `███████╗ █████╗ ██╗      
 ╚═╝     ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝`
 
 // newTextInput creates a text input with the Falcon style.
-// No prompt prefix - clean input area.
-// init.go
-
-// newTextInput creates a text input with the Falcon style.
 func newTextInput() textinput.Model {
 	ti := textinput.New()
 	ti.Placeholder = "Ask me anything..."
@@ -121,8 +117,6 @@ func newTextInput() textinput.Model {
 	ti.CharLimit = 2000
 	ti.Width = 80
 	ti.Prompt = "" // No prompt prefix
-
-	// --- FIX STARTS HERE ---
 
 	// We need to match the textinput background to the container background
 	// defined in your tui.go (InputAreaBg)
@@ -141,8 +135,6 @@ func newTextInput() textinput.Model {
 	ti.Cursor.Style = lipgloss.NewStyle().
 		Foreground(AccentColor).
 		Background(InputAreaBg)
-
-	// --- FIX ENDS HERE ---
 
 	return ti
 }
