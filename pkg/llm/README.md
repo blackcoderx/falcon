@@ -9,13 +9,16 @@ pkg/llm/
 ├── client.go                # LLMClient interface + Message/StreamCallback types
 ├── provider.go              # Provider interface + SetupField types
 ├── registry.go              # Global provider registry (Register, Get, All)
-├── register_providers.go    # init() — registers all built-in providers
-├── ollama.go                # Ollama HTTP client (local and cloud)
-├── ollama_provider.go       # OllamaProvider — registry metadata + BuildClient
-├── gemini.go                # Google Gemini client (official SDK)
-├── gemini_provider.go       # GeminiProvider — registry metadata + BuildClient
-├── openrouter.go            # OpenRouter HTTP client (OpenAI-compatible gateway)
-└── openrouter_provider.go   # OpenRouterProvider — registry metadata + BuildClient
+├── register_providers.go    # Documentation for provider registration pattern
+├── ollama/
+│   ├── ollama.go            # Ollama HTTP client (local and cloud)
+│   └── ollama_provider.go   # OllamaProvider — registry metadata + BuildClient + init() registration
+├── gemini/
+│   ├── gemini.go            # Google Gemini client (official SDK)
+│   └── gemini_provider.go   # GeminiProvider — registry metadata + BuildClient + init() registration
+└── openrouter/
+    ├── openrouter.go        # OpenRouter HTTP client (OpenAI-compatible gateway)
+    └── openrouter_provider.go # OpenRouterProvider — registry metadata + BuildClient + init() registration
 ```
 
 ## LLMClient Interface
@@ -72,12 +75,12 @@ type SetupField struct {
 
 ## Supported Providers
 
-### Ollama (`ollama.go` + `ollama_provider.go`)
+### Ollama (`ollama/ollama.go` + `ollama/ollama_provider.go`)
 
 Local and cloud Ollama instances. Uses Ollama's `/api/chat` endpoint with newline-delimited JSON streaming.
 
 ```go
-client := llm.NewOllamaClient("http://localhost:11434", "llama3", "")
+client := ollama.NewOllamaClient("http://localhost:11434", "llama3", "")
 ```
 
 **Config format:**
@@ -95,12 +98,12 @@ provider_config:
 
 ---
 
-### Google Gemini (`gemini.go` + `gemini_provider.go`)
+### Google Gemini (`gemini/gemini.go` + `gemini/gemini_provider.go`)
 
 Uses the official `google.golang.org/genai` SDK. Handles Gemini's role mapping (`"assistant"` → `"model"`) and system instruction extraction automatically.
 
 ```go
-client, err := llm.NewGeminiClient("your-api-key", "gemini-2.5-flash-lite")
+client, err := gemini.NewGeminiClient("your-api-key", "gemini-2.5-flash-lite")
 ```
 
 **Config format:**
@@ -116,12 +119,12 @@ provider_config:
 
 ---
 
-### OpenRouter (`openrouter.go` + `openrouter_provider.go`)
+### OpenRouter (`openrouter/openrouter.go` + `openrouter/openrouter_provider.go`)
 
 OpenAI-compatible gateway giving access to hundreds of models (Claude, GPT-4, Llama, Gemini, etc.) through a single API endpoint at `https://openrouter.ai/api/v1`. Uses SSE streaming.
 
 ```go
-client := llm.NewOpenRouterClient("your-api-key", "google/gemini-2.5-flash-lite")
+client := openrouter.NewOpenRouterClient("your-api-key", "google/gemini-2.5-flash-lite")
 ```
 
 **Config format:**
@@ -140,14 +143,24 @@ provider_config:
 
 ## Registry
 
-The registry (`registry.go`) is a simple ordered map. All built-in providers are registered in `register_providers.go` via `init()`:
+The registry (`registry.go`) is a simple ordered map. Each provider self-registers via an `init()` function in its own subpackage (e.g., `ollama/ollama_provider.go`):
 
 ```go
+// In each provider's _provider.go file:
 func init() {
-    Register(&OllamaProvider{})
-    Register(&GeminiProvider{})
-    Register(&OpenRouterProvider{})
+    llm.Register(&OllamaProvider{})
 }
+```
+
+To activate providers, the consuming package imports the subpackages with blank imports:
+
+```go
+// In pkg/tui/init.go:
+import (
+    _ "github.com/blackcoderx/falcon/pkg/llm/ollama"
+    _ "github.com/blackcoderx/falcon/pkg/llm/gemini"
+    _ "github.com/blackcoderx/falcon/pkg/llm/openrouter"
+)
 ```
 
 **API:**
@@ -164,7 +177,9 @@ The setup wizard and client factory consume the registry — they never need to 
 ### Basic Chat
 
 ```go
-client := llm.NewOllamaClient("http://localhost:11434", "llama3", "")
+import "github.com/blackcoderx/falcon/pkg/llm/ollama"
+
+client := ollama.NewOllamaClient("http://localhost:11434", "llama3", "")
 
 messages := []llm.Message{
     {Role: "system", Content: "You are a helpful assistant."},
@@ -194,11 +209,13 @@ if err := client.CheckConnection(); err != nil {
 
 Three steps, no changes to any other package:
 
-### Step 1: Implement LLMClient
+### Step 1: Create a subpackage and implement LLMClient
 
 ```go
-// pkg/llm/myprovider.go
-package llm
+// pkg/llm/myprovider/myprovider.go
+package myprovider
+
+import "github.com/blackcoderx/falcon/pkg/llm"
 
 type MyProviderClient struct {
     apiKey string
@@ -207,17 +224,23 @@ type MyProviderClient struct {
 
 func NewMyProviderClient(apiKey, model string) *MyProviderClient { ... }
 
-func (c *MyProviderClient) Chat(messages []Message) (string, error)                          { ... }
-func (c *MyProviderClient) ChatStream(messages []Message, cb StreamCallback) (string, error) { ... }
-func (c *MyProviderClient) CheckConnection() error                                            { ... }
-func (c *MyProviderClient) GetModel() string                                                  { return c.model }
+func (c *MyProviderClient) Chat(messages []llm.Message) (string, error)                              { ... }
+func (c *MyProviderClient) ChatStream(messages []llm.Message, cb llm.StreamCallback) (string, error) { ... }
+func (c *MyProviderClient) CheckConnection() error                                                    { ... }
+func (c *MyProviderClient) GetModel() string                                                          { return c.model }
 ```
 
-### Step 2: Implement Provider
+### Step 2: Implement Provider with self-registration
 
 ```go
-// pkg/llm/myprovider_provider.go
-package llm
+// pkg/llm/myprovider/myprovider_provider.go
+package myprovider
+
+import "github.com/blackcoderx/falcon/pkg/llm"
+
+func init() {
+    llm.Register(&MyProvider{})
+}
 
 type MyProvider struct{}
 
@@ -225,8 +248,8 @@ func (p *MyProvider) ID() string          { return "myprovider" }
 func (p *MyProvider) DisplayName() string  { return "My Provider" }
 func (p *MyProvider) DefaultModel() string { return "my-default-model" }
 
-func (p *MyProvider) SetupFields() []SetupField {
-    return []SetupField{
+func (p *MyProvider) SetupFields() []llm.SetupField {
+    return []llm.SetupField{
         {
             Key:         "api_key",
             Title:       "API Key",
@@ -236,7 +259,7 @@ func (p *MyProvider) SetupFields() []SetupField {
     }
 }
 
-func (p *MyProvider) BuildClient(values map[string]string, model string) (LLMClient, error) {
+func (p *MyProvider) BuildClient(values map[string]string, model string) (llm.LLMClient, error) {
     if model == "" {
         model = p.DefaultModel()
     }
@@ -244,19 +267,16 @@ func (p *MyProvider) BuildClient(values map[string]string, model string) (LLMCli
 }
 ```
 
-### Step 3: Register
+### Step 3: Add a blank import
 
 ```go
-// pkg/llm/register_providers.go — add one line:
-func init() {
-    Register(&OllamaProvider{})
-    Register(&GeminiProvider{})
-    Register(&OpenRouterProvider{})
-    Register(&MyProvider{})   // ← add this
-}
+// In pkg/tui/init.go — add one line:
+import (
+    _ "github.com/blackcoderx/falcon/pkg/llm/myprovider"
+)
 ```
 
-The provider now appears in the setup wizard, gets its own config section, and is instantiated at runtime. **Zero changes to `pkg/core/init.go` or `pkg/tui/init.go`.**
+The provider now appears in the setup wizard, gets its own config section, and is instantiated at runtime. **Zero changes to `pkg/core/init.go`.**
 
 ## Testing
 
@@ -268,10 +288,10 @@ type MockLLMClient struct {
     Err      error
 }
 
-func (m *MockLLMClient) Chat(_ []Message) (string, error)                          { return m.Response, m.Err }
-func (m *MockLLMClient) ChatStream(_ []Message, cb StreamCallback) (string, error) { cb(m.Response); return m.Response, m.Err }
-func (m *MockLLMClient) CheckConnection() error                                     { return m.Err }
-func (m *MockLLMClient) GetModel() string                                           { return "mock" }
+func (m *MockLLMClient) Chat(_ []llm.Message) (string, error)                              { return m.Response, m.Err }
+func (m *MockLLMClient) ChatStream(_ []llm.Message, cb llm.StreamCallback) (string, error) { cb(m.Response); return m.Response, m.Err }
+func (m *MockLLMClient) CheckConnection() error                                             { return m.Err }
+func (m *MockLLMClient) GetModel() string                                                   { return "mock" }
 ```
 
 ```bash
