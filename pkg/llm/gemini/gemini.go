@@ -1,10 +1,11 @@
-package llm
+package gemini
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	"github.com/blackcoderx/falcon/pkg/llm"
 	"google.golang.org/genai"
 )
 
@@ -42,7 +43,7 @@ func NewGeminiClient(apiKey, model string) (*GeminiClient, error) {
 
 // convertMessages converts our Message type to Gemini Content format.
 // Gemini uses "user" and "model" roles (not "assistant").
-func (c *GeminiClient) convertMessages(messages []Message) []*genai.Content {
+func (c *GeminiClient) convertMessages(messages []llm.Message) []*genai.Content {
 	var contents []*genai.Content
 
 	for _, msg := range messages {
@@ -63,9 +64,9 @@ func (c *GeminiClient) convertMessages(messages []Message) []*genai.Content {
 
 // extractSystemInstruction extracts the system message (if any) from messages.
 // Returns the system instruction and remaining messages.
-func (c *GeminiClient) extractSystemInstruction(messages []Message) (string, []Message) {
+func (c *GeminiClient) extractSystemInstruction(messages []llm.Message) (string, []llm.Message) {
 	var systemInstruction string
-	var remaining []Message
+	var remaining []llm.Message
 
 	for _, msg := range messages {
 		if msg.Role == "system" {
@@ -83,7 +84,7 @@ func (c *GeminiClient) extractSystemInstruction(messages []Message) (string, []M
 }
 
 // Chat sends a non-streaming chat request and returns the complete response.
-func (c *GeminiClient) Chat(messages []Message) (string, error) {
+func (c *GeminiClient) Chat(messages []llm.Message) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
@@ -116,7 +117,7 @@ func (c *GeminiClient) Chat(messages []Message) (string, error) {
 
 // ChatStream sends a streaming chat request and calls callback for each chunk.
 // Returns the complete response when streaming finishes.
-func (c *GeminiClient) ChatStream(messages []Message, callback StreamCallback) (string, error) {
+func (c *GeminiClient) ChatStream(messages []llm.Message, callback llm.StreamCallback) (string, error) {
 	ctx := context.Background() // No timeout for streaming
 
 	// Extract system instruction from messages

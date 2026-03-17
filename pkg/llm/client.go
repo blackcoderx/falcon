@@ -3,6 +3,15 @@
 // enabling easy switching between different LLM backends like Ollama and Gemini.
 package llm
 
+// Message represents a chat message
+type Message struct {
+	Role    string `json:"role"` // "system", "user", or "assistant"
+	Content string `json:"content"`
+}
+
+// StreamCallback is called for each chunk of streaming response
+type StreamCallback func(chunk string)
+
 // LLMClient defines the interface that all LLM providers must implement.
 // This allows the agent to work with any LLM backend without tight coupling.
 type LLMClient interface {

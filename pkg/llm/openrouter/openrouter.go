@@ -1,4 +1,4 @@
-package llm
+package openrouter
 
 import (
 	"bufio"
@@ -9,21 +9,23 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/blackcoderx/falcon/pkg/llm"
 )
 
 const openRouterBaseURL = "https://openrouter.ai/api/v1"
 
 // openRouterRequest is the OpenAI-compatible request body used by OpenRouter.
 type openRouterRequest struct {
-	Model    string    `json:"model"`
-	Messages []Message `json:"messages"`
-	Stream   bool      `json:"stream"`
+	Model    string        `json:"model"`
+	Messages []llm.Message `json:"messages"`
+	Stream   bool          `json:"stream"`
 }
 
 // openRouterChoice represents a single choice in a non-streaming response.
 type openRouterChoice struct {
-	Message      Message `json:"message"`
-	FinishReason string  `json:"finish_reason"`
+	Message      llm.Message `json:"message"`
+	FinishReason string      `json:"finish_reason"`
 }
 
 // openRouterResponse is the non-streaming response body from OpenRouter.
@@ -105,7 +107,7 @@ func (c *OpenRouterClient) newRequest(body []byte, stream bool) (*http.Request, 
 }
 
 // Chat sends a non-streaming chat request and returns the complete response.
-func (c *OpenRouterClient) Chat(messages []Message) (string, error) {
+func (c *OpenRouterClient) Chat(messages []llm.Message) (string, error) {
 	payload := openRouterRequest{
 		Model:    c.model,
 		Messages: messages,
@@ -155,7 +157,7 @@ func (c *OpenRouterClient) Chat(messages []Message) (string, error) {
 
 // ChatStream sends a streaming chat request using SSE and calls callback for each chunk.
 // Returns the complete response when streaming finishes.
-func (c *OpenRouterClient) ChatStream(messages []Message, callback StreamCallback) (string, error) {
+func (c *OpenRouterClient) ChatStream(messages []llm.Message, callback llm.StreamCallback) (string, error) {
 	payload := openRouterRequest{
 		Model:    c.model,
 		Messages: messages,

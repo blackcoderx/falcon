@@ -1,4 +1,10 @@
-package llm
+package openrouter
+
+import "github.com/blackcoderx/falcon/pkg/llm"
+
+func init() {
+	llm.Register(&OpenRouterProvider{})
+}
 
 // OpenRouterProvider implements Provider for the OpenRouter gateway.
 // OpenRouter is an OpenAI-compatible API that provides access to hundreds
@@ -10,8 +16,8 @@ func (p *OpenRouterProvider) ID() string          { return "openrouter" }
 func (p *OpenRouterProvider) DisplayName() string  { return "OpenRouter (Claude, GPT-4, Llama, and 100s more)" }
 func (p *OpenRouterProvider) DefaultModel() string { return "google/gemini-2.5-flash-lite" }
 
-func (p *OpenRouterProvider) SetupFields() []SetupField {
-	return []SetupField{
+func (p *OpenRouterProvider) SetupFields() []llm.SetupField {
+	return []llm.SetupField{
 		{
 			Key:         "api_key",
 			Title:       "OpenRouter API Key",
@@ -23,7 +29,7 @@ func (p *OpenRouterProvider) SetupFields() []SetupField {
 	}
 }
 
-func (p *OpenRouterProvider) BuildClient(values map[string]string, model string) (LLMClient, error) {
+func (p *OpenRouterProvider) BuildClient(values map[string]string, model string) (llm.LLMClient, error) {
 	if model == "" {
 		model = p.DefaultModel()
 	}

@@ -1,4 +1,10 @@
-package llm
+package gemini
+
+import "github.com/blackcoderx/falcon/pkg/llm"
+
+func init() {
+	llm.Register(&GeminiProvider{})
+}
 
 // GeminiProvider implements Provider for Google's Gemini backend.
 type GeminiProvider struct{}
@@ -7,8 +13,8 @@ func (p *GeminiProvider) ID() string          { return "gemini" }
 func (p *GeminiProvider) DisplayName() string  { return "Gemini (Google AI)" }
 func (p *GeminiProvider) DefaultModel() string { return "gemini-2.5-flash-lite" }
 
-func (p *GeminiProvider) SetupFields() []SetupField {
-	return []SetupField{
+func (p *GeminiProvider) SetupFields() []llm.SetupField {
+	return []llm.SetupField{
 		{
 			Key:         "api_key",
 			Title:       "Gemini API Key",
@@ -20,7 +26,7 @@ func (p *GeminiProvider) SetupFields() []SetupField {
 	}
 }
 
-func (p *GeminiProvider) BuildClient(values map[string]string, model string) (LLMClient, error) {
+func (p *GeminiProvider) BuildClient(values map[string]string, model string) (llm.LLMClient, error) {
 	if model == "" {
 		model = p.DefaultModel()
 	}

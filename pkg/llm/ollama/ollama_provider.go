@@ -1,4 +1,10 @@
-package llm
+package ollama
+
+import "github.com/blackcoderx/falcon/pkg/llm"
+
+func init() {
+	llm.Register(&OllamaProvider{})
+}
 
 // OllamaProvider implements Provider for the Ollama backend.
 // Supports both local (http://localhost:11434) and cloud (https://ollama.com) modes.
@@ -8,14 +14,14 @@ func (p *OllamaProvider) ID() string          { return "ollama" }
 func (p *OllamaProvider) DisplayName() string  { return "Ollama (local or cloud)" }
 func (p *OllamaProvider) DefaultModel() string { return "llama3" }
 
-func (p *OllamaProvider) SetupFields() []SetupField {
-	return []SetupField{
+func (p *OllamaProvider) SetupFields() []llm.SetupField {
+	return []llm.SetupField{
 		{
 			Key:   "mode",
-			Type:  FieldSelect,
+			Type:  llm.FieldSelect,
 			Title: "Ollama mode",
 			Description: "Local runs on your machine; Cloud uses Ollama's hosted service.",
-			Options: []FieldOption{
+			Options: []llm.FieldOption{
 				{"Local (run on your machine)", "local"},
 				{"Cloud (Ollama Cloud)", "cloud"},
 			},
@@ -37,7 +43,7 @@ func (p *OllamaProvider) SetupFields() []SetupField {
 	}
 }
 
-func (p *OllamaProvider) BuildClient(values map[string]string, model string) (LLMClient, error) {
+func (p *OllamaProvider) BuildClient(values map[string]string, model string) (llm.LLMClient, error) {
 	url := values["url"]
 	if url == "" {
 		if values["mode"] == "cloud" {

@@ -1,6 +1,5 @@
-// Package llm provides client implementations for Large Language Models,
-// specifically focusing on Ollama integration for local AI inference.
-package llm
+// Package ollama provides the Ollama LLM client implementation.
+package ollama
 
 import (
 	"bufio"
@@ -10,31 +9,24 @@ import (
 	"io"
 	"net/http"
 	"time"
-)
 
-// Message represents a chat message
-type Message struct {
-	Role    string `json:"role"` // "system", "user", or "assistant"
-	Content string `json:"content"`
-}
+	"github.com/blackcoderx/falcon/pkg/llm"
+)
 
 // ChatRequest represents an Ollama chat request
 type ChatRequest struct {
-	Model    string    `json:"model"`
-	Messages []Message `json:"messages"`
-	Stream   bool      `json:"stream"`
+	Model    string        `json:"model"`
+	Messages []llm.Message `json:"messages"`
+	Stream   bool          `json:"stream"`
 }
 
 // ChatResponse represents an Ollama chat response
 type ChatResponse struct {
-	Model     string  `json:"model"`
-	CreatedAt string  `json:"created_at"`
-	Message   Message `json:"message"`
-	Done      bool    `json:"done"`
+	Model     string      `json:"model"`
+	CreatedAt string      `json:"created_at"`
+	Message   llm.Message `json:"message"`
+	Done      bool        `json:"done"`
 }
-
-// StreamCallback is called for each chunk of streaming response
-type StreamCallback func(chunk string)
 
 // OllamaClient handles communication with Ollama API
 type OllamaClient struct {
@@ -64,7 +56,7 @@ func NewOllamaClient(baseURL, model, apiKey string) *OllamaClient {
 }
 
 // Chat sends a chat request to Ollama and returns the response
-func (c *OllamaClient) Chat(messages []Message) (string, error) {
+func (c *OllamaClient) Chat(messages []llm.Message) (string, error) {
 	req := ChatRequest{
 		Model:    c.Model,
 		Messages: messages,
@@ -109,7 +101,7 @@ func (c *OllamaClient) Chat(messages []Message) (string, error) {
 // ChatStream sends a chat request with streaming and calls callback for each chunk.
 // If streaming fails with 503 (common with Ollama Cloud), it automatically falls back
 // to non-streaming mode and delivers the response as a single chunk.
-func (c *OllamaClient) ChatStream(messages []Message, callback StreamCallback) (string, error) {
+func (c *OllamaClient) ChatStream(messages []llm.Message, callback llm.StreamCallback) (string, error) {
 	req := ChatRequest{
 		Model:    c.Model,
 		Messages: messages,
@@ -194,7 +186,7 @@ func (c *OllamaClient) ChatStream(messages []Message, callback StreamCallback) (
 
 // chatWithFallback uses non-streaming mode and delivers the response via callback.
 // This is used as a fallback when streaming is unavailable (e.g., Ollama Cloud 503).
-func (c *OllamaClient) chatWithFallback(messages []Message, callback StreamCallback) (string, error) {
+func (c *OllamaClient) chatWithFallback(messages []llm.Message, callback llm.StreamCallback) (string, error) {
 	content, err := c.Chat(messages)
 	if err != nil {
 		return "", err

@@ -8,6 +8,9 @@ import (
 	"github.com/blackcoderx/falcon/pkg/core/tools"
 	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 	"github.com/blackcoderx/falcon/pkg/llm"
+	"github.com/blackcoderx/falcon/pkg/llm/ollama"
+	_ "github.com/blackcoderx/falcon/pkg/llm/gemini"
+	_ "github.com/blackcoderx/falcon/pkg/llm/openrouter"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -109,7 +112,7 @@ func collectProviderValues(p llm.Provider) map[string]string {
 
 // newOllamaClientFallback creates an Ollama client using legacy top-level config
 // fields. Used for backward compatibility when the provider registry lookup fails.
-func newOllamaClientFallback(model string) *llm.OllamaClient {
+func newOllamaClientFallback(model string) *ollama.OllamaClient {
 	url := viper.GetString("ollama_url")
 	if url == "" {
 		url = "http://localhost:11434"
@@ -124,7 +127,7 @@ func newOllamaClientFallback(model string) *llm.OllamaClient {
 		model = "llama3"
 	}
 
-	return llm.NewOllamaClient(url, model, apiKey)
+	return ollama.NewOllamaClient(url, model, apiKey)
 }
 
 // newSpinner creates a spinner with the Falcon style (points animation).
