@@ -284,6 +284,23 @@ var (
 				Foreground(DimColor)
 )
 
+// Slash command panel styles
+var (
+	SlashPanelStyle = lipgloss.NewStyle().
+			MarginLeft(ContentPadLeft)
+
+	SlashItemSelectedStyle = lipgloss.NewStyle().
+				Foreground(AccentColor).
+				Bold(true)
+
+	SlashItemStyle = lipgloss.NewStyle().
+			Foreground(DimColor)
+
+	SlashItemKindStyle = lipgloss.NewStyle().
+				Foreground(MutedColor).
+				Italic(true)
+)
+
 // Confirmation dialog styles
 var (
 	ConfirmHeaderStyle = lipgloss.NewStyle().

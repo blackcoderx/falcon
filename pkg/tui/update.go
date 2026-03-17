@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/blackcoderx/falcon/pkg/core"
@@ -101,6 +102,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.textinput, cmd = m.textinput.Update(msg)
 		cmds = append(cmds, cmd)
+
+		// Update slash state when input changes
+		if val := m.textinput.Value(); strings.HasPrefix(val, "/") {
+			m = m.updateSlashState(val[1:])
+		} else if m.slashState.Active {
+			m.slashState = SlashState{}
+		}
 	}
 
 	// Update viewport
@@ -140,7 +148,7 @@ func (m Model) handleWindowResize(msg tea.WindowSizeMsg) Model {
 	footerHeight := 1
 	margins := 3
 
-	viewportHeight := m.height - inputHeight - footerHeight - margins
+	viewportHeight := m.height - inputHeight - footerHeight - margins - m.slashPanelHeight()
 	if viewportHeight < 5 {
 		viewportHeight = 5
 	}

@@ -234,9 +234,14 @@ func (m Model) renderStatusText() string {
 }
 
 // renderInputArea renders the input area — same width as user message box.
+// If the slash panel is active, it renders above the input field.
 func (m Model) renderInputArea() string {
-	// MarginLeft is on InputAreaStyle — no manual pad needed
-	return InputAreaStyle.Width(m.boxWidth()).Render(m.textinput.View())
+	var parts []string
+	if m.slashState.Active && len(m.slashState.Suggestions) > 0 {
+		parts = append(parts, m.renderSlashPanel())
+	}
+	parts = append(parts, InputAreaStyle.Width(m.boxWidth()).Render(m.textinput.View()))
+	return strings.Join(parts, "\n")
 }
 
 // renderFooter renders the footer with animated circle, status, model info, and shortcuts.

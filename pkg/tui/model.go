@@ -72,6 +72,12 @@ type Model struct {
 	pendingConfirmation *core.FileConfirmation      // Details of the pending file change
 	confirmManager      *shared.ConfirmationManager // Shared confirmation manager
 
+	// Slash command state
+	slashState SlashState
+
+	// Model picker state (used by /model command)
+	modelPickerActive bool
+
 	// Persistent memory store
 	memoryStore *core.MemoryStore
 

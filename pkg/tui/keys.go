@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/atotto/clipboard"
@@ -13,6 +14,13 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (Model, tea.Cmd) {
 	// Handle confirmation mode first (takes priority)
 	if m.confirmationMode {
 		return m.handleConfirmationKeys(msg)
+	}
+
+	// Handle slash command panel navigation (takes priority over regular keys)
+	if m.slashState.Active {
+		if handled, updatedModel, cmd := m.handleSlashKeys(msg); handled {
+			return updatedModel, cmd
+		}
 	}
 
 	switch msg.String() {
@@ -141,27 +149,38 @@ func (m Model) handleHistoryDown() (Model, tea.Cmd) {
 
 // handleEnter processes the enter key to send a message.
 func (m Model) handleEnter() (Model, tea.Cmd) {
-	if m.textinput.Value() == "" || m.thinking {
+	if m.thinking {
 		return m, nil
 	}
 
 	userInput := strings.TrimSpace(m.textinput.Value())
-	if userInput == "" {
+	if userInput == "" && m.slashState.FlowContent == "" {
 		return m, nil
+	}
+
+	// Build the enriched input for the agent
+	agentInput := userInput
+	displayInput := userInput
+	if m.slashState.FlowContent != "" {
+		agentInput = fmt.Sprintf("File context:\n```yaml\n%s\n```\n\nTask: %s", m.slashState.FlowContent, userInput)
+		m.slashState = SlashState{} // clear after use
+	}
+
+	if displayInput == "" {
+		displayInput = "(context attached)"
 	}
 
 	// Add separator if there are previous logs
 	if len(m.logs) > 0 {
 		m.logs = append(m.logs, logEntry{Type: "separator", Content: ""})
 	}
-	m.logs = append(m.logs, logEntry{Type: "user", Content: userInput})
+	m.logs = append(m.logs, logEntry{Type: "user", Content: displayInput})
 
 	// Add to history
-	m.inputHistory = append(m.inputHistory, userInput)
+	m.inputHistory = append(m.inputHistory, displayInput)
 	m.historyIdx = -1
 	m.savedInput = ""
 
-	// Reset input and start processing
 	m.textinput.SetValue("")
 	m.thinking = true
 	m.status = "thinking"
@@ -170,7 +189,7 @@ func (m Model) handleEnter() (Model, tea.Cmd) {
 
 	return m, tea.Batch(
 		m.spinner.Tick,
-		runAgentAsync(m.agent, userInput),
+		runAgentAsync(m.agent, agentInput),
 	)
 }
 
