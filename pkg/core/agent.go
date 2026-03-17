@@ -102,6 +102,12 @@ func (a *Agent) LLMClient() llm.LLMClient {
 	return a.llmClient
 }
 
+// SwapLLMClient replaces the agent's LLM client at runtime.
+// Only call this when the agent is not actively processing (m.thinking == false).
+func (a *Agent) SwapLLMClient(client llm.LLMClient) {
+	a.llmClient = client
+}
+
 // SetDefaultLimit sets the fallback limit for tools without a specific limit.
 func (a *Agent) SetDefaultLimit(limit int) {
 	a.defaultLimit = limit

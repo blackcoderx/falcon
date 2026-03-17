@@ -7,6 +7,7 @@ import (
 
 	"github.com/blackcoderx/falcon/pkg/core"
 	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
+	"github.com/blackcoderx/falcon/pkg/llm"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -77,6 +78,12 @@ type Model struct {
 
 	// modelPickerActive shows the model picker panel (populated by /model command, rendered in Phase 5)
 	modelPickerActive bool
+
+	// Model picker state (step 0 = provider list, step 1 = model name input)
+	modelPickerStep  int            // 0 = selecting provider, 1 = entering model name
+	modelPickerItems []llm.Provider // available providers
+	modelPickerIdx   int            // currently highlighted provider index
+	modelPickerInput textinput.Model // model name text input
 
 	// Persistent memory store
 	memoryStore *core.MemoryStore

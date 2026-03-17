@@ -20,51 +20,15 @@ import (
 	"github.com/spf13/viper"
 )
 
-// configureToolLimits sets up per-tool call limits from config file.
-// Falls back to sensible defaults if config values are missing.
-// High-risk tools (network I/O, side effects) have lower limits.
-// Low-risk tools (in-memory, no side effects) have higher limits.
+// configureToolLimits applies hardcoded default tool call limits to the agent.
 func configureToolLimits(agent *core.Agent) {
-	// Default limits (used if config doesn't specify)
-	// We use the core defaults as the source of truth
-	defaultLimits := core.DefaultToolLimits
+	// Apply global limits (hardcoded — no longer read from config)
+	agent.SetDefaultLimit(50)
+	agent.SetTotalLimit(200)
 
-	// Set global limits from config (with defaults)
-	defaultLimit := viper.GetInt("tool_limits.default_limit")
-	if defaultLimit <= 0 {
-		defaultLimit = 50
-	}
-	agent.SetDefaultLimit(defaultLimit)
-
-	totalLimit := viper.GetInt("tool_limits.total_limit")
-	if totalLimit <= 0 {
-		totalLimit = 200
-	}
-	agent.SetTotalLimit(totalLimit)
-
-	// Apply default per-tool limits first
-	for toolName, limit := range defaultLimits {
+	// Apply per-tool limits from the default map
+	for toolName, limit := range core.DefaultToolLimits {
 		agent.SetToolLimit(toolName, limit)
-	}
-
-	// Override with config values if present
-	perToolConfig := viper.GetStringMap("tool_limits.per_tool")
-	for toolName, limitVal := range perToolConfig {
-		// viper returns interface{}, need to convert to int
-		var limit int
-		switch v := limitVal.(type) {
-		case int:
-			limit = v
-		case int64:
-			limit = int(v)
-		case float64:
-			limit = int(v)
-		default:
-			continue // Skip invalid values
-		}
-		if limit > 0 {
-			agent.SetToolLimit(toolName, limit)
-		}
 	}
 }
 

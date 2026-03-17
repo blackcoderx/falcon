@@ -237,7 +237,9 @@ func (m Model) renderStatusText() string {
 // If the slash panel is active, it renders above the input field.
 func (m Model) renderInputArea() string {
 	var parts []string
-	if m.slashState.Active && len(m.slashState.Suggestions) > 0 {
+	if m.modelPickerActive {
+		parts = append(parts, m.renderModelPicker())
+	} else if m.slashState.Active && len(m.slashState.Suggestions) > 0 {
 		parts = append(parts, m.renderSlashPanel())
 	}
 	parts = append(parts, InputAreaStyle.Width(m.boxWidth()).Render(m.textinput.View()))

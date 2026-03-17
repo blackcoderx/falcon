@@ -147,7 +147,7 @@ func (m Model) calcViewportHeight() int {
 	inputHeight := 1
 	footerHeight := 1
 	margins := 3
-	h := m.height - inputHeight - footerHeight - margins - m.slashPanelHeight()
+	h := m.height - inputHeight - footerHeight - margins - m.slashPanelHeight() - m.modelPickerHeight()
 	if h < 5 {
 		h = 5
 	}

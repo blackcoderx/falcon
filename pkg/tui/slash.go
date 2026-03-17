@@ -143,7 +143,7 @@ func (m Model) acceptSlashCommand() (Model, tea.Cmd) {
 	switch selected.Kind {
 	case "builtin":
 		if selected.Name == "model" {
-			m.modelPickerActive = true
+			m = m.openModelPicker()
 			m.slashState = SlashState{}
 			m.textinput.SetValue("")
 		}

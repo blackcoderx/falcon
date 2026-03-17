@@ -23,6 +23,16 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (Model, tea.Cmd) {
 		}
 	}
 
+	// Handle model picker keys
+	if m.modelPickerActive {
+		if handled, updatedModel, cmd := m.handleModelPickerKeys(msg); handled {
+			if cmd == nil {
+				cmd = m.spinner.Tick
+			}
+			return updatedModel, cmd
+		}
+	}
+
 	switch msg.String() {
 	case "ctrl+c":
 		// Cancel any pending confirmation when quitting
