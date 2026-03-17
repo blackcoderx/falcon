@@ -29,9 +29,10 @@ type memoryFile struct {
 
 // MemoryStore manages persistent agent memory.
 type MemoryStore struct {
-	entries []MemoryEntry
-	mu      sync.RWMutex
-	falconDir string
+	entries   []MemoryEntry
+	mu        sync.RWMutex
+	falconDir string // project .falcon dir (for falcon.md)
+	globalDir string // global ~/.falcon dir (for memory.json)
 }
 
 // FalconDir returns the base .falcon directory path.
@@ -41,6 +42,7 @@ func (ms *MemoryStore) FalconDir() string { return ms.falconDir }
 func NewMemoryStore(falconDir string) *MemoryStore {
 	ms := &MemoryStore{
 		falconDir: falconDir,
+		globalDir: GlobalFalconDir(),
 	}
 	ms.loadMemory()
 	return ms
@@ -237,7 +239,7 @@ func (ms *MemoryStore) UpdateKnowledge(section, newContent string) error {
 
 // loadMemory reads memory.json from disk, handling both old ({}) and new (versioned) formats.
 func (ms *MemoryStore) loadMemory() {
-	memPath := filepath.Join(ms.falconDir, "memory.json")
+	memPath := filepath.Join(ms.globalDir, "memory.json")
 	data, err := os.ReadFile(memPath)
 	if err != nil {
 		return // File doesn't exist yet
@@ -266,6 +268,11 @@ func (ms *MemoryStore) saveMemory() error {
 		return fmt.Errorf("failed to marshal memory: %w", err)
 	}
 
-	memPath := filepath.Join(ms.falconDir, "memory.json")
-	return os.WriteFile(memPath, data, 0644)
+	// Ensure global dir exists before writing
+	if err := os.MkdirAll(ms.globalDir, 0700); err != nil {
+		return fmt.Errorf("failed to ensure global falcon dir: %w", err)
+	}
+
+	memPath := filepath.Join(ms.globalDir, "memory.json")
+	return os.WriteFile(memPath, data, 0600)
 }

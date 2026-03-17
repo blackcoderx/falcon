@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/blackcoderx/falcon/pkg/core"
 	"github.com/blackcoderx/falcon/pkg/core/tools/persistence"
@@ -13,6 +15,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -106,19 +109,57 @@ func init() {
 			fmt.Printf("  built:  %s\n", date)
 		},
 	})
+
+	// Config command — global LLM provider/model setup wizard
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "config",
+		Short: "Configure global LLM provider and model credentials",
+		Long:  "Interactive wizard to set up or update your LLM provider credentials stored in ~/.falcon/config.yaml",
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := core.RunGlobalConfigWizard(); err != nil {
+				if errors.Is(err, core.ErrSetupCancelled) {
+					fmt.Println("Setup cancelled.")
+					return
+				}
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+		},
+	})
 }
 
 func initConfig() {
 	if cfgFile != "" {
 		viper.SetConfigFile(cfgFile)
-	} else {
-		viper.AddConfigPath(".falcon")
-		viper.SetConfigType("yaml")
-		viper.SetConfigName("config")
+		viper.AutomaticEnv()
+		_ = viper.ReadInConfig()
+		return
 	}
 
+	// Load global config first (~/.falcon/config.yaml) — provider, model, theme
+	globalPath := core.GlobalConfigPath()
+	viper.SetConfigFile(globalPath)
 	viper.AutomaticEnv()
-	_ = viper.ReadInConfig()
+	_ = viper.ReadInConfig() // no error if not found
+
+	// Overlay project config for framework and web_ui only
+	projectPath := filepath.Join(core.FalconFolderName, "config.yaml")
+	projectData, err := os.ReadFile(projectPath)
+	if err == nil {
+		var projectCfg core.Config
+		var rawProjectCfg map[string]interface{}
+		if yaml.Unmarshal(projectData, &projectCfg) == nil {
+			if yaml.Unmarshal(projectData, &rawProjectCfg) == nil {
+				if webUIRaw, ok := rawProjectCfg["web_ui"]; ok && webUIRaw != nil {
+					viper.Set("web_ui.enabled", projectCfg.WebUI.Enabled)
+					viper.Set("web_ui.port", projectCfg.WebUI.Port)
+				}
+				if projectCfg.Framework != "" {
+					viper.Set("framework", projectCfg.Framework)
+				}
+			}
+		}
+	}
 }
 
 func runCLI(requestName, env string) error {

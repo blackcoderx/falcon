@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 	"github.com/blackcoderx/falcon/pkg/core/tools/spec_ingester"
 	"github.com/blackcoderx/falcon/pkg/llm"
 	"github.com/charmbracelet/huh"
@@ -32,12 +31,11 @@ type WebUIConfig struct {
 // Provider-specific settings are stored generically in ProviderConfig so that
 // new providers can be added without changing this struct.
 type Config struct {
-	Provider       string            `yaml:"provider"`                // "ollama", "gemini", "openrouter", …
+	Provider       string            `yaml:"provider"`                  // "ollama", "gemini", "openrouter", …
 	ProviderConfig map[string]string `yaml:"provider_config,omitempty"` // provider-specific key/value pairs
 	DefaultModel   string            `yaml:"default_model"`
 	Theme          string            `yaml:"theme"`
 	Framework      string            `yaml:"framework"` // API framework (e.g., gin, fastapi, express)
-	ToolLimits     ToolLimitsConfig  `yaml:"tool_limits"`
 	WebUI          WebUIConfig       `yaml:"web_ui"`
 
 	// Legacy fields — migrated automatically on first load; do not use in new code.
@@ -142,6 +140,7 @@ func providerOptions() []huh.Option[string] {
 // runSetupWizard displays an interactive setup wizard on first run.
 // Provider-specific forms are generated from the provider's SetupFields(),
 // so this function never needs to change when a new provider is added.
+// If a global config already exists with a provider, provider/model steps are skipped.
 func runSetupWizard(frameworkFlag string) (*SetupResult, error) {
 	var (
 		selectedFramework = frameworkFlag
@@ -152,6 +151,10 @@ func runSetupWizard(frameworkFlag string) (*SetupResult, error) {
 	fmt.Println("  Welcome to Falcon - AI-powered API debugging assistant")
 	fmt.Println("  Let's configure your setup.")
 	fmt.Println()
+
+	// Check if global config already has provider configured
+	existingGlobal, _ := LoadGlobalConfig()
+	hasGlobalConfig := existingGlobal != nil && existingGlobal.Provider != ""
 
 	// Phase 1: Framework selection (skip if --framework flag was provided)
 	var configGroups []*huh.Group
@@ -166,6 +169,27 @@ func runSetupWizard(frameworkFlag string) (*SetupResult, error) {
 					Height(10),
 			),
 		)
+	}
+
+	if hasGlobalConfig {
+		// Only ask for framework — provider/model are already in global config
+		if len(configGroups) > 0 {
+			frameworkForm := huh.NewForm(configGroups...).WithTheme(huh.ThemeDracula())
+			if err := frameworkForm.Run(); err != nil {
+				return nil, fmt.Errorf("setup cancelled: %w", err)
+			}
+		}
+		result := &SetupResult{
+			Framework:      selectedFramework,
+			Provider:       existingGlobal.Provider,
+			ProviderValues: existingGlobal.ProviderConfig,
+			Model:          existingGlobal.DefaultModel,
+		}
+		if result.ProviderValues == nil {
+			result.ProviderValues = map[string]string{}
+		}
+		fmt.Printf("  Using existing global provider: %s\n\n", result.Provider)
+		return result, nil
 	}
 
 	// Phase 2: Provider selection
@@ -198,12 +222,11 @@ func runSetupWizard(frameworkFlag string) (*SetupResult, error) {
 
 	fields := p.SetupFields()
 	if len(fields) > 0 {
-		providerFields, modelVar, err := buildProviderForm(p, result.ProviderValues)
+		modelVar, err := buildProviderForm(p, result.ProviderValues)
 		if err != nil {
 			return nil, err
 		}
 		result.Model = modelVar
-		_ = providerFields // values written directly into result.ProviderValues via pointers
 	}
 
 	// Apply per-field defaults
@@ -245,7 +268,7 @@ func runSetupWizard(frameworkFlag string) (*SetupResult, error) {
 // buildProviderForm creates and runs the huh form for a provider's setup fields,
 // writing collected values into the provided map. Also collects model name.
 // Returns the model name the user entered (may be empty — caller applies default).
-func buildProviderForm(p llm.Provider, values map[string]string) ([]huh.Field, string, error) {
+func buildProviderForm(p llm.Provider, values map[string]string) (string, error) {
 	fields := p.SetupFields()
 	// Allocate string variables for each field so huh can bind to them.
 	vars := make([]string, len(fields))
@@ -291,7 +314,7 @@ func buildProviderForm(p llm.Provider, values map[string]string) ([]huh.Field, s
 
 	form := huh.NewForm(huh.NewGroup(huhFields...)).WithTheme(huh.ThemeDracula())
 	if err := form.Run(); err != nil {
-		return nil, "", fmt.Errorf("setup cancelled: %w", err)
+		return "", fmt.Errorf("setup cancelled: %w", err)
 	}
 
 	// Write collected values back into the map
@@ -299,14 +322,16 @@ func buildProviderForm(p llm.Provider, values map[string]string) ([]huh.Field, s
 		values[f.Key] = vars[i]
 	}
 
-	return huhFields, modelVar, nil
+	return modelVar, nil
 }
 
 // buildConfirmSummary builds the confirmation text shown before writing config.
 func buildConfirmSummary(result *SetupResult, p llm.Provider) string {
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "Provider:  %s\n", p.DisplayName())
-	fmt.Fprintf(&sb, "Framework: %s\n", result.Framework)
+	if result.Framework != "" {
+		fmt.Fprintf(&sb, "Framework: %s\n", result.Framework)
+	}
 	fmt.Fprintf(&sb, "Model:     %s\n", result.Model)
 	for _, f := range p.SetupFields() {
 		v := result.ProviderValues[f.Key]
@@ -350,18 +375,21 @@ func InitializeFalconFolder(framework string, skipIndex bool) error {
 			return fmt.Errorf("failed to create .falcon folder: %w", err)
 		}
 
-		// Create config.yaml with wizard results
-		if err := createDefaultConfig(setup); err != nil {
+		// Write global config (provider, model, theme) to ~/.falcon/config.yaml
+		if err := EnsureGlobalFalconDir(); err != nil {
+			return err
+		}
+		if err := writeGlobalConfig(setup); err != nil {
+			return err
+		}
+
+		// Write project config (framework only) to .falcon/config.yaml
+		if err := writeProjectConfig(setup.Framework); err != nil {
 			return err
 		}
 
 		// Create falcon.md knowledge base template
 		if err := createFalconKnowledgeBase(); err != nil {
-			return err
-		}
-
-		// Create empty memory.json
-		if err := createMemoryFile(); err != nil {
 			return err
 		}
 
@@ -376,7 +404,7 @@ func InitializeFalconFolder(framework string, skipIndex bool) error {
 		}
 
 		// Create folder structure
-		newFolders := []string{"baselines", "flows", "reports", "sessions"}
+		newFolders := []string{"baselines", "flows", "reports"}
 		for _, folder := range newFolders {
 			if err := os.Mkdir(filepath.Join(FalconFolderName, folder), 0755); err != nil {
 				return fmt.Errorf("failed to create %s folder: %w", folder, err)
@@ -396,11 +424,6 @@ func InitializeFalconFolder(framework string, skipIndex bool) error {
 
 		// Create default dev environment
 		if err := createDefaultEnvironment(); err != nil {
-			return err
-		}
-
-		// Create manifest.json
-		if err := shared.CreateManifest(FalconFolderName); err != nil {
 			return err
 		}
 
@@ -443,15 +466,15 @@ func InitializeFalconFolder(framework string, skipIndex bool) error {
 	}
 
 	// Ensure subdirectories exist (for upgrades from older versions)
-	for _, dir := range []string{"requests", "environments", "baselines", "flows", "reports", "sessions"} {
+	for _, dir := range []string{"requests", "environments", "baselines", "flows", "reports"} {
 		if err := ensureDir(filepath.Join(FalconFolderName, dir)); err != nil {
 			return err
 		}
 	}
 
-	// Ensure manifest exists (for upgrades)
-	if _, err := os.Stat(filepath.Join(FalconFolderName, shared.ManifestFilename)); os.IsNotExist(err) {
-		shared.CreateManifest(FalconFolderName)
+	// Migrate provider/model config from project to global location (no-op if already done)
+	if err := migrateToGlobalConfig(); err != nil {
+		return fmt.Errorf("failed to migrate to global config: %w", err)
 	}
 
 	// Migrate legacy config fields if present
@@ -709,50 +732,38 @@ var DefaultToolLimits = map[string]int{
 	"write_file":       10,
 }
 
-// createDefaultConfig writes a fresh config.yaml from the setup wizard results.
-// Provider-specific values are stored in the generic provider_config map —
-// no switches required here.
-func createDefaultConfig(setup *SetupResult) error {
+// writeGlobalConfig writes provider/model/theme from wizard results to ~/.falcon/config.yaml.
+func writeGlobalConfig(setup *SetupResult) error {
+	// Load existing global config to preserve any other fields
+	existing, err := LoadGlobalConfig()
+	if err != nil {
+		existing = &Config{}
+	}
+
+	existing.Provider = setup.Provider
+	existing.ProviderConfig = setup.ProviderValues
+	existing.DefaultModel = setup.Model
+	if existing.Theme == "" {
+		existing.Theme = "dark"
+	}
+
+	return SaveGlobalConfig(existing)
+}
+
+// writeProjectConfig writes only the framework (and optionally web_ui) to .falcon/config.yaml.
+func writeProjectConfig(framework string) error {
 	config := Config{
-		Provider:       setup.Provider,
-		ProviderConfig: setup.ProviderValues,
-		DefaultModel:   setup.Model,
-		Theme:          "dark",
-		Framework:      setup.Framework,
-		ToolLimits: ToolLimitsConfig{
-			DefaultLimit: 50,
-			TotalLimit:   200,
-			PerTool:      DefaultToolLimits,
-		},
+		Framework: framework,
 	}
 
 	data, err := yaml.Marshal(config)
 	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
+		return fmt.Errorf("failed to marshal project config: %w", err)
 	}
 
 	configPath := filepath.Join(FalconFolderName, "config.yaml")
 	if err := os.WriteFile(configPath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write config file: %w", err)
-	}
-
-	return nil
-}
-
-// createMemoryFile creates a memory.json file with versioned format
-func createMemoryFile() error {
-	memory := map[string]interface{}{
-		"version": 1,
-		"entries": []interface{}{},
-	}
-	data, err := yaml.Marshal(memory)
-	if err != nil {
-		return fmt.Errorf("failed to marshal memory: %w", err)
-	}
-
-	memoryPath := filepath.Join(FalconFolderName, "memory.json")
-	if err := os.WriteFile(memoryPath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write memory file: %w", err)
+		return fmt.Errorf("failed to write project config file: %w", err)
 	}
 
 	return nil
