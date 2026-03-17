@@ -3,10 +3,7 @@ package agent
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
@@ -14,19 +11,17 @@ import (
 
 // RunTestsTool executes multiple test scenarios
 type RunTestsTool struct {
-	falconDir  string
-	httpTool   *shared.HTTPTool
-	assertTool *shared.AssertTool
-	varStore   *shared.VariableStore
+	falconDir    string
+	reportWriter *shared.ReportWriter
+	testExecutor *shared.TestExecutor
 }
 
 // NewRunTestsTool creates a new run_tests tool
-func NewRunTestsTool(falconDir string, httpTool *shared.HTTPTool, assertTool *shared.AssertTool, varStore *shared.VariableStore) *RunTestsTool {
+func NewRunTestsTool(falconDir string, testExecutor *shared.TestExecutor, reportWriter *shared.ReportWriter) *RunTestsTool {
 	return &RunTestsTool{
-		falconDir:  falconDir,
-		httpTool:   httpTool,
-		assertTool: assertTool,
-		varStore:   varStore,
+		falconDir:    falconDir,
+		reportWriter: reportWriter,
+		testExecutor: testExecutor,
 	}
 }
 
@@ -100,27 +95,9 @@ func (t *RunTestsTool) Execute(args string) (string, error) {
 		concurrency = 5
 	}
 
-	results := make([]shared.TestResult, len(scenariosToRun))
-	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, concurrency)
+	results := t.testExecutor.RunScenarios(scenariosToRun, params.BaseURL, concurrency)
 
-	// In the real app, we might use a callback for TUI updates.
-	// For CLI simple output:
-	// fmt.Printf("Running %d tests with concurrency %d...\n", len(scenariosToRun), concurrency)
-
-	for i, scenario := range scenariosToRun {
-		wg.Add(1)
-		go func(idx int, s shared.TestScenario) {
-			defer wg.Done()
-			semaphore <- struct{}{} // Acquire
-			results[idx] = t.runSingleScenario(s, params.BaseURL)
-			<-semaphore // Release
-		}(i, scenario)
-	}
-
-	wg.Wait()
-
-	// Summarize results
+	// Summarize
 	passed := 0
 	failed := 0
 	var sb strings.Builder
@@ -144,10 +121,10 @@ func (t *RunTestsTool) Execute(args string) (string, error) {
 	}
 
 	fmt.Fprintf(&sb, "\nSummary: %d Passed, %d Failed\n", passed, failed)
-
 	summary := sb.String()
 
-	reportPath, err := generateTestReport(t.falconDir, params.ReportName, results, passed, failed)
+	reportContent := formatTestReport(results, passed, failed)
+	reportPath, err := t.reportWriter.Write(params.ReportName, "test_report", reportContent)
 	if err != nil {
 		return summary + fmt.Sprintf("\n\nWarning: failed to save report: %v", err), nil
 	}
@@ -155,23 +132,8 @@ func (t *RunTestsTool) Execute(args string) (string, error) {
 	return summary + fmt.Sprintf("\n\nReport saved to: %s", reportPath), nil
 }
 
-// generateTestReport writes test results directly to a Markdown file in .falcon/reports/.
-func generateTestReport(falconDir, reportName string, results []shared.TestResult, passed, failed int) (string, error) {
-	reportsDir := filepath.Join(falconDir, "reports")
-	if err := os.MkdirAll(reportsDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create reports directory: %w", err)
-	}
-
-	name := reportName
-	if name == "" {
-		name = fmt.Sprintf("test_report_%s", time.Now().Format("20060102_150405"))
-	}
-	name = strings.ReplaceAll(name, " ", "_")
-	if !strings.HasSuffix(name, ".md") {
-		name += ".md"
-	}
-	reportPath := filepath.Join(reportsDir, name)
-
+// formatTestReport builds the Markdown content for a test report.
+func formatTestReport(results []shared.TestResult, passed, failed int) string {
 	var sb strings.Builder
 
 	fmt.Fprintf(&sb, "# Test Results Report\n\n")
@@ -198,93 +160,5 @@ func generateTestReport(falconDir, reportName string, results []shared.TestResul
 		fmt.Fprintf(&sb, "\n")
 	}
 
-	if err := os.WriteFile(reportPath, []byte(sb.String()), 0644); err != nil {
-		return "", fmt.Errorf("failed to write report: %w", err)
-	}
-
-	if err := shared.ValidateReport(reportPath); err != nil {
-		return "", err
-	}
-
-	return reportPath, nil
-}
-
-func (t *RunTestsTool) runSingleScenario(s shared.TestScenario, baseURL string) shared.TestResult {
-	startTime := time.Now()
-	res := shared.TestResult{
-		ScenarioID:   s.ID,
-		ScenarioName: s.Name,
-		Category:     s.Category,
-		Severity:     s.Severity,
-		OWASPRef:     s.OWASPRef,
-		Timestamp:    time.Now().Format(time.RFC3339),
-		Passed:       true,
-	}
-
-	// Prepare request
-	url := baseURL + s.URL
-	if !strings.HasPrefix(s.URL, "/") {
-		url = baseURL + "/" + s.URL
-	}
-
-	req := shared.HTTPRequest{
-		Method:  s.Method,
-		URL:     url,
-		Headers: s.Headers,
-		Body:    s.Body,
-	}
-
-	// Run request
-	httpResp, err := t.httpTool.Run(req)
-	duration := time.Since(startTime)
-	res.DurationMs = duration.Milliseconds()
-
-	if err != nil {
-		res.Passed = false
-		res.Error = fmt.Sprintf("Request failed: %v", err)
-		return res
-	}
-
-	res.ActualStatus = httpResp.StatusCode
-	res.ResponseBody = httpResp.Body
-	res.ExpectedStatus = s.Expected.StatusCode
-
-	// Assertions
-	// 1. Status Code
-	if s.Expected.StatusCode != 0 && s.Expected.StatusCode != httpResp.StatusCode {
-		res.Passed = false
-		res.Error = fmt.Sprintf("Status code mismatch: expected %d, got %d", s.Expected.StatusCode, httpResp.StatusCode)
-	}
-
-	// 2. Status Code Range
-	if s.Expected.StatusCodeRange != nil {
-		if httpResp.StatusCode < s.Expected.StatusCodeRange.Min || httpResp.StatusCode > s.Expected.StatusCodeRange.Max {
-			res.Passed = false
-			res.Error = fmt.Sprintf("Status code %d out of range [%d-%d]", httpResp.StatusCode, s.Expected.StatusCodeRange.Min, s.Expected.StatusCodeRange.Max)
-		}
-	}
-
-	// 3. Body Contains
-	for _, contains := range s.Expected.BodyContains {
-		if !strings.Contains(httpResp.Body, contains) {
-			res.Passed = false
-			res.Error = fmt.Sprintf("Body missing expected string: '%s'", contains)
-		}
-	}
-
-	// 4. Body Not Contains
-	for _, notContains := range s.Expected.BodyNotContains {
-		if strings.Contains(httpResp.Body, notContains) {
-			res.Passed = false
-			res.Error = fmt.Sprintf("Body contains forbidden string: '%s'", notContains)
-		}
-	}
-
-	// 5. Max Duration
-	if s.Expected.MaxDurationMs > 0 && res.DurationMs > int64(s.Expected.MaxDurationMs) {
-		res.Passed = false
-		res.Error = fmt.Sprintf("Response time %dms exceeded max %dms", res.DurationMs, s.Expected.MaxDurationMs)
-	}
-
-	return res
+	return sb.String()
 }

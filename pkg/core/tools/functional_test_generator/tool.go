@@ -12,20 +12,16 @@ import (
 // from the API Knowledge Graph using various testing strategies.
 type FunctionalTestGeneratorTool struct {
 	falconDir      string
-	httpTool       *shared.HTTPTool
-	assertTool     *shared.AssertTool
 	strategyEngine *StrategyEngine
 	generator      *TestGenerator
 }
 
 // NewFunctionalTestGeneratorTool creates a new functional test generator tool.
-func NewFunctionalTestGeneratorTool(falconDir string, httpTool *shared.HTTPTool, assertTool *shared.AssertTool) *FunctionalTestGeneratorTool {
+func NewFunctionalTestGeneratorTool(falconDir string, executor *shared.TestExecutor) *FunctionalTestGeneratorTool {
 	return &FunctionalTestGeneratorTool{
 		falconDir:      falconDir,
-		httpTool:       httpTool,
-		assertTool:     assertTool,
 		strategyEngine: NewStrategyEngine(),
-		generator:      NewTestGenerator(httpTool, assertTool),
+		generator:      NewTestGenerator(executor),
 	}
 }
 

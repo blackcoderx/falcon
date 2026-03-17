@@ -3,8 +3,6 @@ package data_driven_engine
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -13,15 +11,19 @@ import (
 
 // DataDrivenEngineTool executes test scenarios using data from external sources.
 type DataDrivenEngineTool struct {
-	falconDir string
-	httpTool  *shared.HTTPTool
+	falconDir    string
+	httpTool     *shared.HTTPTool
+	testExecutor *shared.TestExecutor
+	reportWriter *shared.ReportWriter
 }
 
 // NewDataDrivenEngineTool creates a new data-driven engine tool.
-func NewDataDrivenEngineTool(falconDir string, httpTool *shared.HTTPTool) *DataDrivenEngineTool {
+func NewDataDrivenEngineTool(falconDir string, httpTool *shared.HTTPTool, testExecutor *shared.TestExecutor, reportWriter *shared.ReportWriter) *DataDrivenEngineTool {
 	return &DataDrivenEngineTool{
-		falconDir: falconDir,
-		httpTool:  httpTool,
+		falconDir:    falconDir,
+		httpTool:     httpTool,
+		testExecutor: testExecutor,
+		reportWriter: reportWriter,
 	}
 }
 
@@ -76,35 +78,23 @@ func (t *DataDrivenEngineTool) Execute(args string) (string, error) {
 		return "", fmt.Errorf("failed to load data: %w", err)
 	}
 
-	// 2. Process rows
+	// 2. Process rows using TestExecutor
 	tempEngine := &TemplateEngine{}
 	var results []shared.TestResult
 	passed := 0
 
 	for i, row := range rows {
-		// Populate scenario with row data
 		populated := tempEngine.Populate(params.Scenario, row)
 		populated.ID = fmt.Sprintf("%s_row_%d", params.Scenario.ID, i)
 
-		// Execute (Simulation/Simplified)
-		req := shared.HTTPRequest{
-			Method: populated.Method,
-			URL:    populated.URL,
-			Body:   populated.Body,
-		}
+		// Use TestExecutor for scenario execution (empty baseURL since URLs are fully qualified)
+		result := t.testExecutor.RunScenario(populated, "")
+		result.ScenarioName = fmt.Sprintf("%s (Row %d)", params.Scenario.Name, i)
 
-		resp, err := t.httpTool.Run(req)
-
-		res := shared.TestResult{
-			ScenarioID:   populated.ID,
-			ScenarioName: fmt.Sprintf("%s (Row %d)", params.Scenario.Name, i),
-			Passed:       err == nil && resp.StatusCode < 400,
-		}
-		if res.Passed {
+		if result.Passed {
 			passed++
 		}
-
-		results = append(results, res)
+		results = append(results, result)
 	}
 
 	result := DataDrivenResult{
@@ -115,7 +105,8 @@ func (t *DataDrivenEngineTool) Execute(args string) (string, error) {
 	}
 	result.Summary = t.formatSummary(result)
 
-	reportPath, err := generateDataDrivenReport(t.falconDir, params.ReportName, result)
+	reportContent := formatDataDrivenReport(result)
+	reportPath, err := t.reportWriter.Write(params.ReportName, "data_driven_report", reportContent)
 	if err != nil {
 		return result.Summary + fmt.Sprintf("\n\nWarning: failed to save report: %v", err), nil
 	}
@@ -123,23 +114,8 @@ func (t *DataDrivenEngineTool) Execute(args string) (string, error) {
 	return result.Summary + fmt.Sprintf("\n\nReport saved to: %s", reportPath), nil
 }
 
-// generateDataDrivenReport writes data-driven test results to a Markdown file in .falcon/reports/.
-func generateDataDrivenReport(falconDir, reportName string, result DataDrivenResult) (string, error) {
-	reportsDir := filepath.Join(falconDir, "reports")
-	if err := os.MkdirAll(reportsDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create reports directory: %w", err)
-	}
-
-	name := reportName
-	if name == "" {
-		name = fmt.Sprintf("data_driven_report_%s", time.Now().Format("20060102_150405"))
-	}
-	name = strings.ReplaceAll(name, " ", "_")
-	if !strings.HasSuffix(name, ".md") {
-		name += ".md"
-	}
-	reportPath := filepath.Join(reportsDir, name)
-
+// formatDataDrivenReport builds the Markdown content for a data-driven report.
+func formatDataDrivenReport(result DataDrivenResult) string {
 	var sb strings.Builder
 
 	fmt.Fprintf(&sb, "# Data-Driven Test Report\n\n")
@@ -167,15 +143,7 @@ func generateDataDrivenReport(falconDir, reportName string, result DataDrivenRes
 		}
 	}
 
-	if err := os.WriteFile(reportPath, []byte(sb.String()), 0644); err != nil {
-		return "", fmt.Errorf("failed to write report: %w", err)
-	}
-
-	if err := shared.ValidateReport(reportPath); err != nil {
-		return "", err
-	}
-
-	return reportPath, nil
+	return sb.String()
 }
 
 func (t *DataDrivenEngineTool) formatSummary(r DataDrivenResult) string {

@@ -146,10 +146,11 @@ func (r *Registry) registerPersistenceTools() {
 func (r *Registry) registerAgentTools() {
 	r.Agent.RegisterTool(zapagent.NewMemoryTool(r.MemStore))
 
-	assertTool := shared.NewAssertTool(r.ResponseManager)
+	testExecutor := shared.NewTestExecutor(r.HTTPTool)
+	reportWriter := shared.NewReportWriter(r.FalconDir)
 
 	// run_tests now handles both single and bulk execution via optional scenario param
-	runTests := zapagent.NewRunTestsTool(r.FalconDir, r.HTTPTool, assertTool, r.VariableStore)
+	runTests := zapagent.NewRunTestsTool(r.FalconDir, testExecutor, reportWriter)
 	r.Agent.RegisterTool(runTests)
 
 	// auto test orchestrator
@@ -157,6 +158,7 @@ func (r *Registry) registerAgentTools() {
 		r.LLMClient,
 		debugging.NewAnalyzeEndpointTool(r.LLMClient),
 		runTests,
+		testExecutor,
 		debugging.NewAnalyzeFailureTool(r.LLMClient),
 	))
 }
@@ -168,8 +170,8 @@ func (r *Registry) registerSpecIngesterTools() {
 
 // registerFunctionalTestGeneratorTools registers spec-driven functional test generator.
 func (r *Registry) registerFunctionalTestGeneratorTools() {
-	assertTool := shared.NewAssertTool(r.ResponseManager)
-	r.Agent.RegisterTool(functional_test_generator.NewFunctionalTestGeneratorTool(r.FalconDir, r.HTTPTool, assertTool))
+	testExecutor := shared.NewTestExecutor(r.HTTPTool)
+	r.Agent.RegisterTool(functional_test_generator.NewFunctionalTestGeneratorTool(r.FalconDir, testExecutor))
 }
 
 // registerSecurityScannerTools registers the whole security scanner ecosystem.
@@ -179,14 +181,17 @@ func (r *Registry) registerSecurityScannerTools() {
 
 // registerPerformanceEngineTools registers the multi-mode performance engine.
 func (r *Registry) registerPerformanceEngineTools() {
-	r.Agent.RegisterTool(performance_engine.NewPerformanceEngineTool(r.FalconDir, r.HTTPTool))
+	reportWriter := shared.NewReportWriter(r.FalconDir)
+	r.Agent.RegisterTool(performance_engine.NewPerformanceEngineTool(r.FalconDir, r.HTTPTool, reportWriter))
 }
 
 // registerModuleTools registers high-level capability modules.
 func (r *Registry) registerModuleTools() {
 	r.Agent.RegisterTool(smoke_runner.NewSmokeRunnerTool(r.FalconDir, r.HTTPTool))
 	r.Agent.RegisterTool(idempotency_verifier.NewIdempotencyVerifierTool(r.FalconDir, r.HTTPTool))
-	r.Agent.RegisterTool(data_driven_engine.NewDataDrivenEngineTool(r.FalconDir, r.HTTPTool))
+	testExecutor := shared.NewTestExecutor(r.HTTPTool)
+	reportWriter := shared.NewReportWriter(r.FalconDir)
+	r.Agent.RegisterTool(data_driven_engine.NewDataDrivenEngineTool(r.FalconDir, r.HTTPTool, testExecutor, reportWriter))
 }
 
 // registerWorkflowTools registers integration and regression modules.

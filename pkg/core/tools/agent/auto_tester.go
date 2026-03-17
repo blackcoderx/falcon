@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"sync"
 
 	"github.com/blackcoderx/falcon/pkg/core/tools/debugging"
 	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
@@ -17,6 +16,7 @@ type AutoTestTool struct {
 	llmClient          llm.LLMClient
 	analyzeTool        *debugging.AnalyzeEndpointTool
 	orchestrateTool    *RunTestsTool
+	testExecutor       *shared.TestExecutor
 	analyzeFailureTool *debugging.AnalyzeFailureTool
 }
 
@@ -24,12 +24,14 @@ func NewAutoTestTool(
 	llmClient llm.LLMClient,
 	a *debugging.AnalyzeEndpointTool,
 	o *RunTestsTool,
+	e *shared.TestExecutor,
 	f *debugging.AnalyzeFailureTool,
 ) *AutoTestTool {
 	return &AutoTestTool{
 		llmClient:          llmClient,
 		analyzeTool:        a,
 		orchestrateTool:    o,
+		testExecutor:       e,
 		analyzeFailureTool: f,
 	}
 }
@@ -102,20 +104,7 @@ func (t *AutoTestTool) Execute(args string) (string, error) {
 	}
 
 	// 3. Run all scenarios in parallel
-	results := make([]shared.TestResult, len(scenarios))
-	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, 5)
-
-	for i, s := range scenarios {
-		wg.Add(1)
-		go func(idx int, scenario shared.TestScenario) {
-			defer wg.Done()
-			semaphore <- struct{}{}
-			results[idx] = t.orchestrateTool.runSingleScenario(scenario, params.BaseURL)
-			<-semaphore
-		}(i, s)
-	}
-	wg.Wait()
+	results := t.testExecutor.RunScenarios(scenarios, params.BaseURL, 5)
 
 	// 4. Diagnose failures
 	var failureReports []string

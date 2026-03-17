@@ -3,8 +3,6 @@ package performance_engine
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -14,22 +12,24 @@ import (
 
 // PerformanceEngineTool provides multi-mode load testing and metrics tracking.
 type PerformanceEngineTool struct {
-	falconDir string
-	httpTool  *shared.HTTPTool
+	falconDir    string
+	httpTool     *shared.HTTPTool
+	reportWriter *shared.ReportWriter
 }
 
 // NewPerformanceEngineTool creates a new performance engine tool.
-func NewPerformanceEngineTool(falconDir string, httpTool *shared.HTTPTool) *PerformanceEngineTool {
+func NewPerformanceEngineTool(falconDir string, httpTool *shared.HTTPTool, reportWriter *shared.ReportWriter) *PerformanceEngineTool {
 	return &PerformanceEngineTool{
-		falconDir: falconDir,
-		httpTool: httpTool,
+		falconDir:    falconDir,
+		httpTool:     httpTool,
+		reportWriter: reportWriter,
 	}
 }
 
 // PerformanceParams defines parameters for performance testing.
 type PerformanceParams struct {
-	Mode        string   `json:"mode"`                   // load, stress, spike, soak
-	BaseURL     string   `json:"base_url"`               // Base URL of the API
+	Mode        string   `json:"mode"`                  // load, stress, spike, soak
+	BaseURL     string   `json:"base_url"`              // Base URL of the API
 	Endpoints   []string `json:"endpoints,omitempty"`    // Specific endpoints to test
 	Concurrency int      `json:"concurrency,omitempty"`  // Number of concurrent virtual users (default: 10)
 	Duration    int      `json:"duration_sec,omitempty"` // Duration of test in seconds (default: 30)
@@ -88,7 +88,8 @@ func (t *PerformanceEngineTool) Execute(args string) (string, error) {
 	metrics := runner.Run(endpoints)
 	duration := time.Since(startTime)
 
-	reportPath, err := generatePerformanceReport(t.falconDir, params, metrics, startTime, duration)
+	reportContent := formatPerformanceReport(params, metrics, startTime, duration)
+	reportPath, err := t.reportWriter.Write(params.ReportName, "performance_report", reportContent)
 	if err != nil {
 		return metrics.FormatSummary(params.Mode) + fmt.Sprintf("\n\nWarning: failed to save report: %v", err), nil
 	}
@@ -96,23 +97,8 @@ func (t *PerformanceEngineTool) Execute(args string) (string, error) {
 	return metrics.FormatSummary(params.Mode) + fmt.Sprintf("\n\nReport saved to: %s", reportPath), nil
 }
 
-// generatePerformanceReport writes the metrics directly to a Markdown file in .falcon/reports/.
-func generatePerformanceReport(falconDir string, params PerformanceParams, metrics ExecutionMetrics, startTime time.Time, duration time.Duration) (string, error) {
-	reportsDir := filepath.Join(falconDir, "reports")
-	if err := os.MkdirAll(reportsDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create reports directory: %w", err)
-	}
-
-	name := params.ReportName
-	if name == "" {
-		name = fmt.Sprintf("performance_report_%s", startTime.Format("20060102_150405"))
-	}
-	name = strings.ReplaceAll(name, " ", "_")
-	if !strings.HasSuffix(name, ".md") {
-		name += ".md"
-	}
-	reportPath := filepath.Join(reportsDir, name)
-
+// formatPerformanceReport builds the Markdown content for a performance report.
+func formatPerformanceReport(params PerformanceParams, metrics ExecutionMetrics, startTime time.Time, duration time.Duration) string {
 	var sb strings.Builder
 
 	fmt.Fprintf(&sb, "# Performance Test Report\n\n")
@@ -149,15 +135,7 @@ func generatePerformanceReport(falconDir string, params PerformanceParams, metri
 	fmt.Fprintf(&sb, "| p99 | %v |\n", metrics.P99)
 	fmt.Fprintf(&sb, "| Max | %v |\n", metrics.Max)
 
-	if err := os.WriteFile(reportPath, []byte(sb.String()), 0644); err != nil {
-		return "", fmt.Errorf("failed to write report: %w", err)
-	}
-
-	if err := shared.ValidateReport(reportPath); err != nil {
-		return "", err
-	}
-
-	return reportPath, nil
+	return sb.String()
 }
 
 func (t *PerformanceEngineTool) getEndpoints(specified []string) (map[string]shared.EndpointAnalysis, error) {
