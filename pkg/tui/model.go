@@ -75,7 +75,7 @@ type Model struct {
 	// Slash command state
 	slashState SlashState
 
-	// Model picker state (used by /model command)
+	// modelPickerActive shows the model picker panel (populated by /model command, rendered in Phase 5)
 	modelPickerActive bool
 
 	// Persistent memory store

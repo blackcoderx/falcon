@@ -109,6 +109,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else if m.slashState.Active {
 			m.slashState = SlashState{}
 		}
+
+		// Keep viewport height in sync whenever the slash panel may have toggled
+		m.viewport.Height = m.calcViewportHeight()
 	}
 
 	// Update viewport
@@ -138,20 +141,25 @@ func (m Model) handleAnimTick() Model {
 	return m
 }
 
+// calcViewportHeight computes the viewport height based on current window and panel state.
+// Called both during resize and whenever the slash panel opens/closes.
+func (m Model) calcViewportHeight() int {
+	inputHeight := 1
+	footerHeight := 1
+	margins := 3
+	h := m.height - inputHeight - footerHeight - margins - m.slashPanelHeight()
+	if h < 5 {
+		h = 5
+	}
+	return h
+}
+
 // handleWindowResize adjusts the layout when the terminal is resized.
 func (m Model) handleWindowResize(msg tea.WindowSizeMsg) Model {
 	m.width = msg.Width
 	m.height = msg.Height
 
-	// Calculate viewport dimensions accounting for padding
-	inputHeight := 1
-	footerHeight := 1
-	margins := 3
-
-	viewportHeight := m.height - inputHeight - footerHeight - margins - m.slashPanelHeight()
-	if viewportHeight < 5 {
-		viewportHeight = 5
-	}
+	viewportHeight := m.calcViewportHeight()
 
 	viewportWidth := m.width - 2
 	if viewportWidth < 40 {

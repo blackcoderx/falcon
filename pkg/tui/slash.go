@@ -22,7 +22,8 @@ type SlashState struct {
 	Query       string
 	Suggestions []SlashCommand
 	Selected    int
-	FlowContent string // loaded file content (after selection, cleared after enter)
+	FlowContent string        // loaded file content (after selection, cleared after enter)
+	cachedAll   []SlashCommand // cached full list (builtins + files), populated once
 }
 
 // listBuiltinCommands returns the list of built-in slash commands.
@@ -99,27 +100,33 @@ func filterCommands(all []SlashCommand, query string) []SlashCommand {
 	return result
 }
 
-// updateSlashState rebuilds the suggestion list filtered by the given query.
-func (m Model) updateSlashState(query string) Model {
-	falconDir := core.FalconFolderName
-
+// refreshSlashCache builds the full unfiltered list of slash commands (builtins + flows + requests).
+// This is called once per panel activation to avoid repeated I/O on every keystroke.
+func refreshSlashCache(falconDir string) []SlashCommand {
 	all := listBuiltinCommands()
 	all = append(all, listFlowFiles(falconDir)...)
 	all = append(all, listRequestFiles(falconDir)...)
+	return all
+}
 
-	filtered := filterCommands(all, query)
+// updateSlashState rebuilds the suggestion list filtered by the given query.
+// It only reads the filesystem on first activation (cache miss); subsequent
+// keystrokes filter the in-memory cache, keeping Update() non-blocking.
+func (m Model) updateSlashState(query string) Model {
+	if !m.slashState.Active || m.slashState.cachedAll == nil {
+		// Build cache on first activation
+		m.slashState.cachedAll = refreshSlashCache(core.FalconFolderName)
+	}
+
+	filtered := filterCommands(m.slashState.cachedAll, query)
 
 	m.slashState.Active = true
 	m.slashState.Query = query
 	m.slashState.Suggestions = filtered
 
 	// Clamp selected index to valid range
-	if len(filtered) == 0 {
-		m.slashState.Selected = 0
-	} else if m.slashState.Selected >= len(filtered) {
-		m.slashState.Selected = len(filtered) - 1
-	} else if m.slashState.Selected < 0 {
-		m.slashState.Selected = 0
+	if m.slashState.Selected >= len(filtered) {
+		m.slashState.Selected = max(0, len(filtered)-1)
 	}
 
 	return m
@@ -177,6 +184,8 @@ func (m Model) acceptSlashCommand() (Model, tea.Cmd) {
 
 // handleSlashKeys intercepts key presses when the slash panel is active.
 // Returns (handled bool, updated model, command).
+// When a key is consumed, a non-nil cmd is always returned so that Update()
+// takes the early-return path and does not forward the key to textinput.
 func (m Model) handleSlashKeys(msg tea.KeyMsg) (bool, Model, tea.Cmd) {
 	switch msg.String() {
 	case "up", "shift+tab":
@@ -187,7 +196,7 @@ func (m Model) handleSlashKeys(msg tea.KeyMsg) (bool, Model, tea.Cmd) {
 				m.slashState.Selected--
 			}
 		}
-		return true, m, nil
+		return true, m, m.spinner.Tick
 
 	case "down", "tab":
 		if len(m.slashState.Suggestions) > 0 {
@@ -197,16 +206,20 @@ func (m Model) handleSlashKeys(msg tea.KeyMsg) (bool, Model, tea.Cmd) {
 				m.slashState.Selected++
 			}
 		}
-		return true, m, nil
+		return true, m, m.spinner.Tick
 
 	case "enter":
 		updated, cmd := m.acceptSlashCommand()
+		if cmd == nil {
+			cmd = m.spinner.Tick
+		}
 		return true, updated, cmd
 
 	case "esc":
+		// Close the panel but leave the typed text in the input intact.
+		// cachedAll is cleared via SlashState{} so the next '/' re-reads the filesystem.
 		m.slashState = SlashState{}
-		m.textinput.SetValue("")
-		return true, m, nil
+		return true, m, m.spinner.Tick
 
 	default:
 		return false, m, nil
@@ -222,7 +235,7 @@ func (m Model) slashPanelHeight() int {
 	if count > 6 {
 		count = 6
 	}
-	return count + 2 // +2 for border lines
+	return count + 1 // +1 for margin/padding (SlashPanelStyle has no borders)
 }
 
 // renderSlashPanel renders the slash command suggestion panel.
@@ -249,7 +262,7 @@ func (m Model) renderSlashPanel() string {
 	var lines []string
 	for i, cmd := range visible {
 		actualIdx := start + i
-		line := "  /" + cmd.Name + "  " + SlashItemKindStyle.Render(cmd.Description)
+		var line string
 		if actualIdx == m.slashState.Selected {
 			line = SlashItemSelectedStyle.Render("  /"+cmd.Name) + "  " + SlashItemKindStyle.Render(cmd.Description)
 		} else {

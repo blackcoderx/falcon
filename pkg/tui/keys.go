@@ -176,8 +176,10 @@ func (m Model) handleEnter() (Model, tea.Cmd) {
 	}
 	m.logs = append(m.logs, logEntry{Type: "user", Content: displayInput})
 
-	// Add to history
-	m.inputHistory = append(m.inputHistory, displayInput)
+	// Add to history (only real text, not the placeholder)
+	if userInput != "" {
+		m.inputHistory = append(m.inputHistory, userInput)
+	}
 	m.historyIdx = -1
 	m.savedInput = ""
 
