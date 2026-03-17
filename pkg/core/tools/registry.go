@@ -2,7 +2,7 @@ package tools
 
 import (
 	"github.com/blackcoderx/falcon/pkg/core"
-	zapagent "github.com/blackcoderx/falcon/pkg/core/tools/agent"
+	falconagent "github.com/blackcoderx/falcon/pkg/core/tools/agent"
 	"github.com/blackcoderx/falcon/pkg/core/tools/data_driven_engine"
 	"github.com/blackcoderx/falcon/pkg/core/tools/debugging"
 	"github.com/blackcoderx/falcon/pkg/core/tools/functional_test_generator"
@@ -144,17 +144,17 @@ func (r *Registry) registerPersistenceTools() {
 
 // registerAgentTools registers memory, reporting, and orchestration tools.
 func (r *Registry) registerAgentTools() {
-	r.Agent.RegisterTool(zapagent.NewMemoryTool(r.MemStore))
+	r.Agent.RegisterTool(falconagent.NewMemoryTool(r.MemStore))
 
 	testExecutor := shared.NewTestExecutor(r.HTTPTool)
 	reportWriter := shared.NewReportWriter(r.FalconDir)
 
 	// run_tests now handles both single and bulk execution via optional scenario param
-	runTests := zapagent.NewRunTestsTool(r.FalconDir, testExecutor, reportWriter)
+	runTests := falconagent.NewRunTestsTool(r.FalconDir, testExecutor, reportWriter)
 	r.Agent.RegisterTool(runTests)
 
 	// auto test orchestrator
-	r.Agent.RegisterTool(zapagent.NewAutoTestTool(
+	r.Agent.RegisterTool(falconagent.NewAutoTestTool(
 		r.LLMClient,
 		debugging.NewAnalyzeEndpointTool(r.LLMClient),
 		runTests,
