@@ -47,9 +47,20 @@ agent that understands your code and can interact with your APIs naturally.`,
 				os.Exit(1)
 			}
 
-			// Re-read config after initialization (first run creates config.json
+			// Re-read config after initialization (first run creates config.yaml
 			// after Viper's initial read, so values would be stale without this)
 			_ = viper.ReadInConfig()
+			if gcfg, err := core.LoadGlobalConfig(); err == nil {
+				provID, model, values := core.GetActiveProviderEntry(gcfg)
+				if provID != "" {
+					viper.Set("provider", provID)
+					viper.Set("default_model", model)
+					viper.Set("provider_config", values)
+				}
+				if gcfg.Theme != "" {
+					viper.Set("theme", gcfg.Theme)
+				}
+			}
 
 			// CLI Mode: Execute saved request
 			if requestFile != "" {
@@ -141,6 +152,20 @@ func initConfig() {
 	viper.SetConfigFile(globalPath)
 	viper.AutomaticEnv()
 	_ = viper.ReadInConfig() // no error if not found
+
+	// Inject active provider values as flat viper keys so all downstream code
+	// (newLLMClient, collectProviderValues) works without modification.
+	if gcfg, err := core.LoadGlobalConfig(); err == nil {
+		provID, model, values := core.GetActiveProviderEntry(gcfg)
+		if provID != "" {
+			viper.Set("provider", provID)
+			viper.Set("default_model", model)
+			viper.Set("provider_config", values)
+		}
+		if gcfg.Theme != "" {
+			viper.Set("theme", gcfg.Theme)
+		}
+	}
 
 	// Overlay project config for framework and web_ui only
 	projectPath := filepath.Join(core.FalconFolderName, "config.yaml")

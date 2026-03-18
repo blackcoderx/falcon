@@ -37,25 +37,44 @@ func EnsureGlobalFalconDir() error {
 	return nil
 }
 
-// LoadGlobalConfig reads the global config. If the file doesn't exist, returns a zero-value Config with no error.
-func LoadGlobalConfig() (*Config, error) {
+// LoadGlobalConfig reads the global config. If the file doesn't exist, returns a
+// zero-value GlobalConfig with no error. Automatically migrates old single-provider
+// format (top-level provider/provider_config/default_model keys) into the new
+// Providers map on first read.
+func LoadGlobalConfig() (*GlobalConfig, error) {
 	data, err := os.ReadFile(GlobalConfigPath())
 	if err != nil {
 		if os.IsNotExist(err) {
-			return &Config{}, nil
+			return &GlobalConfig{}, nil
 		}
 		return nil, fmt.Errorf("failed to read global config: %w", err)
 	}
 
-	var cfg Config
+	var cfg GlobalConfig
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse global config: %w", err)
 	}
+
+	// Migrate old single-provider format in memory.
+	if cfg.LegacyProvider != "" && cfg.Providers == nil {
+		if cfg.Providers == nil {
+			cfg.Providers = map[string]ProviderEntry{}
+		}
+		cfg.Providers[cfg.LegacyProvider] = ProviderEntry{
+			Model:  cfg.LegacyDefaultModel,
+			Config: cfg.LegacyProviderConfig,
+		}
+		cfg.DefaultProvider = cfg.LegacyProvider
+		cfg.LegacyProvider = ""
+		cfg.LegacyProviderConfig = nil
+		cfg.LegacyDefaultModel = ""
+	}
+
 	return &cfg, nil
 }
 
-// SaveGlobalConfig writes the config to ~/.falcon/config.yaml with 0600 permissions.
-func SaveGlobalConfig(cfg *Config) error {
+// SaveGlobalConfig writes the GlobalConfig to ~/.falcon/config.yaml (0600 perms).
+func SaveGlobalConfig(cfg *GlobalConfig) error {
 	if err := EnsureGlobalFalconDir(); err != nil {
 		return err
 	}
@@ -71,29 +90,85 @@ func SaveGlobalConfig(cfg *Config) error {
 	return nil
 }
 
-// RunGlobalConfigWizard runs the interactive provider/model setup wizard and saves to global config.
-// Re-uses buildProviderForm and providerOptions from init.go (same package).
-func RunGlobalConfigWizard() error {
-	var selectedProvider string
+// GetActiveProviderEntry returns the ID, model, and config values for the
+// currently active (default) provider. Returns empty strings/nil if nothing configured.
+func GetActiveProviderEntry(cfg *GlobalConfig) (providerID, model string, values map[string]string) {
+	if cfg == nil || cfg.DefaultProvider == "" || cfg.Providers == nil {
+		return "", "", nil
+	}
+	entry, ok := cfg.Providers[cfg.DefaultProvider]
+	if !ok {
+		return cfg.DefaultProvider, "", nil
+	}
+	return cfg.DefaultProvider, entry.Model, entry.Config
+}
 
+// SetProviderEntry upserts a provider entry into the config without touching
+// any other provider entries.
+func SetProviderEntry(cfg *GlobalConfig, providerID, model string, values map[string]string) {
+	if cfg.Providers == nil {
+		cfg.Providers = map[string]ProviderEntry{}
+	}
+	cfg.Providers[providerID] = ProviderEntry{Model: model, Config: values}
+}
+
+// RunGlobalConfigWizard runs the interactive provider/model setup wizard and saves to global config.
+// Presents a sub-action menu: add/update a provider, set default provider, or remove a provider.
+func RunGlobalConfigWizard() error {
 	fmt.Println()
 	fmt.Println("  Falcon Global Configuration")
-	fmt.Println("  Configure your LLM provider credentials.")
 	fmt.Println()
 
-	// Phase 1: Provider selection
+	existing, err := LoadGlobalConfig()
+	if err != nil {
+		existing = &GlobalConfig{}
+	}
+
+	// Sub-action menu
+	var action string
+	actionForm := huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("What would you like to do?").
+				Options(
+					huh.NewOption("Add or update a provider", "upsert"),
+					huh.NewOption("Set default provider", "set_default"),
+					huh.NewOption("Remove a provider", "remove"),
+				).
+				Value(&action),
+		),
+	).WithTheme(huh.ThemeDracula())
+
+	if err := actionForm.Run(); err != nil {
+		return ErrSetupCancelled
+	}
+
+	switch action {
+	case "upsert":
+		return runUpsertProvider(existing)
+	case "set_default":
+		return runSetDefaultProvider(existing)
+	case "remove":
+		return runRemoveProvider(existing)
+	}
+	return nil
+}
+
+// runUpsertProvider adds or updates a single provider config without touching others.
+func runUpsertProvider(existing *GlobalConfig) error {
+	var selectedProvider string
+
 	providerForm := huh.NewForm(
 		huh.NewGroup(
 			huh.NewSelect[string]().
-				Title("Select your LLM provider").
-				Description("Choose which AI service to use for assistance.").
+				Title("Select provider to configure").
 				Options(providerOptions()...).
 				Value(&selectedProvider),
 		),
 	).WithTheme(huh.ThemeDracula())
 
 	if err := providerForm.Run(); err != nil {
-		return fmt.Errorf("setup cancelled: %w", ErrSetupCancelled)
+		return ErrSetupCancelled
 	}
 
 	p, ok := llm.Get(selectedProvider)
@@ -101,7 +176,6 @@ func RunGlobalConfigWizard() error {
 		return fmt.Errorf("unknown provider %q", selectedProvider)
 	}
 
-	// Phase 2: Provider-specific fields
 	providerValues := map[string]string{}
 	var modelVar string
 
@@ -114,7 +188,6 @@ func RunGlobalConfigWizard() error {
 		modelVar = mv
 	}
 
-	// Apply per-field defaults
 	for _, f := range fields {
 		if providerValues[f.Key] == "" && f.Default != "" {
 			providerValues[f.Key] = f.Default
@@ -130,38 +203,33 @@ func RunGlobalConfigWizard() error {
 		Model:          modelVar,
 	}
 
-	// Phase 3: Confirmation summary
 	confirmDescription := buildConfirmSummary(result, p)
 
-	var confirmed bool
-	confirmForm := huh.NewForm(
-		huh.NewGroup(
-			huh.NewConfirm().
-				Title("Save global configuration with these settings?").
-				Description(confirmDescription).
-				Affirmative("Yes, save config").
-				Negative("No, cancel").
-				Value(&confirmed),
-		),
-	).WithTheme(huh.ThemeDracula())
-
-	if err := confirmForm.Run(); err != nil {
-		return fmt.Errorf("setup cancelled: %w", ErrSetupCancelled)
+	// Ask if this should become the default provider
+	isFirst := existing.DefaultProvider == "" || len(existing.Providers) == 0
+	var setAsDefault bool
+	if isFirst {
+		setAsDefault = true
+	} else {
+		confirmForm := huh.NewForm(
+			huh.NewGroup(
+				huh.NewConfirm().
+					Title("Set as default provider?").
+					Description(confirmDescription).
+					Affirmative("Yes, set as default").
+					Negative("No, keep current default").
+					Value(&setAsDefault),
+			),
+		).WithTheme(huh.ThemeDracula())
+		if err := confirmForm.Run(); err != nil {
+			return ErrSetupCancelled
+		}
 	}
 
-	if !confirmed {
-		return ErrSetupCancelled
+	SetProviderEntry(existing, selectedProvider, modelVar, providerValues)
+	if setAsDefault {
+		existing.DefaultProvider = selectedProvider
 	}
-
-	// Phase 4: Load existing global config to preserve non-provider fields, then save
-	existing, err := LoadGlobalConfig()
-	if err != nil {
-		existing = &Config{}
-	}
-
-	existing.Provider = selectedProvider
-	existing.ProviderConfig = providerValues
-	existing.DefaultModel = modelVar
 	if existing.Theme == "" {
 		existing.Theme = "dark"
 	}
@@ -170,7 +238,102 @@ func RunGlobalConfigWizard() error {
 		return err
 	}
 
-	fmt.Println("Global configuration saved to ~/.falcon/config.yaml")
+	fmt.Printf("Provider %q saved to ~/.falcon/config.yaml\n", p.DisplayName())
+	if setAsDefault {
+		fmt.Printf("Default provider set to %q\n", p.DisplayName())
+	}
+	return nil
+}
+
+// runSetDefaultProvider lets the user pick which configured provider to use as default.
+func runSetDefaultProvider(existing *GlobalConfig) error {
+	if len(existing.Providers) == 0 {
+		fmt.Println("No providers configured yet. Run 'falcon config' and add a provider first.")
+		return nil
+	}
+
+	var opts []huh.Option[string]
+	for _, p := range llm.All() {
+		if _, ok := existing.Providers[p.ID()]; ok {
+			opts = append(opts, huh.NewOption(p.DisplayName(), p.ID()))
+		}
+	}
+
+	var selected string
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Select the default provider").
+				Options(opts...).
+				Value(&selected),
+		),
+	).WithTheme(huh.ThemeDracula())
+
+	if err := form.Run(); err != nil {
+		return ErrSetupCancelled
+	}
+
+	existing.DefaultProvider = selected
+	if err := SaveGlobalConfig(existing); err != nil {
+		return err
+	}
+
+	p, _ := llm.Get(selected)
+	fmt.Printf("Default provider set to %q\n", p.DisplayName())
+	return nil
+}
+
+// runRemoveProvider lets the user remove a configured provider.
+func runRemoveProvider(existing *GlobalConfig) error {
+	if len(existing.Providers) == 0 {
+		fmt.Println("No providers configured.")
+		return nil
+	}
+
+	var opts []huh.Option[string]
+	for _, p := range llm.All() {
+		if _, ok := existing.Providers[p.ID()]; ok {
+			opts = append(opts, huh.NewOption(p.DisplayName(), p.ID()))
+		}
+	}
+
+	var selected string
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Select provider to remove").
+				Options(opts...).
+				Value(&selected),
+		),
+	).WithTheme(huh.ThemeDracula())
+
+	if err := form.Run(); err != nil {
+		return ErrSetupCancelled
+	}
+
+	delete(existing.Providers, selected)
+
+	// If the removed provider was the default, clear or reassign default
+	if existing.DefaultProvider == selected {
+		existing.DefaultProvider = ""
+		for _, p := range llm.All() {
+			if _, ok := existing.Providers[p.ID()]; ok {
+				existing.DefaultProvider = p.ID()
+				break
+			}
+		}
+	}
+
+	if err := SaveGlobalConfig(existing); err != nil {
+		return err
+	}
+
+	p, _ := llm.Get(selected)
+	fmt.Printf("Provider %q removed.\n", p.DisplayName())
+	if existing.DefaultProvider != "" {
+		dp, _ := llm.Get(existing.DefaultProvider)
+		fmt.Printf("Default provider is now %q\n", dp.DisplayName())
+	}
 	return nil
 }
 
@@ -200,18 +363,16 @@ func migrateToGlobalConfig() error {
 		return nil
 	}
 
-	// Write global config with provider/model/theme/web_ui fields
-	globalCfg := &Config{
-		Provider:         projectCfg.Provider,
-		ProviderConfig:   projectCfg.ProviderConfig,
-		DefaultModel:     projectCfg.DefaultModel,
-		Theme:            projectCfg.Theme,
-		WebUI:            projectCfg.WebUI,
-		OllamaConfig:     projectCfg.OllamaConfig,
-		GeminiConfig:     projectCfg.GeminiConfig,
-		OpenRouterConfig: projectCfg.OpenRouterConfig,
-		OllamaURL:        projectCfg.OllamaURL,
-		OllamaAPIKey:     projectCfg.OllamaAPIKey,
+	globalCfg := &GlobalConfig{
+		DefaultProvider: projectCfg.Provider,
+		Theme:           projectCfg.Theme,
+		WebUI:           projectCfg.WebUI,
+		Providers: map[string]ProviderEntry{
+			projectCfg.Provider: {
+				Model:  projectCfg.DefaultModel,
+				Config: projectCfg.ProviderConfig,
+			},
+		},
 	}
 	if globalCfg.Theme == "" {
 		globalCfg.Theme = "dark"

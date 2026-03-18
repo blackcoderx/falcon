@@ -85,6 +85,26 @@ var SupportedFrameworks = []string{
 	"other",   // Other/custom framework
 }
 
+// ProviderEntry holds the model and credentials for a single configured provider.
+type ProviderEntry struct {
+	Model  string            `yaml:"model"`
+	Config map[string]string `yaml:"config"`
+}
+
+// GlobalConfig is the multi-provider global config written to ~/.falcon/config.yaml.
+type GlobalConfig struct {
+	DefaultProvider string                   `yaml:"default_provider"`
+	Theme           string                   `yaml:"theme"`
+	WebUI           WebUIConfig              `yaml:"web_ui,omitempty"`
+	Providers       map[string]ProviderEntry `yaml:"providers,omitempty"`
+
+	// Legacy migration fields — present only in old single-provider configs.
+	// LoadGlobalConfig migrates them into Providers on first read.
+	LegacyProvider       string            `yaml:"provider,omitempty"`
+	LegacyProviderConfig map[string]string `yaml:"provider_config,omitempty"`
+	LegacyDefaultModel   string            `yaml:"default_model,omitempty"`
+}
+
 // SetupResult holds the values collected by the first-run setup wizard.
 type SetupResult struct {
 	Framework      string
@@ -154,7 +174,7 @@ func runSetupWizard(frameworkFlag string) (*SetupResult, error) {
 
 	// Check if global config already has provider configured
 	existingGlobal, _ := LoadGlobalConfig()
-	hasGlobalConfig := existingGlobal != nil && existingGlobal.Provider != ""
+	hasGlobalConfig := existingGlobal != nil && existingGlobal.DefaultProvider != ""
 
 	// Phase 1: Framework selection (skip if --framework flag was provided)
 	var configGroups []*huh.Group
@@ -179,14 +199,15 @@ func runSetupWizard(frameworkFlag string) (*SetupResult, error) {
 				return nil, fmt.Errorf("setup cancelled: %w", err)
 			}
 		}
+		provID, model, values := GetActiveProviderEntry(existingGlobal)
+		if values == nil {
+			values = map[string]string{}
+		}
 		result := &SetupResult{
 			Framework:      selectedFramework,
-			Provider:       existingGlobal.Provider,
-			ProviderValues: existingGlobal.ProviderConfig,
-			Model:          existingGlobal.DefaultModel,
-		}
-		if result.ProviderValues == nil {
-			result.ProviderValues = map[string]string{}
+			Provider:       provID,
+			ProviderValues: values,
+			Model:          model,
 		}
 		fmt.Printf("  Using existing global provider: %s\n\n", result.Provider)
 		return result, nil
@@ -733,16 +754,15 @@ var DefaultToolLimits = map[string]int{
 }
 
 // writeGlobalConfig writes provider/model/theme from wizard results to ~/.falcon/config.yaml.
+// Upserts the provider entry without wiping other configured providers.
 func writeGlobalConfig(setup *SetupResult) error {
-	// Load existing global config to preserve any other fields
 	existing, err := LoadGlobalConfig()
 	if err != nil {
-		existing = &Config{}
+		existing = &GlobalConfig{}
 	}
 
-	existing.Provider = setup.Provider
-	existing.ProviderConfig = setup.ProviderValues
-	existing.DefaultModel = setup.Model
+	SetProviderEntry(existing, setup.Provider, setup.Model, setup.ProviderValues)
+	existing.DefaultProvider = setup.Provider
 	if existing.Theme == "" {
 		existing.Theme = "dark"
 	}
