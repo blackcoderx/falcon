@@ -200,12 +200,13 @@ func migrateToGlobalConfig() error {
 		return nil
 	}
 
-	// Write global config with provider/model/theme fields
+	// Write global config with provider/model/theme/web_ui fields
 	globalCfg := &Config{
 		Provider:         projectCfg.Provider,
 		ProviderConfig:   projectCfg.ProviderConfig,
 		DefaultModel:     projectCfg.DefaultModel,
 		Theme:            projectCfg.Theme,
+		WebUI:            projectCfg.WebUI,
 		OllamaConfig:     projectCfg.OllamaConfig,
 		GeminiConfig:     projectCfg.GeminiConfig,
 		OpenRouterConfig: projectCfg.OpenRouterConfig,
@@ -223,10 +224,9 @@ func migrateToGlobalConfig() error {
 		return fmt.Errorf("migration: failed to write global config: %w", err)
 	}
 
-	// Rewrite project config with only framework + web_ui
-	projectOnly := Config{
+	// Rewrite project config with only framework
+	projectOnly := projectConfigFile{
 		Framework: projectCfg.Framework,
-		WebUI:     projectCfg.WebUI,
 	}
 	newData, err := yaml.Marshal(projectOnly)
 	if err != nil {

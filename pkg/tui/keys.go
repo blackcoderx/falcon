@@ -173,11 +173,13 @@ func (m Model) handleEnter() (Model, tea.Cmd) {
 	displayInput := userInput
 	if m.slashState.FlowContent != "" {
 		agentInput = fmt.Sprintf("File context:\n```yaml\n%s\n```\n\nTask: %s", m.slashState.FlowContent, userInput)
-		m.slashState = SlashState{} // clear after use
-	}
-
-	if displayInput == "" {
-		displayInput = "(context attached)"
+		tagLabel := "@ " + m.slashState.TaggedFile
+		if displayInput == "" {
+			displayInput = tagLabel
+		} else {
+			displayInput = tagLabel + "  " + displayInput
+		}
+		m.slashState = SlashState{} // clears TaggedFile + FlowContent
 	}
 
 	// Add separator if there are previous logs

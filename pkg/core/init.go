@@ -750,9 +750,15 @@ func writeGlobalConfig(setup *SetupResult) error {
 	return SaveGlobalConfig(existing)
 }
 
-// writeProjectConfig writes only the framework (and optionally web_ui) to .falcon/config.yaml.
+// projectConfigFile is the minimal on-disk representation of .falcon/config.yaml.
+// It intentionally contains only framework so the file stays clean.
+type projectConfigFile struct {
+	Framework string `yaml:"framework"`
+}
+
+// writeProjectConfig writes only the framework to .falcon/config.yaml.
 func writeProjectConfig(framework string) error {
-	config := Config{
+	config := projectConfigFile{
 		Framework: framework,
 	}
 

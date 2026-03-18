@@ -22,7 +22,8 @@ type SlashState struct {
 	Query       string
 	Suggestions []SlashCommand
 	Selected    int
-	FlowContent string        // loaded file content (after selection, cleared after enter)
+	FlowContent string         // loaded file content (after selection, cleared after enter)
+	TaggedFile  string         // filename of the tagged file (shown as chip until message is sent)
 	cachedAll   []SlashCommand // cached full list (builtins + files), populated once
 }
 
@@ -161,6 +162,7 @@ func (m Model) acceptSlashCommand() (Model, tea.Cmd) {
 		content, err := os.ReadFile(filePath)
 		if err == nil {
 			m.slashState.FlowContent = string(content)
+			m.slashState.TaggedFile = selected.Name
 		}
 
 		// Extract remainder text after the slash command in the input

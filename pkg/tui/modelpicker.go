@@ -123,8 +123,8 @@ func (m Model) applyModelSwitch() Model {
 	m.modelPickerActive = false
 
 	m.logs = append(m.logs, logEntry{
-		Type:    "response",
-		Content: fmt.Sprintf("Switched to **%s** (%s)", m.modelName, p.DisplayName()),
+		Type:    "system",
+		Content: fmt.Sprintf("Switched to %s (%s)", m.modelName, p.DisplayName()),
 	})
 	m.updateViewportContent()
 	return m

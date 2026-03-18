@@ -171,6 +171,12 @@ var (
 				MarginLeft(ContentPadLeft).
 				MarginTop(1)
 
+	// System messages: single compact line for status updates (model switch, etc.)
+	SystemMessageStyle = lipgloss.NewStyle().
+				Foreground(DimColor).
+				Italic(true).
+				MarginLeft(ContentPadLeft)
+
 	// Response card: subtle box for tool output/responses
 	ResponseCardStyle = lipgloss.NewStyle().
 				Background(ResponseCardBg).
@@ -286,6 +292,11 @@ var (
 
 // Slash command panel styles
 var (
+	TagChipStyle = lipgloss.NewStyle().
+			Foreground(AccentColor).
+			Faint(true).
+			MarginLeft(ContentPadLeft)
+
 	SlashPanelStyle = lipgloss.NewStyle().
 			MarginLeft(ContentPadLeft)
 

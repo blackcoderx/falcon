@@ -131,6 +131,9 @@ func (m *Model) formatLogEntry(entry logEntry) string {
 		}
 		return AgentMessageStyle.Render(entry.Content)
 
+	case "system":
+		return SystemMessageStyle.Render(entry.Content)
+
 	case "error":
 		return pad + ErrorStyle.Render("  Error: "+entry.Content)
 
@@ -241,6 +244,9 @@ func (m Model) renderInputArea() string {
 		parts = append(parts, m.renderModelPicker())
 	} else if m.slashState.Active && len(m.slashState.Suggestions) > 0 {
 		parts = append(parts, m.renderSlashPanel())
+	}
+	if m.slashState.TaggedFile != "" {
+		parts = append(parts, TagChipStyle.Render("@ "+m.slashState.TaggedFile))
 	}
 	parts = append(parts, InputAreaStyle.Width(m.boxWidth()).Render(m.textinput.View()))
 	return strings.Join(parts, "\n")
