@@ -7,7 +7,6 @@ import (
 
 	"github.com/blackcoderx/falcon/pkg/core"
 	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
-	"github.com/blackcoderx/falcon/pkg/llm"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -15,6 +14,15 @@ import (
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/harmonica"
 )
+
+// modelEntry represents a single selectable item in the /model picker.
+// Each configured provider in GlobalConfig becomes exactly one entry.
+type modelEntry struct {
+	ProviderID  string
+	DisplayName string            // e.g. "Ollama - llama3.2"
+	Model       string
+	Config      map[string]string
+}
 
 // logEntry represents a single log line in the UI
 type logEntry struct {
@@ -76,14 +84,12 @@ type Model struct {
 	// Slash command state
 	slashState SlashState
 
-	// modelPickerActive shows the model picker panel (populated by /model command, rendered in Phase 5)
+	// modelPickerActive shows the model picker panel (populated by /model command)
 	modelPickerActive bool
 
-	// Model picker state (step 0 = provider list, step 1 = model name input)
-	modelPickerStep  int            // 0 = selecting provider, 1 = entering model name
-	modelPickerItems []llm.Provider // available providers
-	modelPickerIdx   int            // currently highlighted provider index
-	modelPickerInput textinput.Model // model name text input
+	// Model picker state — flat list of configured providers only
+	modelPickerItems []modelEntry // configured providers from GlobalConfig
+	modelPickerIdx   int         // currently highlighted index
 
 	// Persistent memory store
 	memoryStore *core.MemoryStore

@@ -2,26 +2,64 @@ package tui
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
+	"github.com/blackcoderx/falcon/pkg/core"
 	"github.com/blackcoderx/falcon/pkg/llm"
-	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/spf13/viper"
 )
 
 // openModelPicker initializes and opens the model picker.
 // Called when the user selects /model.
+// Only shows providers that have been configured in GlobalConfig.
 func (m Model) openModelPicker() Model {
+	gcfg, err := core.LoadGlobalConfig()
+	if err != nil || gcfg == nil || len(gcfg.Providers) == 0 {
+		m.logs = append(m.logs, logEntry{
+			Type:    "system",
+			Content: "No providers configured. Run 'falcon config' to add one.",
+		})
+		m.updateViewportContent()
+		return m
+	}
+
+	// Build entries in provider registration order for a stable display.
+	var entries []modelEntry
+	for _, p := range llm.All() {
+		entry, ok := gcfg.Providers[p.ID()]
+		if !ok {
+			continue
+		}
+		model := entry.Model
+		if model == "" {
+			model = p.DefaultModel()
+		}
+		entries = append(entries, modelEntry{
+			ProviderID:  p.ID(),
+			DisplayName: fmt.Sprintf("%s - %s", p.DisplayName(), model),
+			Model:       model,
+			Config:      entry.Config,
+		})
+	}
+
+	if len(entries) == 0 {
+		m.logs = append(m.logs, logEntry{
+			Type:    "system",
+			Content: "No providers configured. Run 'falcon config' to add one.",
+		})
+		m.updateViewportContent()
+		return m
+	}
+
 	m.modelPickerActive = true
-	m.modelPickerStep = 0
-	m.modelPickerItems = llm.All()
+	m.modelPickerItems = entries
 	m.modelPickerIdx = 0
 
-	// Pre-select current provider
-	currentProvider := viper.GetString("provider")
-	for i, p := range m.modelPickerItems {
-		if p.ID() == currentProvider {
+	// Pre-select the currently active provider.
+	currentProvider := gcfg.DefaultProvider
+	for i, e := range entries {
+		if e.ProviderID == currentProvider {
 			m.modelPickerIdx = i
 			break
 		}
@@ -31,83 +69,70 @@ func (m Model) openModelPicker() Model {
 }
 
 // handleModelPickerKeys processes keyboard input for the model picker.
+// Single-step: navigate the list with up/down, confirm with enter, cancel with esc.
 func (m Model) handleModelPickerKeys(msg tea.KeyMsg) (bool, Model, tea.Cmd) {
 	if !m.modelPickerActive {
 		return false, m, nil
 	}
 
-	switch m.modelPickerStep {
-	case 0: // Provider selection step
-		switch msg.String() {
-		case "up", "shift+tab":
-			if m.modelPickerIdx > 0 {
-				m.modelPickerIdx--
-			} else {
-				m.modelPickerIdx = len(m.modelPickerItems) - 1
-			}
-			return true, m, nil
-		case "down", "tab":
-			if m.modelPickerIdx < len(m.modelPickerItems)-1 {
-				m.modelPickerIdx++
-			} else {
-				m.modelPickerIdx = 0
-			}
-			return true, m, nil
-		case "enter":
-			// Advance to model name step
-			m.modelPickerStep = 1
-			ti := textinput.New()
-			if len(m.modelPickerItems) > 0 {
-				ti.Placeholder = m.modelPickerItems[m.modelPickerIdx].DefaultModel()
-			}
-			ti.Focus()
-			ti.Width = 40
-			m.modelPickerInput = ti
-			return true, m, textinput.Blink
-		case "esc":
-			m.modelPickerActive = false
-			return true, m, nil
+	switch msg.String() {
+	case "up", "shift+tab":
+		if m.modelPickerIdx > 0 {
+			m.modelPickerIdx--
+		} else {
+			m.modelPickerIdx = len(m.modelPickerItems) - 1
 		}
-
-	case 1: // Model name input step
-		switch msg.String() {
-		case "enter":
-			m = m.applyModelSwitch()
-			return true, m, m.spinner.Tick
-		case "esc":
-			// Go back to provider step
-			m.modelPickerStep = 0
-			return true, m, nil
-		default:
-			// Pass key to the text input
-			var cmd tea.Cmd
-			m.modelPickerInput, cmd = m.modelPickerInput.Update(msg)
-			return true, m, cmd
+		return true, m, nil
+	case "down", "tab":
+		if m.modelPickerIdx < len(m.modelPickerItems)-1 {
+			m.modelPickerIdx++
+		} else {
+			m.modelPickerIdx = 0
 		}
+		return true, m, nil
+	case "enter":
+		m = m.applyModelSwitch()
+		return true, m, m.spinner.Tick
+	case "esc":
+		m.modelPickerActive = false
+		return true, m, nil
 	}
 
 	return false, m, nil
 }
 
-// applyModelSwitch builds a new LLM client and swaps it into the agent.
+// applyModelSwitch builds a new LLM client from the selected modelEntry and swaps it into the agent.
 func (m Model) applyModelSwitch() Model {
 	if len(m.modelPickerItems) == 0 || m.modelPickerIdx >= len(m.modelPickerItems) {
 		m.modelPickerActive = false
 		return m
 	}
 
-	p := m.modelPickerItems[m.modelPickerIdx]
-	modelName := m.modelPickerInput.Value()
-	if modelName == "" {
-		modelName = p.DefaultModel()
+	entry := m.modelPickerItems[m.modelPickerIdx]
+	p, ok := llm.Get(entry.ProviderID)
+	if !ok {
+		m.logs = append(m.logs, logEntry{
+			Type:    "error",
+			Content: fmt.Sprintf("Unknown provider: %s", entry.ProviderID),
+		})
+		m.modelPickerActive = false
+		m.updateViewportContent()
+		return m
 	}
 
-	// Collect credentials from viper/env (reuse existing helper)
-	values := collectProviderValues(p)
+	// Use config from the entry, with env-variable fallbacks for empty fields.
+	values := make(map[string]string)
+	for k, v := range entry.Config {
+		values[k] = v
+	}
+	for _, f := range p.SetupFields() {
+		if values[f.Key] == "" && f.EnvFallback != "" {
+			values[f.Key] = os.Getenv(f.EnvFallback)
+		}
+	}
 
-	client, err := p.BuildClient(values, modelName)
+	client, err := p.BuildClient(values, entry.Model)
 	if err != nil {
-		// Show error in logs and close picker
 		m.logs = append(m.logs, logEntry{
 			Type:    "error",
 			Content: fmt.Sprintf("Failed to switch model: %v", err),
@@ -117,7 +142,6 @@ func (m Model) applyModelSwitch() Model {
 		return m
 	}
 
-	// Swap the client
 	m.agent.SwapLLMClient(client)
 	m.modelName = client.GetModel()
 	m.modelPickerActive = false
@@ -137,29 +161,17 @@ func (m Model) renderModelPicker() string {
 	}
 
 	var lines []string
+	header := SlashItemStyle.Render("  Switch model (↑↓ navigate, enter select, esc cancel)")
+	lines = append(lines, header)
 
-	if m.modelPickerStep == 0 {
-		// Provider list
-		header := SlashItemStyle.Render("  Select provider (↑↓ navigate, enter select, esc cancel)")
-		lines = append(lines, header)
-		for i, p := range m.modelPickerItems {
-			line := "  " + p.DisplayName()
-			if i == m.modelPickerIdx {
-				line = SlashItemSelectedStyle.Render(line)
-			} else {
-				line = SlashItemStyle.Render(line)
-			}
-			lines = append(lines, line)
+	for i, entry := range m.modelPickerItems {
+		line := "  " + entry.DisplayName
+		if i == m.modelPickerIdx {
+			line = SlashItemSelectedStyle.Render(line)
+		} else {
+			line = SlashItemStyle.Render(line)
 		}
-	} else {
-		// Model name input
-		selected := ""
-		if len(m.modelPickerItems) > 0 && m.modelPickerIdx < len(m.modelPickerItems) {
-			selected = m.modelPickerItems[m.modelPickerIdx].DisplayName()
-		}
-		lines = append(lines, SlashItemStyle.Render(fmt.Sprintf("  Provider: %s", SlashItemSelectedStyle.Render(selected))))
-		lines = append(lines, SlashItemStyle.Render("  Model name (enter to confirm, esc to go back):"))
-		lines = append(lines, "  "+m.modelPickerInput.View())
+		lines = append(lines, line)
 	}
 
 	return SlashPanelStyle.Render(strings.Join(lines, "\n"))
@@ -170,8 +182,5 @@ func (m Model) modelPickerHeight() int {
 	if !m.modelPickerActive {
 		return 0
 	}
-	if m.modelPickerStep == 0 {
-		return len(m.modelPickerItems) + 2 // header + providers + padding
-	}
-	return 4 // provider line + prompt line + input line + padding
+	return len(m.modelPickerItems) + 2 // header + items + padding
 }
