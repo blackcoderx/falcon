@@ -55,11 +55,18 @@ func (h *handlers) getDashboard(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	// Provider and model come from the global config (multi-provider structure).
+	var providerID, model string
+	if gcfg, err := core.LoadGlobalConfig(); err == nil {
+		providerID, model, _ = core.GetActiveProviderEntry(gcfg)
+	}
+
 	writeJSON(w, http.StatusOK, map[string]any{
 		"manifest": manifest,
 		"config_summary": map[string]string{
-			"provider":  cfg.Provider,
-			"model":     cfg.DefaultModel,
+			"provider":  providerID,
+			"model":     model,
 			"framework": cfg.Framework,
 		},
 	})
