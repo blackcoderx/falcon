@@ -6,6 +6,7 @@ import (
 
 	"github.com/blackcoderx/falcon/pkg/core"
 	"github.com/blackcoderx/falcon/pkg/core/tools"
+	"github.com/blackcoderx/falcon/pkg/core/tools/persistence"
 	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 	"github.com/blackcoderx/falcon/pkg/llm"
 	"github.com/blackcoderx/falcon/pkg/llm/ollama"
@@ -32,13 +33,13 @@ func configureToolLimits(agent *core.Agent) {
 	}
 }
 
-// registerTools adds all tools to the agent.
-// This includes codebase tools, persistence tools, and testing tools from all sprints.
 // registerTools adds all tools to the agent using the central registry.
-// This switches Falcon to use the new modular tool packages (shared, debugging, persistence, agent).
-func registerTools(agent *core.Agent, falconDir, workDir string, confirmManager *shared.ConfirmationManager, memStore *core.MemoryStore) {
+// Returns the PersistenceManager so the TUI can call SetEnvironment directly,
+// sharing the same instance that the agent's EnvironmentTool holds.
+func registerTools(agent *core.Agent, falconDir, workDir string, confirmManager *shared.ConfirmationManager, memStore *core.MemoryStore) *persistence.PersistenceManager {
 	registry := tools.NewRegistry(agent, agent.LLMClient(), workDir, falconDir, memStore, confirmManager)
 	registry.RegisterAllTools()
+	return registry.PersistManager
 }
 
 // newLLMClient creates and configures the LLM client from Viper config.
@@ -204,7 +205,7 @@ func InitialModel(webPort int) Model {
 	memStore := core.NewMemoryStore(falconDir)
 	agent.SetMemoryStore(memStore)
 
-	registerTools(agent, falconDir, workDir, confirmManager, memStore)
+	persistManager := registerTools(agent, falconDir, workDir, confirmManager, memStore)
 
 	m := Model{
 		textinput:        newTextInput(),
@@ -224,6 +225,7 @@ func InitialModel(webPort int) Model {
 		confirmManager:   confirmManager,
 		confirmationMode: false,
 		memoryStore:      memStore,
+		persistManager:   persistManager,
 
 		// Initialize harmonica spring for pulsing animation
 		// frequency=5.0 (moderate oscillation speed), damping=0.3 (keeps bouncing)

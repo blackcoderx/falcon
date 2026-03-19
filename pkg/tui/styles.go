@@ -102,6 +102,11 @@ var (
 				Foreground(DimColor).
 				PaddingRight(1)
 
+	FooterEnvStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#4ec9b0")).
+			Bold(true).
+			PaddingRight(1)
+
 	FooterInfoStyle = lipgloss.NewStyle().
 			Foreground(DimColor)
 

@@ -33,6 +33,16 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (Model, tea.Cmd) {
 		}
 	}
 
+	// Handle environment picker keys
+	if m.envPickerActive {
+		if handled, updatedModel, cmd := m.handleEnvPickerKeys(msg); handled {
+			if cmd == nil {
+				cmd = m.spinner.Tick
+			}
+			return updatedModel, cmd
+		}
+	}
+
 	switch msg.String() {
 	case "ctrl+c":
 		// Cancel any pending confirmation when quitting

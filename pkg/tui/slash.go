@@ -31,6 +31,7 @@ type SlashState struct {
 func listBuiltinCommands() []SlashCommand {
 	return []SlashCommand{
 		{Name: "model", Description: "Switch LLM provider/model", Kind: "builtin"},
+		{Name: "env", Description: "Switch active environment", Kind: "builtin"},
 	}
 }
 
@@ -145,6 +146,10 @@ func (m Model) acceptSlashCommand() (Model, tea.Cmd) {
 	case "builtin":
 		if selected.Name == "model" {
 			m = m.openModelPicker()
+			m.slashState = SlashState{}
+			m.textinput.SetValue("")
+		} else if selected.Name == "env" {
+			m = m.openEnvPicker()
 			m.slashState = SlashState{}
 			m.textinput.SetValue("")
 		}

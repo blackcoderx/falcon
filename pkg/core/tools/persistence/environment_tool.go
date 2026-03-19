@@ -28,12 +28,12 @@ type EnvironmentParams struct {
 func (t *EnvironmentTool) Name() string { return "environment" }
 
 func (t *EnvironmentTool) Description() string {
-	return "Manage environments in .falcon/environments/. Actions: set (activate environment and optionally persist its variables), list (show all available environments and which is active)"
+	return "Manage environments in .falcon/environments/. Actions: get (return the currently active environment name), set (activate environment and optionally persist its variables), list (show all available environments and which is active)"
 }
 
 func (t *EnvironmentTool) Parameters() string {
 	return `{
-  "action": "set|list",
+  "action": "get|set|list",
   "name":      "dev|staging|prod|...",
   "variables": {"BASE_URL": "http://localhost:3000", "API_KEY": "{{API_KEY}}"}
 }`
@@ -46,13 +46,24 @@ func (t *EnvironmentTool) Execute(args string) (string, error) {
 	}
 
 	switch params.Action {
+	case "get":
+		return t.get()
 	case "set":
 		return t.set(params)
 	case "list":
 		return t.list()
 	default:
-		return "", fmt.Errorf("unknown action '%s' (use: set, list)", params.Action)
+		return "", fmt.Errorf("unknown action '%s' (use: get, set, list)", params.Action)
 	}
+}
+
+// get returns the name of the currently active environment.
+func (t *EnvironmentTool) get() (string, error) {
+	env := t.manager.GetCurrentEnv()
+	if env == "" {
+		return "No environment is currently active.", nil
+	}
+	return fmt.Sprintf("Active environment: %s", env), nil
 }
 
 func (t *EnvironmentTool) set(params EnvironmentParams) (string, error) {

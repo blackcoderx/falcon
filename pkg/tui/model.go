@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/blackcoderx/falcon/pkg/core"
+	"github.com/blackcoderx/falcon/pkg/core/tools/persistence"
 	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -90,6 +91,18 @@ type Model struct {
 	// Model picker state — flat list of configured providers only
 	modelPickerItems []modelEntry // configured providers from GlobalConfig
 	modelPickerIdx   int         // currently highlighted index
+
+	// Environment picker state
+	envPickerActive bool
+	envPickerItems  []string // environment names from .falcon/environments/
+	envPickerIdx    int      // currently highlighted index
+
+	// Active environment (name of the currently loaded environment)
+	currentEnv string
+
+	// Shared PersistenceManager — same instance the agent's EnvironmentTool holds.
+	// Calling SetEnvironment on this automatically updates agent tool behaviour.
+	persistManager *persistence.PersistenceManager
 
 	// Persistent memory store
 	memoryStore *core.MemoryStore

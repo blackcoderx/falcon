@@ -242,6 +242,8 @@ func (m Model) renderInputArea() string {
 	var parts []string
 	if m.modelPickerActive {
 		parts = append(parts, m.renderModelPicker())
+	} else if m.envPickerActive {
+		parts = append(parts, m.renderEnvPicker())
 	} else if m.slashState.Active && len(m.slashState.Suggestions) > 0 {
 		parts = append(parts, m.renderSlashPanel())
 	}
@@ -259,11 +261,15 @@ func (m Model) renderFooter() string {
 		return m.renderConfirmationFooter()
 	}
 
-	// Left side: status + model name
+	// Left side: status + optional env badge + model name
 	status := m.renderStatusText()
 	modelInfo := FooterModelStyle.Render(m.modelName)
 
 	left := status + "  " + modelInfo
+	if m.currentEnv != "" {
+		envBadge := FooterEnvStyle.Render(m.currentEnv)
+		left = status + "  " + envBadge + "  " + modelInfo
+	}
 
 	// Right side: keyboard shortcuts
 	var parts []string
