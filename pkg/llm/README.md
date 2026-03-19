@@ -152,10 +152,10 @@ func init() {
 }
 ```
 
-To activate providers, the consuming package imports the subpackages with blank imports:
+To activate providers, blank imports trigger each provider's `init()`. These are centralized in `register_providers.go`:
 
 ```go
-// In pkg/tui/init.go:
+// pkg/llm/register_providers.go:
 import (
     _ "github.com/blackcoderx/falcon/pkg/llm/ollama"
     _ "github.com/blackcoderx/falcon/pkg/llm/gemini"
@@ -270,13 +270,13 @@ func (p *MyProvider) BuildClient(values map[string]string, model string) (llm.LL
 ### Step 3: Add a blank import
 
 ```go
-// In pkg/tui/init.go — add one line:
+// In pkg/llm/register_providers.go — add one line:
 import (
     _ "github.com/blackcoderx/falcon/pkg/llm/myprovider"
 )
 ```
 
-The provider now appears in the setup wizard, gets its own config section, and is instantiated at runtime. **Zero changes to `pkg/core/init.go`.**
+The provider now appears in the setup wizard (`falcon config`), gets its own entry in `~/.falcon/config.yaml`, and is instantiated at runtime. **Zero changes to `pkg/core/init.go` or `pkg/core/globalconfig.go`.**
 
 ## Testing
 

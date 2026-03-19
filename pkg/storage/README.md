@@ -154,23 +154,30 @@ result := storage.SubstituteVariables("{{UNDEFINED}}/path", variables)
 
 ## File Layout
 
-Falcon's storage lives entirely inside `.falcon/`:
+Falcon uses two persistent folders:
 
 ```
-.falcon/
-├── config.yaml              # Main configuration (YAML)
-├── memory.json              # Agent memory (JSON)
-├── manifest.json            # Workspace counts (JSON)
+~/.falcon/                   # Global — shared across all projects
+├── config.yaml              # LLM provider credentials
+└── memory.json              # Persistent agent memory (JSON)
+
+.falcon/                     # Per-project runtime data
+├── config.yaml              # Project config (framework, tool limits, web_ui)
+├── manifest.json            # Parsed endpoint graph (JSON)
+├── falcon.md                # API knowledge base
+├── spec.yaml                # Ingested API spec (YAML)
+├── variables.json           # Global variables
 ├── requests/                # Saved API requests
 │   ├── get-users.yaml
-│   ├── create-user.yaml
-│   └── health-check.yaml
+│   └── create-user.yaml
 ├── environments/            # Environment variable files
 │   ├── dev.yaml
 │   ├── staging.yaml
 │   └── prod.yaml
 ├── baselines/               # Regression test snapshots
-└── flows/                   # Multi-step API flows
+├── sessions/                # Session audit logs
+├── flows/                   # Multi-step API flows
+└── reports/                 # Test reports (Markdown)
 ```
 
 ## Usage Patterns
