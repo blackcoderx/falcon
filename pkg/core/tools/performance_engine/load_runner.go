@@ -1,6 +1,7 @@
 package performance_engine
 
 import (
+	"strings"
 	"sync"
 	"time"
 
@@ -67,18 +68,25 @@ func (r *LoadTestRunner) Run(endpoints map[string]shared.EndpointAnalysis) Execu
 	return metricsCollector.Finalize()
 }
 
-func (r *LoadTestRunner) executeRequest(_ string) RequestStat {
-	// Simple parsing
-	// Method Path
+func (r *LoadTestRunner) executeRequest(epKey string) RequestStat {
 	start := time.Now()
-	// Mocking execution for now since we don't want to actually blast a localhost in a loop
-	// in this environment unless we have a specific test target.
-	// In a real scenario, this would call r.httpTool.Run()
 
+	method, path := "GET", "/"
+	if parts := strings.SplitN(epKey, " ", 2); len(parts) == 2 {
+		method, path = parts[0], parts[1]
+	}
+
+	resp, err := r.httpTool.Run(shared.HTTPRequest{
+		Method: method,
+		URL:    r.params.BaseURL + path,
+	})
+	if err != nil {
+		return RequestStat{Latency: time.Since(start), Success: false}
+	}
 	return RequestStat{
-		StatusCode: 200,
-		Latency:    time.Since(start),
-		Success:    true,
+		StatusCode: resp.StatusCode,
+		Latency:    resp.Duration,
+		Success:    resp.StatusCode < 500,
 	}
 }
 

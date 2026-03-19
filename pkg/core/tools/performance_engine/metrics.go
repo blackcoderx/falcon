@@ -77,9 +77,9 @@ func (c *MetricsCollector) Finalize() ExecutionMetrics {
 		AvgLatency:  totalLatency / time.Duration(count),
 		Min:         min,
 		Max:         max,
-		P50:         time.Duration(latencies[int(float64(count)*0.50)]),
-		P95:         time.Duration(latencies[int(float64(count)*0.95)]),
-		P99:         time.Duration(latencies[int(float64(count)*0.99)]),
+		P50:         time.Duration(latencies[int(float64(count-1)*0.50)]),
+		P95:         time.Duration(latencies[int(float64(count-1)*0.95)]),
+		P99:         time.Duration(latencies[int(float64(count-1)*0.99)]),
 	}
 
 	return metrics
