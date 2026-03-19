@@ -28,11 +28,20 @@ func GlobalConfigPath() string {
 	return filepath.Join(GlobalFalconDir(), "config.yaml")
 }
 
-// EnsureGlobalFalconDir creates ~/.falcon if it doesn't exist (with 0700 permissions).
+// EnsureGlobalFalconDir creates ~/.falcon if it doesn't exist (with 0700 permissions)
+// and ensures memory.json exists with an empty valid structure.
 func EnsureGlobalFalconDir() error {
 	dir := GlobalFalconDir()
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return fmt.Errorf("failed to create global falcon dir %s: %w", dir, err)
+	}
+	// Ensure memory.json exists so the agent can always read/write it.
+	memPath := filepath.Join(dir, "memory.json")
+	if _, err := os.Stat(memPath); os.IsNotExist(err) {
+		empty := []byte(`{"version":1,"entries":[]}` + "\n")
+		if err := os.WriteFile(memPath, empty, 0600); err != nil {
+			return fmt.Errorf("failed to create memory.json: %w", err)
+		}
 	}
 	return nil
 }
