@@ -6,7 +6,7 @@ Thank you for your interest in contributing to Falcon! This document provides gu
 
 ### Prerequisites
 
-- Go 1.25.3 or higher
+- Go 1.21 or higher
 - [Ollama](https://ollama.ai/) (optional, for testing with a local LLM)
 - Git
 
@@ -20,32 +20,48 @@ Thank you for your interest in contributing to Falcon! This document provides gu
    ```
 3. Build the project:
    ```bash
-   go build -o falcon.exe ./cmd/falcon
+   go build -o falcon.exe ./cmd/falcon   # Windows
+   go build -o falcon ./cmd/falcon       # Unix
    ```
 4. Run tests:
    ```bash
    go test ./...
    ```
 
+---
+
 ## Project Structure
 
 ```
 falcon/
-├── cmd/falcon/        # Application entry point
+├── cmd/falcon/        # Application entry point (Cobra CLI)
+│   ├── main.go        # Root command, flags, CLI mode
+│   └── update.go      # Self-update logic
 ├── pkg/
-│   ├── core/          # Agent logic and ReAct loop
-│   │   └── tools/     # 4-tier tool system
-│   │       ├── shared/      # Foundation & HTTP
-│   │       ├── debugging/   # Code investigation
-│   │       ├── persistence/ # State & Environments
-│   │       ├── agent/       # Agent lifecycle
-│   │       ├── spec_ingester/ # API Intelligence
-│   │       └── (modules)/   # Security, Performance, QA, etc.
-│   ├── llm/           # LLM client implementations
-│   ├── storage/       # Low-level I/O
-│   ├── web/           # Embedded web dashboard
-│   └── tui/           # Terminal UI
-├── .falcon/              # Runtime config & memory (created on first run)
+│   ├── core/          # Agent logic, ReAct loop, tool interfaces
+│   │   ├── tools/     # 28+ tools in tiered packages
+│   │   │   ├── shared/               # Foundation: HTTP, auth, assertions
+│   │   │   ├── debugging/            # Code analysis and fixes
+│   │   │   ├── persistence/          # Requests, environments, variables
+│   │   │   ├── agent/                # Memory, test execution, automation
+│   │   │   ├── spec_ingester/        # OpenAPI/Postman spec parsing
+│   │   │   ├── functional_test_generator/
+│   │   │   ├── security_scanner/
+│   │   │   ├── performance_engine/
+│   │   │   ├── smoke_runner/
+│   │   │   ├── idempotency_verifier/
+│   │   │   ├── data_driven_engine/
+│   │   │   ├── regression_watchdog/
+│   │   │   └── integration_orchestrator/
+│   │   └── prompt/    # System prompt builder
+│   ├── llm/           # Pluggable LLM provider system
+│   │   ├── ollama/    # Ollama client + self-registration
+│   │   ├── gemini/    # Gemini client + self-registration
+│   │   └── openrouter/  # OpenRouter client + self-registration
+│   ├── storage/       # Low-level YAML/env file I/O
+│   ├── web/           # Embedded web dashboard (HTTP + static SPA)
+│   └── tui/           # Terminal UI (Bubble Tea)
+├── .falcon/           # Runtime config & memory (created on first run)
 ├── CLAUDE.md          # Development guidelines for AI assistants
 └── README.md          # User documentation
 ```
@@ -58,6 +74,8 @@ See the README files in each package for detailed documentation:
 - [pkg/storage/README.md](pkg/storage/README.md) — Persistence layer
 - [pkg/tui/README.md](pkg/tui/README.md) — Terminal UI
 
+---
+
 ## How to Contribute
 
 ### Reporting Bugs
@@ -67,7 +85,7 @@ See the README files in each package for detailed documentation:
    - Clear title describing the bug
    - Steps to reproduce
    - Expected vs actual behavior
-   - Environment details (OS, Go version, Ollama version)
+   - Environment details (OS, Go version, provider/model)
 
 ### Suggesting Features
 
@@ -81,120 +99,96 @@ See the README files in each package for detailed documentation:
 
 1. Create a feature branch:
    ```bash
-   git checkout -b feature/my-feature
+   git checkout -b feat/my-feature
    ```
 
 2. Make your changes following the [code style guidelines](#code-style)
 
 3. Add tests for new functionality
 
-4. Run tests:
+4. Run tests and verify the build:
    ```bash
    go test ./...
+   go build -o falcon.exe ./cmd/falcon
    ```
 
-5. Commit with clear messages:
+5. Commit with a clear message (see [commit messages](#commit-messages)):
    ```bash
    git commit -m "feat: add new tool for X"
    ```
 
 6. Push and create a PR:
    ```bash
-   git push origin feature/my-feature
+   git push origin feat/my-feature
    ```
 
-## Code Style
-
-### Go Conventions
-
-- Follow standard Go formatting (`go fmt`)
-- Use meaningful variable names
-- Add comments for exported functions
-- Keep functions focused and small
-
-### Commit Messages
-
-Use conventional commits:
-
-- `feat:` — New feature
-- `fix:` — Bug fix
-- `docs:` — Documentation changes
-- `test:` — Test changes
-- `refactor:` — Code refactoring
-- `chore:` — Build/tooling changes
-
-Examples:
-```
-feat: add OAuth2 PKCE flow support
-fix: handle empty response body in HTTP tool
-docs: update tool creation guide
-test: add tests for variable substitution
-```
+---
 
 ## Common Tasks
 
 ### Adding a New Tool
 
-1. **Choose a tier**: Place your tool in the appropriate folder under `pkg/core/tools/`:
-   - `shared/` — Foundation tools used by other tools
-   - `debugging/` — Tools for codebase analysis and fixing
-   - `persistence/` — Tools for state and environment management
-   - `agent/` — Agent-internal management tools
-   - `(module)/` — Specific autonomous modules (e.g., `security_scanner/`)
+Tools are the primary way to extend Falcon's capabilities. Each tool is a Go struct that implements the `core.Tool` interface.
 
-2. **Implement the tool**:
-   ```go
-   package mytier
+#### 1. Choose a location
 
-   type MyTool struct{}
+Place your tool in the appropriate package under `pkg/core/tools/`:
 
-   func NewMyTool() *MyTool { return &MyTool{} }
+| Package | Purpose |
+|---------|---------|
+| `shared/` | Foundation tools used by other tools (HTTP, auth) |
+| `debugging/` | Tools for codebase analysis and fixing |
+| `persistence/` | Tools for state and environment management |
+| `agent/` | Agent-internal management tools |
+| `<module>/` | Autonomous domain modules (e.g., `security_scanner/`) |
 
-   func (t *MyTool) Name() string        { return "my_tool" }
-   func (t *MyTool) Description() string { return "Does something useful" }
-   func (t *MyTool) Parameters() string  { return `{"type":"object","properties":{...}}` }
-   func (t *MyTool) Execute(args string) (string, error) { ... }
-   ```
+#### 2. Implement the `Tool` interface
 
-3. **Register in `pkg/core/tools/registry.go`**: Add your tool to the relevant `register*()` method so it's wired into the agent.
+```go
+package mytier
 
-4. **Add tests**: Create `tool_test.go` in the same directory.
+type MyTool struct{}
 
-5. **Update the system prompt**: If the tool adds a new capability category, update `pkg/core/prompt/`.
+func NewMyTool() *MyTool { return &MyTool{} }
 
-### Adding a New LLM Provider
+func (t *MyTool) Name() string        { return "my_tool" }
+func (t *MyTool) Description() string { return "Does something useful" }
+func (t *MyTool) Parameters() string {
+    return `{
+        "type": "object",
+        "properties": {
+            "input": {"type": "string", "description": "The input value"}
+        },
+        "required": ["input"]
+    }`
+}
 
-1. Create `pkg/llm/newprovider.go` implementing the `LLMClient` interface
-2. Update the config struct in `pkg/core/init.go`
-3. Add a provider option to the setup wizard in `pkg/core/init.go`
-4. Update `pkg/tui/init.go` to instantiate the new client
-5. Add documentation to `pkg/llm/README.md`
-
-### Adding a New Keyboard Shortcut
-
-1. Add the key binding in `pkg/tui/keys.go`
-2. Add the handler in `pkg/tui/update.go`
-3. Update the footer help text in `pkg/tui/view.go`
-
-## Testing
-
-### Running Tests
-
-```bash
-# All tests
-go test ./...
-
-# Specific package
-go test ./pkg/core/...
-
-# With coverage
-go test -cover ./...
-
-# Verbose output
-go test -v ./pkg/core/tools/...
+func (t *MyTool) Execute(args string) (string, error) {
+    var params struct {
+        Input string `json:"input"`
+    }
+    if err := json.Unmarshal([]byte(args), &params); err != nil {
+        return "", fmt.Errorf("invalid args: %w", err)
+    }
+    // ... implementation
+    return result, nil
+}
 ```
 
-### Writing Tests
+#### 3. Register in `pkg/core/tools/registry.go`
+
+Add your tool to the relevant `register*()` method:
+
+```go
+func (r *Registry) registerSharedTools() {
+    // existing tools...
+    r.agent.RegisterTool(NewMyTool())
+}
+```
+
+#### 4. Add tests
+
+Create `my_tool_test.go` in the same directory:
 
 ```go
 func TestMyTool_Execute(t *testing.T) {
@@ -232,9 +226,209 @@ func TestMyTool_Execute(t *testing.T) {
 }
 ```
 
+#### 5. Update the system prompt (if needed)
+
+If the tool introduces a new capability category, update `pkg/core/prompt/` to inform the LLM about it.
+
+#### For tools requiring human approval (file writes)
+
+Implement `core.ConfirmableTool` to hook into the confirmation workflow:
+
+```go
+type MyWriteTool struct {
+    eventCallback core.EventCallback
+}
+
+func (t *MyWriteTool) SetEventCallback(cb core.EventCallback) {
+    t.eventCallback = cb
+}
+```
+
+---
+
+### Adding a New LLM Provider
+
+Providers use a self-registration pattern — each provider registers itself via `init()`.
+
+#### 1. Create the client
+
+`pkg/llm/<name>/<name>.go` — implement `llm.LLMClient`:
+
+```go
+type MyClient struct {
+    model  string
+    apiKey string
+}
+
+func (c *MyClient) Chat(messages []llm.Message) (string, error) { ... }
+func (c *MyClient) ChatStream(messages []llm.Message, cb llm.StreamCallback) (string, error) { ... }
+func (c *MyClient) CheckConnection() error { ... }
+func (c *MyClient) GetModel() string { return c.model }
+```
+
+#### 2. Create the provider
+
+`pkg/llm/<name>/<name>_provider.go` — implement `llm.Provider` and self-register:
+
+```go
+type MyProvider struct{}
+
+func (p *MyProvider) ID() string          { return "myprovider" }
+func (p *MyProvider) DisplayName() string { return "My Provider" }
+func (p *MyProvider) DefaultModel() string { return "my-default-model" }
+
+func (p *MyProvider) SetupFields() []llm.SetupField {
+    return []llm.SetupField{
+        {
+            Key:         "api_key",
+            Type:        llm.FieldTypeInput,
+            Title:       "API Key",
+            Secret:      true,
+            EnvFallback: "MYPROVIDER_API_KEY",
+        },
+    }
+}
+
+func (p *MyProvider) BuildClient(values map[string]string, model string) (llm.LLMClient, error) {
+    return &MyClient{model: model, apiKey: values["api_key"]}, nil
+}
+
+func init() {
+    llm.Register(&MyProvider{})
+}
+```
+
+#### 3. Activate the provider
+
+Add a blank import to `pkg/llm/register_providers.go`:
+
+```go
+import (
+    _ "github.com/blackcoderx/falcon/pkg/llm/myprovider"
+)
+```
+
+#### 4. Document it
+
+Add a section to `pkg/llm/README.md` describing setup fields and any special requirements.
+
+---
+
+### Adding a New Keyboard Shortcut
+
+1. Define the key in `pkg/tui/keys.go`
+2. Handle the keypress in `pkg/tui/update.go`
+3. Update the footer help text in `pkg/tui/view.go`
+
+---
+
+### Adding a New Web Dashboard Section
+
+1. Add the REST route in `pkg/web/routes.go`
+2. Implement the handler in `pkg/web/handlers.go`
+3. Add read helpers if needed in `pkg/web/readers.go`
+4. Add write helpers if needed in `pkg/web/writers.go` (use atomic writes: temp file → rename)
+5. Add the frontend section in `pkg/web/static/app.js`
+
+---
+
+## Code Style
+
+### Go Conventions
+
+- Follow standard Go formatting (`go fmt`)
+- Use meaningful variable names
+- Add comments for exported functions and types
+- Keep functions focused and small
+- Thread-safety: use mutex guards for shared state (see `Agent`, `ResponseManager`, `VariableStore`)
+
+### Commit Messages
+
+Use conventional commits:
+
+| Prefix | When to use |
+|--------|-------------|
+| `feat:` | New feature |
+| `fix:` | Bug fix |
+| `docs:` | Documentation changes |
+| `test:` | Test changes |
+| `refactor:` | Code refactoring |
+| `chore:` | Build/tooling changes |
+
+Examples:
+```
+feat: add OAuth2 PKCE flow support
+fix: handle empty response body in HTTP tool
+docs: update tool creation guide
+test: add tests for variable substitution
+refactor: extract HTTP retry logic into shared helper
+```
+
+### Security Guidelines
+
+- Never store secrets (API keys, tokens) in tool outputs or memory entries — check for the `Secret` field pattern used in existing tools
+- Path safety: block `../` and absolute paths in tools that read/write files (see `debugging/write_file.go`)
+- Tool limits: respect per-tool and total call limits via `agent.ExecuteTool()` — do not bypass them
+- File writes always go through the confirmation workflow for user approval
+
+---
+
+## Testing
+
+### Running Tests
+
+```bash
+# All tests
+go test ./...
+
+# Specific package
+go test ./pkg/core/...
+
+# Single test by name
+go test -v -run TestMyTool ./pkg/core/tools/...
+
+# With coverage
+go test -cover ./...
+```
+
+### Writing Tests
+
+Follow the table-driven test pattern used throughout the codebase:
+
+```go
+func TestMyTool_Execute(t *testing.T) {
+    tool := NewMyTool()
+
+    tests := []struct {
+        name    string
+        args    string
+        want    string
+        wantErr bool
+    }{
+        {name: "valid input", args: `{"input": "test"}`, want: "expected output"},
+        {name: "invalid JSON", args: "invalid", wantErr: true},
+        {name: "missing required field", args: `{}`, wantErr: true},
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            got, err := tool.Execute(tt.args)
+            if (err != nil) != tt.wantErr {
+                t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
+            }
+            if !tt.wantErr && got != tt.want {
+                t.Errorf("Execute() = %v, want %v", got, tt.want)
+            }
+        })
+    }
+}
+```
+
+---
+
 ## Questions?
 
 - Open a [GitHub Discussion](https://github.com/blackcoderx/falcon/discussions)
-- Check existing issues and PRs
+- Check existing issues and PRs at [GitHub Issues](https://github.com/blackcoderx/falcon/issues)
 
 Thank you for contributing to Falcon!
