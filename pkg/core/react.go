@@ -10,22 +10,13 @@ import (
 )
 
 // ProcessMessage handles a user message using ReAct logic.
-// It runs the think-act-observe cycle until a final answer is reached or
-// tool limits are exceeded. This is the blocking version without events.
+// It runs the think-act-observe cycle until a final answer is reached.
+// This is the blocking version without events.
 func (a *Agent) ProcessMessage(input string) (string, error) {
 	// Add user message to history
 	a.AppendHistory(llm.Message{Role: "user", Content: input})
 
-	// Reset tool call counters for this session
-	a.ResetToolCounts()
-
 	for {
-		// Check total limit safety cap
-		if a.isTotalLimitReached() {
-			msg := fmt.Sprintf("I reached the maximum total tool calls (%d). Stopping to prevent runaway execution.", a.totalLimit)
-			return msg, nil
-		}
-
 		// Prepare system prompt with tool descriptions
 		systemPrompt := a.buildSystemPrompt()
 
@@ -78,14 +69,11 @@ func (a *Agent) ProcessMessage(input string) (string, error) {
 
 // ProcessMessageWithEvents handles a user message and emits events for each stage.
 // This enables real-time UI updates as the agent thinks, uses tools, and responds.
-// Events emitted: thinking, tool_call, observation, answer, error, streaming, tool_usage, confirmation_required
+// Events emitted: thinking, tool_call, observation, answer, error, streaming, confirmation_required
 // The context can be used to cancel the agent mid-processing.
 func (a *Agent) ProcessMessageWithEvents(ctx context.Context, input string, callback EventCallback) (string, error) {
 	// Add user message to history
 	a.AppendHistory(llm.Message{Role: "user", Content: input})
-
-	// Reset tool call counters for this session
-	a.ResetToolCounts()
 
 	for {
 		// Check for cancellation
@@ -96,18 +84,8 @@ func (a *Agent) ProcessMessageWithEvents(ctx context.Context, input string, call
 			// Continue processing
 		}
 
-		// Check total limit safety cap
-		if a.isTotalLimitReached() {
-			msg := fmt.Sprintf("I reached the maximum total tool calls (%d). Stopping to prevent runaway execution.", a.totalLimit)
-			callback(AgentEvent{Type: "error", Content: msg})
-			return msg, nil
-		}
-
-		// Get current total for display
-		totalCalls, _ := a.GetTotalUsage()
-
 		// Emit thinking event
-		callback(AgentEvent{Type: "thinking", Content: fmt.Sprintf("reasoning (calls: %d)...", totalCalls)})
+		callback(AgentEvent{Type: "thinking", Content: "reasoning..."})
 
 		// Prepare system prompt with tool descriptions
 		systemPrompt := a.buildSystemPrompt()
@@ -404,10 +382,8 @@ func extractFinalAnswer(response string) string {
 
 // executeTool handles the common logic for executing a tool:
 // 1. Checks if tool exists
-// 2. Checks limits
-// 3. Emits events (if callback provided)
-// 4. Updates usage stats
-// 5. runs Execute()
+// 2. Emits events (if callback provided)
+// 3. Runs Execute()
 func (a *Agent) executeTool(toolName, toolArgs string, callback EventCallback) string {
 	a.toolsMu.RLock()
 	tool, ok := a.tools[toolName]
@@ -421,23 +397,10 @@ func (a *Agent) executeTool(toolName, toolArgs string, callback EventCallback) s
 		return observation
 	}
 
-	// Check per-tool limit
-	if a.isToolLimitReached(toolName) {
-		limit := a.getToolLimit(toolName)
-		observation := fmt.Sprintf("Tool '%s' has reached its limit (%d calls). Use other tools or provide a final answer.", toolName, limit)
-		if callback != nil {
-			callback(AgentEvent{Type: "error", Content: fmt.Sprintf("Tool '%s' limit reached (%d calls)", toolName, limit)})
-		}
-		return observation
-	}
-
 	// Emit tool call event
 	if callback != nil {
 		callback(AgentEvent{Type: "tool_call", Content: toolName, ToolArgs: toolArgs})
 	}
-
-	// Increment counters
-	toolCount, toolLimit := a.IncrementToolCount(toolName)
 
 	// Set confirmation callback if applicable
 	if callback != nil {
@@ -452,22 +415,9 @@ func (a *Agent) executeTool(toolName, toolArgs string, callback EventCallback) s
 		observation = fmt.Sprintf("Error executing tool: %v", err)
 	}
 
-	// Emit observation & usage events
+	// Emit observation event
 	if callback != nil {
 		callback(AgentEvent{Type: "observation", Content: observation})
-
-		stats, totalCalls, totalLimit := a.GetToolUsageStats()
-		callback(AgentEvent{
-			Type: "tool_usage",
-			ToolUsage: &ToolUsageEvent{
-				ToolName:    toolName,
-				ToolCurrent: toolCount,
-				ToolLimit:   toolLimit,
-				TotalCalls:  totalCalls,
-				TotalLimit:  totalLimit,
-				AllStats:    stats,
-			},
-		})
 	}
 
 	return observation

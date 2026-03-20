@@ -27,20 +27,10 @@ type modelEntry struct {
 
 // logEntry represents a single log line in the UI
 type logEntry struct {
-	Type      string // "user", "thinking", "tool", "observation", "response", "error", "separator", "streaming"
-	Content   string
-	ToolArgs  string        // Tool arguments (for "tool" entries)
-	ToolUsed  int           // Current usage count (for "tool" entries)
-	ToolLimit int           // Usage limit (for "tool" entries)
-	Duration  time.Duration // Execution time (for "tool" entries, set when observation arrives)
-}
-
-// ToolUsageDisplay represents tool usage for TUI display
-type ToolUsageDisplay struct {
-	Name    string
-	Current int
-	Limit   int
-	Percent int
+	Type     string        // "user", "thinking", "tool", "observation", "response", "error", "separator", "streaming"
+	Content  string
+	ToolArgs string        // Tool arguments (for "tool" entries)
+	Duration time.Duration // Execution time (for "tool" entries, set when observation arrives)
 }
 
 // Model is the Bubble Tea model for the Falcon TUI.
@@ -68,14 +58,7 @@ type Model struct {
 	streamingBuffer string   // buffer for accumulating streaming content
 	modelName       string   // current LLM model name for badge display
 
-	// Tool usage tracking for display
-	toolUsage     []ToolUsageDisplay // Current tool usage stats
-	totalCalls    int                // Total tool calls in session
-	totalLimit    int                // Total limit
-	lastToolName  string             // Last tool that was called
-	lastToolCount int                // Last tool's current count
-	lastToolLimit int                // Last tool's limit
-	toolStartTime time.Time          // When the current tool call started
+	toolStartTime time.Time // When the current tool call started
 
 	// Confirmation state for file write approval
 	confirmationMode    bool                        // True when awaiting user confirmation
@@ -165,14 +148,9 @@ func (p *programRef) Send(msg tea.Msg) {
 // This is still a package-level variable but access is now synchronized.
 var globalProgram = &programRef{}
 
-// resetToolDisplayState resets all tool usage display fields to their zero values.
+// resetToolDisplayState resets tool display state.
 func (m *Model) resetToolDisplayState() {
-	m.toolUsage = nil
-	m.totalCalls = 0
-	m.totalLimit = 0
-	m.lastToolName = ""
-	m.lastToolCount = 0
-	m.lastToolLimit = 0
+	m.toolStartTime = time.Time{}
 }
 
 // resetAnimState resets all animation state fields to their initial values.

@@ -21,18 +21,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-// configureToolLimits applies hardcoded default tool call limits to the agent.
-func configureToolLimits(agent *core.Agent) {
-	// Apply global limits (hardcoded — no longer read from config)
-	agent.SetDefaultLimit(50)
-	agent.SetTotalLimit(200)
-
-	// Apply per-tool limits from the default map
-	for toolName, limit := range core.DefaultToolLimits {
-		agent.SetToolLimit(toolName, limit)
-	}
-}
-
 // registerTools adds all tools to the agent using the central registry.
 // Returns the PersistenceManager so the TUI can call SetEnvironment directly,
 // sharing the same instance that the agent's EnvironmentTool holds.
@@ -188,9 +176,6 @@ func InitialModel() Model {
 		framework = core.GetConfigFramework()
 	}
 	agent.SetFramework(framework)
-
-	// Configure per-tool call limits before registering tools
-	configureToolLimits(agent)
 
 	// Create confirmation manager for file write approvals (shared between tool and TUI)
 	confirmManager := shared.NewConfirmationManager()

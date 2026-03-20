@@ -14,13 +14,6 @@ import (
 
 const FalconFolderName = ".falcon"
 
-// ToolLimitsConfig holds per-tool call limits configuration
-type ToolLimitsConfig struct {
-	DefaultLimit int            `yaml:"default_limit"` // Fallback limit for tools without specific limit
-	TotalLimit   int            `yaml:"total_limit"`   // Safety cap on total tool calls per session
-	PerTool      map[string]int `yaml:"per_tool"`      // Per-tool limits (tool_name -> max_calls)
-}
-
 // Config represents the user's Falcon configuration.
 // Provider-specific settings are stored generically in ProviderConfig so that
 // new providers can be added without changing this struct.
@@ -689,60 +682,6 @@ API_KEY: your-prod-api-key
 		}
 	}
 	return nil
-}
-
-// DefaultToolLimits defines the default per-tool call limits.
-var DefaultToolLimits = map[string]int{
-	// Core HTTP
-	"http_request":     25,
-	"webhook_listener": 10,
-	// Unified auth (replaces auth_bearer, auth_basic, auth_oauth2, auth_helper)
-	"auth": 50,
-	// Utilities
-	"wait":  20,
-	"retry": 15,
-	// Assertions & extraction
-	"assert_response":      100,
-	"extract_value":        100,
-	"validate_json_schema": 50,
-	"compare_responses":    30,
-	// Unified persistence (replaces save_request, load_request, list_requests)
-	"request": 50,
-	// Unified environment (replaces set_environment, list_environments)
-	"environment": 30,
-	// Variables
-	"variable": 100,
-	// .falcon-scoped tools
-	"falcon_write": 30,
-	"falcon_read":  50,
-	"session_log":  20,
-	// Memory
-	"memory": 50,
-	// Test suites & orchestration
-	"test_suite":              10,
-	"run_tests":               10,
-	"auto_test":               5,
-	"orchestrate_integration": 5,
-	// Spec & test generation
-	"ingest_spec":               5,
-	"generate_functional_tests": 5,
-	// Specialized testing modules
-	"run_smoke":          15,
-	"run_data_driven":    10,
-	"verify_idempotency": 10,
-	"check_regression":   10,
-	"run_performance":    5,
-	"scan_security":      3,
-	// Debugging (file system reads)
-	"read_file":        50,
-	"list_files":       50,
-	"search_code":      30,
-	"find_handler":     20,
-	"analyze_endpoint": 15,
-	"analyze_failure":  15,
-	"propose_fix":      10,
-	"create_test_file": 10,
-	"write_file":       10,
 }
 
 // writeGlobalConfig writes provider/model/theme from wizard results to ~/.falcon/config.yaml.

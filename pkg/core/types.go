@@ -20,14 +20,12 @@ type Tool interface {
 // Events are emitted via callbacks to enable real-time UI updates.
 type AgentEvent struct {
 	// Type indicates the event type: "thinking", "tool_call", "observation",
-	// "answer", "error", "streaming", "tool_usage", "confirmation_required"
+	// "answer", "error", "streaming", "confirmation_required"
 	Type string
 	// Content holds the main event payload (varies by type)
 	Content string
 	// ToolArgs contains tool arguments (present only for "tool_call" events)
 	ToolArgs string
-	// ToolUsage contains tool usage statistics (present only for "tool_usage" events)
-	ToolUsage *ToolUsageEvent
 	// FileConfirmation contains file write info (present only for "confirmation_required" events)
 	FileConfirmation *FileConfirmation
 }
@@ -43,23 +41,6 @@ type FileConfirmation struct {
 	Diff string
 }
 
-// ToolUsageEvent contains tool usage statistics for display in the TUI.
-// This enables visualization of how many tool calls have been made.
-type ToolUsageEvent struct {
-	// ToolName is the name of the current tool being called (empty for stats-only updates)
-	ToolName string
-	// ToolCurrent is the number of calls made to this tool in the current session
-	ToolCurrent int
-	// ToolLimit is the maximum allowed calls for this tool per session
-	ToolLimit int
-	// TotalCalls is the total number of tool calls across all tools
-	TotalCalls int
-	// TotalLimit is the maximum total tool calls allowed per session
-	TotalLimit int
-	// AllStats contains usage statistics for all tools used in this session
-	AllStats []ToolUsageStats
-}
-
 // EventCallback is the function signature for agent event handlers.
 // Callbacks receive events as the agent progresses through the ReAct loop.
 type EventCallback func(AgentEvent)
@@ -73,15 +54,3 @@ type ConfirmableTool interface {
 	SetEventCallback(callback EventCallback)
 }
 
-// ToolUsageStats represents the usage statistics for a single tool.
-// Used for displaying tool call limits and usage in the TUI.
-type ToolUsageStats struct {
-	// Name is the tool name
-	Name string
-	// Current is the number of calls made to this tool
-	Current int
-	// Limit is the maximum allowed calls for this tool
-	Limit int
-	// Percent is the usage percentage (0-100)
-	Percent int
-}

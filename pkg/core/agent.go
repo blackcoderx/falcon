@@ -20,14 +20,6 @@ type Agent struct {
 	historyMu    sync.RWMutex // Protects access to history slice
 	lastResponse interface{}  // Store last tool response for chaining
 
-	// Per-tool call limiting
-	toolLimits   map[string]int // max calls per tool per session
-	toolCounts   map[string]int // current session call counts
-	countersMu   sync.Mutex     // Protects access to toolCounts and totalCalls
-	defaultLimit int            // fallback limit for tools without specific limit
-	totalLimit   int            // safety cap on total tool calls per session
-	totalCalls   int            // current total tool calls in session
-
 	// History management
 	maxHistory int // maximum number of messages to keep in history (0 = unlimited)
 
@@ -38,29 +30,18 @@ type Agent struct {
 	memoryStore *MemoryStore
 }
 
-// Default limits for tool calls and history management.
+// Default limits for history management.
 const (
-	DefaultToolCallLimit = 50  // Default max calls per tool per session
-	DefaultTotalLimit    = 200 // Safety cap on total tool calls per session
-	DefaultMaxHistory    = 100 // Default max messages to keep in history
+	DefaultMaxHistory = 100 // Default max messages to keep in history
 )
 
 // NewAgent creates a new Falcon agent with the given LLM client.
-// The agent is initialized with default tool limits:
-//   - Default per-tool limit: 50 calls
-//   - Total limit: 200 calls per session
-//   - Max history: 100 messages
 func NewAgent(llmClient llm.LLMClient) *Agent {
 	return &Agent{
 		llmClient:    llmClient,
 		tools:        make(map[string]Tool),
 		history:      []llm.Message{},
 		lastResponse: nil,
-		toolLimits:   make(map[string]int),
-		toolCounts:   make(map[string]int),
-		defaultLimit: DefaultToolCallLimit,
-		totalLimit:   DefaultTotalLimit,
-		totalCalls:   0,
 		maxHistory:   DefaultMaxHistory,
 	}
 }
@@ -90,14 +71,6 @@ func (a *Agent) SetLastResponse(response interface{}) {
 	a.lastResponse = response
 }
 
-// SetToolLimit sets the maximum number of calls allowed for a specific tool per session.
-// This method is thread-safe.
-func (a *Agent) SetToolLimit(toolName string, limit int) {
-	a.countersMu.Lock()
-	defer a.countersMu.Unlock()
-	a.toolLimits[toolName] = limit
-}
-
 // LLMClient returns the agent's LLM client.
 func (a *Agent) LLMClient() llm.LLMClient {
 	a.clientMu.RLock()
@@ -110,16 +83,6 @@ func (a *Agent) SwapLLMClient(client llm.LLMClient) {
 	a.clientMu.Lock()
 	defer a.clientMu.Unlock()
 	a.llmClient = client
-}
-
-// SetDefaultLimit sets the fallback limit for tools without a specific limit.
-func (a *Agent) SetDefaultLimit(limit int) {
-	a.defaultLimit = limit
-}
-
-// SetTotalLimit sets the safety cap on total tool calls per session.
-func (a *Agent) SetTotalLimit(limit int) {
-	a.totalLimit = limit
 }
 
 // SetFramework sets the user's API framework for context-aware assistance.
@@ -149,88 +112,10 @@ func (a *Agent) GetHistory() []llm.Message {
 	return cp
 }
 
-// ResetToolCounts resets all tool call counters.
-// This should be called at the start of each new message.
-// This method is thread-safe.
-func (a *Agent) ResetToolCounts() {
-	a.countersMu.Lock()
-	defer a.countersMu.Unlock()
-	a.toolCounts = make(map[string]int)
-	a.totalCalls = 0
-}
-
-// getToolLimit returns the limit for a specific tool, or the default if not set.
-// Caller must hold countersMu lock.
-func (a *Agent) getToolLimit(toolName string) int {
-	if limit, ok := a.toolLimits[toolName]; ok {
-		return limit
-	}
-	return a.defaultLimit
-}
-
-// isToolLimitReached checks if a tool has reached its call limit.
-// This method is thread-safe.
-func (a *Agent) isToolLimitReached(toolName string) bool {
-	a.countersMu.Lock()
-	defer a.countersMu.Unlock()
-	return a.toolCounts[toolName] >= a.getToolLimit(toolName)
-}
-
-// isTotalLimitReached checks if the total call limit has been reached.
-// This method is thread-safe.
-func (a *Agent) isTotalLimitReached() bool {
-	a.countersMu.Lock()
-	defer a.countersMu.Unlock()
-	return a.totalCalls >= a.totalLimit
-}
-
-// IncrementToolCount increments the call count for a specific tool.
-// Returns the new count and limit for the tool.
-// This method is thread-safe.
-func (a *Agent) IncrementToolCount(toolName string) (count, limit int) {
-	a.countersMu.Lock()
-	defer a.countersMu.Unlock()
-	a.toolCounts[toolName]++
-	a.totalCalls++
-	return a.toolCounts[toolName], a.getToolLimit(toolName)
-}
-
 // SetMaxHistory sets the maximum number of messages to keep in history.
 // Set to 0 for unlimited history (not recommended for long sessions).
 func (a *Agent) SetMaxHistory(max int) {
 	a.maxHistory = max
-}
-
-// GetToolUsageStats returns current tool usage statistics.
-// Returns a slice of stats for each used tool, plus total calls and limit.
-// This method is thread-safe.
-func (a *Agent) GetToolUsageStats() (stats []ToolUsageStats, totalCalls, totalLimit int) {
-	a.countersMu.Lock()
-	defer a.countersMu.Unlock()
-
-	// Get all tools that have been used
-	for toolName, count := range a.toolCounts {
-		if count > 0 {
-			limit := a.getToolLimit(toolName)
-			// Use float64 to avoid potential overflow with large counts
-			percent := min(int((float64(count)/float64(limit))*100), 100)
-			stats = append(stats, ToolUsageStats{
-				Name:    toolName,
-				Current: count,
-				Limit:   limit,
-				Percent: percent,
-			})
-		}
-	}
-	return stats, a.totalCalls, a.totalLimit
-}
-
-// GetTotalUsage returns total calls and limit.
-// This method is thread-safe.
-func (a *Agent) GetTotalUsage() (current, limit int) {
-	a.countersMu.Lock()
-	defer a.countersMu.Unlock()
-	return a.totalCalls, a.totalLimit
 }
 
 // AppendHistory adds a message to the history and truncates if necessary.

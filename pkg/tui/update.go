@@ -261,38 +261,6 @@ func (m Model) handleAgentEvent(msg agentEventMsg) Model {
 		m.streamingBuffer = ""
 		m.status = "idle"
 
-	case "tool_usage":
-		if msg.event.ToolUsage != nil {
-			usage := msg.event.ToolUsage
-
-			// Update the most recent tool entry with usage data
-			for i := len(m.logs) - 1; i >= 0; i-- {
-				if m.logs[i].Type == "tool" {
-					m.logs[i].ToolUsed = usage.ToolCurrent
-					m.logs[i].ToolLimit = usage.ToolLimit
-					break
-				}
-			}
-
-			// Update model-level tracking
-			m.totalCalls = usage.TotalCalls
-			m.totalLimit = usage.TotalLimit
-			m.lastToolName = usage.ToolName
-			m.lastToolCount = usage.ToolCurrent
-			m.lastToolLimit = usage.ToolLimit
-
-			// Convert stats to display format
-			m.toolUsage = make([]ToolUsageDisplay, len(usage.AllStats))
-			for i, stat := range usage.AllStats {
-				m.toolUsage[i] = ToolUsageDisplay{
-					Name:    stat.Name,
-					Current: stat.Current,
-					Limit:   stat.Limit,
-					Percent: stat.Percent,
-				}
-			}
-		}
-
 	case "confirmation_required":
 		if msg.event.FileConfirmation != nil {
 			m.confirmationMode = true
