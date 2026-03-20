@@ -3,6 +3,8 @@ package debugging
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/blackcoderx/falcon/pkg/llm"
@@ -11,11 +13,12 @@ import (
 // ProposeFixTool generates and applies code fixes
 type ProposeFixTool struct {
 	llmClient llm.LLMClient
+	workDir   string
 }
 
 // NewProposeFixTool creates a new propose_fix tool
-func NewProposeFixTool(llmClient llm.LLMClient) *ProposeFixTool {
-	return &ProposeFixTool{llmClient: llmClient}
+func NewProposeFixTool(llmClient llm.LLMClient, workDir string) *ProposeFixTool {
+	return &ProposeFixTool{llmClient: llmClient, workDir: workDir}
 }
 
 type ProposeFixParams struct {
@@ -30,7 +33,7 @@ func (t *ProposeFixTool) Name() string {
 }
 
 func (t *ProposeFixTool) Description() string {
-	return "Generate a unified diff showing proposed code changes to fix vulnerability, with explanation of changes and required imports."
+	return "Generates a code fix for a vulnerability or failure. Reads the full file content automatically — no need to call read_file first. Returns a unified diff, a complete patched_content field ready for write_file, and an explanation of the changes."
 }
 
 func (t *ProposeFixTool) Parameters() string {
@@ -48,6 +51,13 @@ func (t *ProposeFixTool) Execute(args string) (string, error) {
 		return "", fmt.Errorf("failed to parse parameters: %w", err)
 	}
 
+	// Always try to read the full file content for accurate diff generation
+	if params.File != "" && t.workDir != "" {
+		if fullContent, err := os.ReadFile(filepath.Join(t.workDir, params.File)); err == nil {
+			params.CurrentCode = string(fullContent)
+		}
+	}
+
 	prompt := fmt.Sprintf(`Generate a security fix for the following code vulnerability.
 
 File: %s
@@ -62,6 +72,7 @@ Return ONLY a valid JSON object matching this structure:
 {
   "explanation": "Brief explanation of the fix",
   "diff": "Unified diff format of the changes",
+  "patched_content": "The complete fixed file content after applying the changes",
   "risk_assessment": "Low|Medium|High risk analysis",
   "required_imports": ["list of new imports if any"]
 }`, params.File, params.Vulnerability, params.CurrentCode, params.FailedTest)

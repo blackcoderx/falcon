@@ -126,7 +126,7 @@ func (r *Registry) registerDebuggingTools() {
 	r.Agent.RegisterTool(debugging.NewFindHandlerTool(r.WorkDir))
 	r.Agent.RegisterTool(debugging.NewAnalyzeEndpointTool(r.LLMClient))
 	r.Agent.RegisterTool(debugging.NewAnalyzeFailureTool(r.LLMClient))
-	r.Agent.RegisterTool(debugging.NewProposeFixTool(r.LLMClient))
+	r.Agent.RegisterTool(debugging.NewProposeFixTool(r.LLMClient, r.WorkDir))
 	r.Agent.RegisterTool(debugging.NewCreateTestFileTool(r.LLMClient))
 }
 
@@ -158,6 +158,17 @@ func (r *Registry) registerAgentTools() {
 		r.LLMClient,
 		debugging.NewAnalyzeEndpointTool(r.LLMClient),
 		runTests,
+		testExecutor,
+		debugging.NewAnalyzeFailureTool(r.LLMClient),
+	))
+
+	// auto fix orchestrator — fix-and-verify loop with user confirmation
+	autoFixWriteFile := debugging.NewWriteFileTool(r.WorkDir, r.ConfirmManager)
+	r.Agent.RegisterTool(debugging.NewAutoFixTool(
+		debugging.NewFindHandlerTool(r.WorkDir),
+		debugging.NewReadFileTool(r.WorkDir),
+		debugging.NewProposeFixTool(r.LLMClient, r.WorkDir),
+		autoFixWriteFile,
 		testExecutor,
 		debugging.NewAnalyzeFailureTool(r.LLMClient),
 	))

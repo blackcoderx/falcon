@@ -65,7 +65,7 @@ func BuildToolsSection(tools map[string]Tool) string {
 			"create_test_file", "read_file", "search_code", "write_file", "list_files":
 			domains["Debugging"] = append(domains["Debugging"], tool)
 
-		case "auto_test", "run_tests", "test_suite":
+		case "auto_test", "auto_fix", "run_tests", "test_suite":
 			domains["Orchestration"] = append(domains["Orchestration"], tool)
 		}
 	}
@@ -122,6 +122,7 @@ const CompactToolReference = `# QUICK TOOL REFERENCE
 | Run test scenarios | run_tests | scenarios, base_url, scenario? (optional single) |
 | Data-driven test | run_data_driven | endpoint, data_file |
 | Auto full test flow | auto_test | endpoint, base_url |
+| Fix and verify loop | auto_fix | endpoint, base_url, expected_status?, max_attempts? |
 | Smoke test | run_smoke | - |
 | Integration workflow | orchestrate_integration | workflow |
 | Test suite | test_suite | name, tests |
@@ -144,7 +145,7 @@ const CompactToolReference = `# QUICK TOOL REFERENCE
 **Spec**: ingest_spec
 **Unit/Functional Testing**: assert_response, extract_value, validate_json_schema, generate_functional_tests, run_tests, run_data_driven
 **Contract Testing**: compare_responses, check_regression, verify_idempotency
-**Integration/E2E**: orchestrate_integration, auto_test, test_suite
+**Integration/E2E**: orchestrate_integration, auto_test, auto_fix, test_suite
 **Smoke**: run_smoke
 **Performance**: run_performance, webhook_listener
 **Security**: scan_security
