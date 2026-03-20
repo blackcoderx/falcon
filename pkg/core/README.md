@@ -71,46 +71,9 @@ type AgentEvent struct {
 | `answer` | Final answer from the agent |
 | `error` | An error occurred |
 | `streaming` | Partial LLM response chunk (real-time display) |
-| `tool_usage` | Per-tool call counter update |
 | `confirmation_required` | File write awaiting user approval |
 
 ---
-
-## Agent Structure
-
-```go
-type Agent struct {
-    llmClient    llm.LLMClient
-    clientMu     sync.RWMutex  // Protects llmClient
-    tools        map[string]Tool
-    toolsMu      sync.RWMutex  // Protects tools map
-    history      []llm.Message
-    historyMu    sync.RWMutex  // Protects history slice
-    lastResponse interface{}   // Last tool response for chaining
-
-    // Per-tool call limiting
-    toolLimits   map[string]int // max calls per tool per session
-    toolCounts   map[string]int // current session call counts
-    countersMu   sync.Mutex     // Protects toolCounts and totalCalls
-    defaultLimit int            // fallback limit for unlisted tools (default 50)
-    totalLimit   int            // safety cap on total calls (default 200)
-    totalCalls   int            // current total calls in session
-
-    maxHistory  int         // max messages to keep in history (default 100)
-    framework   string      // gin, fastapi, express, etc.
-    memoryStore *MemoryStore
-}
-```
-
-**Constants:**
-
-```go
-const (
-    DefaultToolCallLimit = 50   // Default max calls per tool per session
-    DefaultTotalLimit    = 200  // Safety cap on total tool calls per session
-    DefaultMaxHistory    = 100  // Default max messages to keep in history
-)
-```
 
 ### Creating an Agent
 
@@ -177,18 +140,6 @@ Final Answer: <response>
 
 The parser (`parseResponse`) handles common LLM formatting variations — missing `ACTION:` prefix, raw `tool_name(...)` calls, and case differences.
 
-### Limit Enforcement
-
-Before executing any tool:
-
-```go
-if agent.toolCounts[toolName] >= agent.toolLimits[toolName] {
-    return "Tool limit reached for " + toolName
-}
-if agent.totalCalls >= agent.totalLimit {
-    return "Total tool call limit reached"
-}
-```
 
 ---
 
@@ -274,86 +225,7 @@ type Config struct {
     DefaultModel   string            `yaml:"default_model"`
     Theme          string            `yaml:"theme"`
     Framework      string            `yaml:"framework"`
-    WebUI          WebUIConfig       `yaml:"web_ui"`
 }
-```
-
-**Example:**
-```yaml
-framework: gin
-web_ui:
-  enabled: true
-  port: 0
-```
-
-Config migration (`migrateToGlobalConfig`) automatically moves legacy per-provider credentials from `.falcon/config.yaml` into `~/.falcon/config.yaml` on first run.
-
----
-
-## Memory System
-
-`MemoryStore` in `memory.go` persists facts across sessions in `~/.falcon/memory.json`:
-
-```go
-type MemoryEntry struct {
-    Key       string `json:"key"`
-    Value     string `json:"value"`
-    Category  string `json:"category"` // "preference", "endpoint", "error", "project", "general"
-    Timestamp string `json:"timestamp"`
-    Source    string `json:"source"`
-}
-```
-
-```go
-store := core.NewMemoryStore("~/.falcon/memory.json")
-store.Save("auth-endpoint", "POST /api/auth/login", "endpoint")
-entries := store.Recall("endpoint")
-```
-
----
-
-## Error Analysis
-
-`analysis.go` provides utilities for parsing error responses:
-
-```go
-// Parse stack trace from an error response body
-files := core.ParseStackTrace(errorBody)
-// Returns: []FileLocation{{File: "api.py", Line: 42}, ...}
-
-// Extract structured error context from a JSON response
-ctx := core.ExtractErrorContext(jsonResponse)
-// Returns: ErrorContext{Message: "...", Type: "...", Fields: [...]}
-```
-
----
-
-## .falcon Folder Structure
-
-Created on first run by `InitializeFalconFolder()`. Uses a **flat structure** — no subdirectories in `reports/` or `flows/`. Filenames carry context via type prefix.
-
-```
-~/.falcon/                   # Global (credentials + memory)
-├── config.yaml
-└── memory.json
-
-.falcon/                     # Per-project
-├── config.yaml
-├── falcon.md                # API knowledge base
-├── spec.yaml                # Ingested API spec (YAML)
-├── manifest.json            # Parsed endpoint graph
-├── variables.json           # Global variables
-├── sessions/
-├── environments/
-├── requests/
-├── baselines/
-├── flows/
-└── reports/
-```
-
-**File naming conventions:**
-- Reports: `<type>_report_<api-name>_<timestamp>.md`
-- Flows: `<type>_<description>.yaml`
 
 ---
 
@@ -386,6 +258,5 @@ go test ./pkg/core/...
 
 `react_test.go` covers:
 - Tool call parsing from LLM output
-- Limit enforcement (per-tool and total)
 - Event emission order
 - History management

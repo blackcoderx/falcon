@@ -66,7 +66,6 @@ type Model struct {
     // Tool usage display
     toolUsage     []ToolUsageDisplay // Per-tool call stats
     totalCalls    int                // Total tool calls in session
-    totalLimit    int                // Total limit cap
     lastToolName  string
     toolStartTime time.Time
 
@@ -96,7 +95,6 @@ type Model struct {
     width  int
     height int
     ready  bool
-    webPort int  // Web dashboard port (0 if disabled)
 }
 ```
 
@@ -198,7 +196,7 @@ Processed by `slash.go` before the input is sent to the agent:
 |---------|--------|
 | `/model` | Open the model picker panel |
 | `/env` | Open the environment picker panel |
-| `/flow <file>` | Load and execute a YAML workflow file |
+| `/` | Load and execute a YAML files - requests and flows |
 
 ---
 
