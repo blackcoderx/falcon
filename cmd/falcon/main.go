@@ -10,7 +10,6 @@ import (
 	"github.com/blackcoderx/falcon/pkg/core/tools/persistence"
 	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 	"github.com/blackcoderx/falcon/pkg/tui"
-	"github.com/blackcoderx/falcon/pkg/web"
 	"github.com/charmbracelet/glamour"
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
@@ -71,30 +70,10 @@ agent that understands your code and can interact with your APIs naturally.`,
 				return
 			}
 
-			// Start Web UI (alongside TUI, disabled only if explicitly set to false)
-			var webShutdown func()
-			var webPort int
-			if !viper.IsSet("web_ui.enabled") || viper.GetBool("web_ui.enabled") {
-				port := viper.GetInt("web_ui.port")
-				actualPort, shutdown, err := web.Start(core.FalconFolderName, port)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Warning: Web UI failed to start: %v\n", err)
-				} else {
-					fmt.Printf("Falcon Web UI -> http://localhost:%d\n\n", actualPort)
-					webPort = actualPort
-					webShutdown = shutdown
-				}
-			}
-
 			// Interactive Mode: Start TUI
-			if err := tui.Run(webPort); err != nil {
+			if err := tui.Run(); err != nil {
 				fmt.Fprintf(os.Stderr, "Error running Falcon: %v\n", err)
 				os.Exit(1)
-			}
-
-			// Shut down web server after TUI exits
-			if webShutdown != nil {
-				webShutdown()
 			}
 		},
 	}
@@ -167,21 +146,14 @@ func initConfig() {
 		}
 	}
 
-	// Overlay project config for framework and web_ui only
+	// Overlay project config for framework only
 	projectPath := filepath.Join(core.FalconFolderName, "config.yaml")
 	projectData, err := os.ReadFile(projectPath)
 	if err == nil {
 		var projectCfg core.Config
-		var rawProjectCfg map[string]interface{}
 		if yaml.Unmarshal(projectData, &projectCfg) == nil {
-			if yaml.Unmarshal(projectData, &rawProjectCfg) == nil {
-				if webUIRaw, ok := rawProjectCfg["web_ui"]; ok && webUIRaw != nil {
-					viper.Set("web_ui.enabled", projectCfg.WebUI.Enabled)
-					viper.Set("web_ui.port", projectCfg.WebUI.Port)
-				}
-				if projectCfg.Framework != "" {
-					viper.Set("framework", projectCfg.Framework)
-				}
+			if projectCfg.Framework != "" {
+				viper.Set("framework", projectCfg.Framework)
 			}
 		}
 	}

@@ -17,9 +17,8 @@ import (
 )
 
 // Run starts the TUI application.
-// webPort is the port the web UI is listening on (0 if disabled).
-func Run(webPort int) error {
-	m := InitialModel(webPort)
+func Run() error {
+	m := InitialModel()
 	prog := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 
 	// Store program reference for goroutines to send messages

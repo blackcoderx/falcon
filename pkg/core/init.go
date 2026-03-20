@@ -21,12 +21,6 @@ type ToolLimitsConfig struct {
 	PerTool      map[string]int `yaml:"per_tool"`      // Per-tool limits (tool_name -> max_calls)
 }
 
-// WebUIConfig controls the embedded web dashboard
-type WebUIConfig struct {
-	Enabled bool `yaml:"enabled"` // default true
-	Port    int  `yaml:"port"`    // 0 = OS-assigned random port
-}
-
 // Config represents the user's Falcon configuration.
 // Provider-specific settings are stored generically in ProviderConfig so that
 // new providers can be added without changing this struct.
@@ -36,7 +30,6 @@ type Config struct {
 	DefaultModel   string            `yaml:"default_model"`
 	Theme          string            `yaml:"theme"`
 	Framework      string            `yaml:"framework"` // API framework (e.g., gin, fastapi, express)
-	WebUI          WebUIConfig       `yaml:"web_ui"`
 
 	// Legacy fields — migrated automatically on first load; do not use in new code.
 	OllamaConfig     *OllamaConfig     `yaml:"ollama,omitempty"`
@@ -95,7 +88,6 @@ type ProviderEntry struct {
 type GlobalConfig struct {
 	DefaultProvider string                   `yaml:"default_provider"`
 	Theme           string                   `yaml:"theme"`
-	WebUI           WebUIConfig              `yaml:"web_ui,omitempty"`
 	Providers       map[string]ProviderEntry `yaml:"providers,omitempty"`
 
 	// Legacy migration fields — present only in old single-provider configs.

@@ -375,7 +375,6 @@ func migrateToGlobalConfig() error {
 	globalCfg := &GlobalConfig{
 		DefaultProvider: projectCfg.Provider,
 		Theme:           projectCfg.Theme,
-		WebUI:           projectCfg.WebUI,
 		Providers: map[string]ProviderEntry{
 			projectCfg.Provider: {
 				Model:  projectCfg.DefaultModel,
