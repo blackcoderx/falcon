@@ -34,7 +34,7 @@ func (t *AnalyzeEndpointTool) Name() string {
 }
 
 func (t *AnalyzeEndpointTool) Description() string {
-	return "Use LLM to analyze API endpoint structure, parameters, auth requirements, expected responses, and security considerations from URL and optional sample request"
+	return "Analyzes an API endpoint's structure, parameters, auth requirements, expected responses, and security risks using LLM. For best results: first call find_handler to locate the handler file, then read_file to get the implementation code, and pass it as the 'context' parameter. This grounds the analysis in actual code rather than inference."
 }
 
 func (t *AnalyzeEndpointTool) Parameters() string {

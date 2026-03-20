@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/blackcoderx/falcon/pkg/core"
 	"github.com/blackcoderx/falcon/pkg/core/tools/shared"
 	"github.com/blackcoderx/falcon/pkg/llm"
 )
@@ -35,7 +36,7 @@ func (t *AnalyzeFailureTool) Name() string {
 }
 
 func (t *AnalyzeFailureTool) Description() string {
-	return "Use LLM to explain why a test failed, assess vulnerability severity, identify OWASP/CWE category, estimate impact, and provide detailed fix suggestions with code examples"
+	return "Explains why a test failed using LLM: assesses severity, identifies OWASP/CWE category, estimates impact, and provides fix suggestions. Automatically extracts stack trace file locations from the error and returns them as 'stack_locations' in the output. After calling this tool, use read_file on the files listed in stack_locations to read the actual handler code, then optionally call analyze_failure again with the code as context for a deeper analysis."
 }
 
 func (t *AnalyzeFailureTool) Parameters() string {
@@ -52,6 +53,23 @@ func (t *AnalyzeFailureTool) Execute(args string) (string, error) {
 		return "", fmt.Errorf("failed to parse parameters: %w", err)
 	}
 
+	// Extract stack frames from the error text
+	stackLocations := core.ParseStackTrace(params.TestResult.Error)
+
+	// Build a human-readable summary of stack locations for the prompt
+	var locationLines []string
+	for _, frame := range stackLocations {
+		if frame.Function != "" {
+			locationLines = append(locationLines, fmt.Sprintf("  %s:%d in %s", frame.File, frame.Line, frame.Function))
+		} else {
+			locationLines = append(locationLines, fmt.Sprintf("  %s:%d", frame.File, frame.Line))
+		}
+	}
+	locationsStr := "none detected"
+	if len(locationLines) > 0 {
+		locationsStr = "\n" + strings.Join(locationLines, "\n")
+	}
+
 	// Marshal TestResult to pretty JSON for the prompt
 	resultJSON, _ := json.MarshalIndent(params.TestResult, "", "  ")
 
@@ -66,6 +84,9 @@ Actual Response Body:
 Expected Behavior:
 %s
 
+Stack Trace Locations (files implicated by the error):
+%s
+
 Return ONLY a valid JSON object matching this structure:
 {
   "explanation": "Why it failed",
@@ -74,8 +95,11 @@ Return ONLY a valid JSON object matching this structure:
   "cwe_id": "CWE-89",
   "impact": "Description of potential impact",
   "remediation": "Step-by-step fix",
-  "code_suggestion": "Example code fix"
-}`, string(resultJSON), params.ResponseBody, params.ExpectedBehavior)
+  "code_suggestion": "Example code fix",
+  "stack_locations": [
+    {"file": "path/to/file.go", "line": 42, "function": "HandlerName"}
+  ]
+}`, string(resultJSON), params.ResponseBody, params.ExpectedBehavior, locationsStr)
 
 	messages := []llm.Message{
 		{Role: "system", Content: "You are an expert API security auditor. Output ONLY valid JSON."},
@@ -95,5 +119,15 @@ Return ONLY a valid JSON object matching this structure:
 		response = strings.TrimSuffix(response, "```")
 	}
 
-	return strings.TrimSpace(response), nil
+	// If we parsed stack locations but the LLM output lacks them, inject them
+	cleaned := strings.TrimSpace(response)
+	if len(stackLocations) > 0 && !strings.Contains(cleaned, "stack_locations") {
+		locJSON, _ := json.Marshal(stackLocations)
+		// Insert before the closing brace
+		if idx := strings.LastIndex(cleaned, "}"); idx >= 0 {
+			cleaned = cleaned[:idx] + fmt.Sprintf(`, "stack_locations": %s}`, string(locJSON))
+		}
+	}
+
+	return cleaned, nil
 }
