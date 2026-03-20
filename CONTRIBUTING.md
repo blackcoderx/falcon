@@ -59,7 +59,6 @@ falcon/
 │   │   ├── gemini/    # Gemini client + self-registration
 │   │   └── openrouter/  # OpenRouter client + self-registration
 │   ├── storage/       # Low-level YAML/env file I/O
-│   ├── web/           # Embedded web dashboard (HTTP + static SPA)
 │   └── tui/           # Terminal UI (Bubble Tea)
 ├── .falcon/           # Runtime config & memory (created on first run)
 ├── CLAUDE.md          # Development guidelines for AI assistants
@@ -319,16 +318,6 @@ Add a section to `pkg/llm/README.md` describing setup fields and any special req
 1. Define the key in `pkg/tui/keys.go`
 2. Handle the keypress in `pkg/tui/update.go`
 3. Update the footer help text in `pkg/tui/view.go`
-
----
-
-### Adding a New Web Dashboard Section
-
-1. Add the REST route in `pkg/web/routes.go`
-2. Implement the handler in `pkg/web/handlers.go`
-3. Add read helpers if needed in `pkg/web/readers.go`
-4. Add write helpers if needed in `pkg/web/writers.go` (use atomic writes: temp file → rename)
-5. Add the frontend section in `pkg/web/static/app.js`
 
 ---
 

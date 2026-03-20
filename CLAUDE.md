@@ -43,8 +43,6 @@ goreleaser release
 
 - **`pkg/tui/`** — Bubble Tea app (Elm architecture). `model.go` holds state, `update.go` handles events, `view.go` renders. Agent events stream in real-time. File writes require user confirmation with diff preview.
 
-- **`pkg/web/`** — Embedded web dashboard (localhost-only). Serves static files from `static/`. REST API for config, requests, environments, memory, variables. Uses atomic writes (temp file → rename).
-
 - **`pkg/storage/`** — Low-level YAML/env file I/O and JSON Schema helpers.
 
 ### Key Interfaces
