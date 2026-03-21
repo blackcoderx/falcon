@@ -15,8 +15,8 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
-      - windows
       - darwin
+      - windows
     goarch:
       - amd64
       - arm64
@@ -32,7 +32,12 @@ builds:
 archives:
   - id: default
     format: tar.gz
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "arm64" }}arm64
+      {{- else }}{{ .Arch }}{{ end }}
     format_overrides:
       - goos: windows
         format: zip
@@ -42,9 +47,14 @@ archives:
 
 checksum:
   name_template: "checksums.txt"
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
 
 changelog:
   sort: asc
+  use: github
   filters:
     exclude:
       - "^docs:"
@@ -52,6 +62,15 @@ changelog:
       - "^chore:"
       - Merge pull request
       - Merge branch
+  groups:
+    - title: Features
+      regexp: "^feat"
+      order: 0
+    - title: Bug Fixes
+      regexp: "^fix"
+      order: 1
+    - title: Others
+      order: 999
 
 release:
   github:
@@ -69,3 +88,32 @@ release:
     ---
 
     **Full Changelog**: https://github.com/blackcoderx/falcon/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+brews:
+  - repository:
+      owner: blackcoderx
+      name: homebrew-falcon
+      token: "{{ .Env.GH_PAT }}"
+    directory: Formula
+    homepage: "https://github.com/blackcoderx/falcon"
+    description: "Terminal-based AI agent for API developers"
+    license: "MIT"
+    skip_upload: auto
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+
+scoops:
+  - repository:
+      owner: blackcoderx
+      name: scoop-falcon
+      token: "{{ .Env.GH_PAT }}"
+    homepage: "https://github.com/blackcoderx/falcon"
+    description: "Terminal-based AI agent for API developers"
+    license: MIT
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"
+    skip_upload: auto

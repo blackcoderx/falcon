@@ -21,9 +21,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.25"
-
-      - name: Verify build
-        run: go build ./...
+          cache: true
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
@@ -33,4 +31,4 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+          GH_PAT: ${{ secrets.GH_PAT }}
