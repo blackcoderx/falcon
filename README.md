@@ -48,6 +48,40 @@ On first run, Falcon creates a `.falcon/` folder in the current directory and wa
 
 ## Installation
 
+### Homebrew (macOS / Linux)
+
+```bash
+brew tap blackcoderx/falcon
+brew install falcon
+```
+
+### Scoop (Windows)
+
+```powershell
+scoop bucket add falcon https://github.com/blackcoderx/scoop-falcon
+scoop install falcon
+```
+
+### go install
+
+```bash
+go install github.com/blackcoderx/falcon/cmd/falcon@latest
+```
+
+### Pre-built Binaries
+
+If Homebrew or Scoop isn't an option, download the binary for your platform directly from the [releases page](https://github.com/blackcoderx/falcon/releases/latest):
+
+| Platform | File |
+|----------|------|
+| macOS (Apple Silicon) | `falcon_Darwin_arm64.tar.gz` |
+| macOS (Intel) | `falcon_Darwin_x86_64.tar.gz` |
+| Linux (x86_64) | `falcon_Linux_x86_64.tar.gz` |
+| Linux (ARM64) | `falcon_Linux_arm64.tar.gz` |
+| Windows (x86_64) | `falcon_Windows_x86_64.zip` |
+
+Extract and move the `falcon` binary to a directory on your `PATH`.
+
 ### Build from Source
 
 **Prerequisites:** Go 1.21+
@@ -66,12 +100,6 @@ falcon update
 ```
 
 Falcon fetches the latest release from GitHub and replaces the binary in-place.
-
-### Multi-Platform Release
-
-```bash
-goreleaser release
-```
 
 ---
 
