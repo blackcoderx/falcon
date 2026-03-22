@@ -1,5 +1,11 @@
 # Falcon
 
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-blackcoder8-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/blackcoder8)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/blackcoderx/falcon)](https://go.dev)
+[![Go Report Card](https://goreportcard.com/badge/github.com/blackcoderx/falcon)](https://goreportcard.com/report/github.com/blackcoderx/falcon)
+[![GitHub release](https://img.shields.io/github/v/release/blackcoderx/falcon)](https://github.com/blackcoderx/falcon/releases/latest)
+[![License](https://img.shields.io/github/license/blackcoderx/falcon)](LICENSE)
+
 **Falcon** is a terminal-based AI agent for API developers. It combines API testing, debugging, and code analysis in an interactive TUI powered by a ReAct (Reason+Act) loop. Built in Go with the [Charm](https://charm.sh) ecosystem (Bubble Tea, Lip Gloss, Glamour).
 
 ![A preview of the Falcon TUI](FalconUI.jpg)
