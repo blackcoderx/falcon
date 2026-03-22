@@ -94,6 +94,21 @@ See the README files in each package for detailed documentation:
    - Use case / motivation
    - Proposed implementation (optional)
 
+### Contributor License Agreement (CLA)
+
+Before your first PR can be merged, you'll need to sign the
+[Contributor License Agreement](CLA.md). It's a one-time step — you keep full
+ownership of your code, and it just gives the project the legal clarity to
+keep running and growing.
+
+When you open a PR, a bot will prompt you automatically. Simply comment:
+
+```
+I have read the CLA Document and I hereby sign the CLA
+```
+
+That's it — you only need to do this once.
+
 ### Pull Requests
 
 1. Create a feature branch:
